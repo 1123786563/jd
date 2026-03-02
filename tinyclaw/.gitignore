@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+.omc/
+package-lock.json
+
+# TypeScript build output
+dist/
+
+# TinyClaw runtime files
+.tinyclaw
+
+.wwebjs_cache
+*.log
+
+# Environment variables
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
