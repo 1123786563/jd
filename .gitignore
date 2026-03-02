@@ -24,8 +24,7 @@ out/
 # IDE 和编辑器
 .vscode/
 .idea/
-.omc/
-*.swp
+ *.swp
 *.swo
 *~
 
@@ -95,6 +94,7 @@ temp/
 # 特定于项目的忽略
 .omc/
 .agents/
+.obsidian/
 
 # 技术特定忽略
 # Python
