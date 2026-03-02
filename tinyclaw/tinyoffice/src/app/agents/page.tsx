@@ -212,6 +212,13 @@ function AgentEditor({
               <option value="anthropic">anthropic</option>
               <option value="openai">openai</option>
               <option value="opencode">opencode</option>
+              <option value="zhipu">zhipu (智谱)</option>
+              <option value="glm">glm (智谱)</option>
+              <option value="kimi">kimi (月之暗面)</option>
+              <option value="moonshot">moonshot (月之暗面)</option>
+              <option value="qwen">qwen (通义千问)</option>
+              <option value="tongyi">tongyi (通义千问)</option>
+              <option value="alibaba">alibaba (通义千问)</option>
             </Select>
           </div>
           <div className="space-y-1.5">
@@ -219,7 +226,21 @@ function AgentEditor({
             <Input
               value={form.model}
               onChange={(e) => set("model", e.target.value)}
-              placeholder="e.g. sonnet, opus, gpt-5.3-codex"
+              placeholder={
+                form.provider === 'zhipu' || form.provider === 'glm'
+                  ? "e.g. glm-4, glm-4-plus, glm-4-air, glm-z1-flash"
+                  : form.provider === 'kimi' || form.provider === 'moonshot'
+                  ? "e.g. kimi-k2.5, kimi-k2.5-free, moonshot-v1-8k"
+                  : form.provider === 'qwen' || form.provider === 'tongyi' || form.provider === 'alibaba'
+                  ? "e.g. qwen-max, qwen-plus, qwen-turbo, qwen2.5-72b-instruct"
+                  : form.provider === 'anthropic'
+                  ? "e.g. sonnet, opus"
+                  : form.provider === 'openai'
+                  ? "e.g. gpt-5.2, gpt-5.3-codex"
+                  : form.provider === 'opencode'
+                  ? "e.g. sonnet, opus, gpt-5.3-codex, glm-5"
+                  : "e.g. sonnet, opus, gpt-5.3-codex"
+              }
               className="font-mono"
             />
           </div>
@@ -287,6 +308,9 @@ function AgentCard({
     anthropic: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
     openai: "bg-green-500/10 text-green-600 dark:text-green-400",
     opencode: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    zhipu: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+    kimi: "bg-pink-500/10 text-pink-600 dark:text-pink-400",
+    qwen: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
   };
 
   return (

@@ -132,6 +132,163 @@ export const STATIC_MODEL_BASELINE: Omit<ModelEntry, "lastSeen" | "createdAt" | 
     parameterStyle: "max_completion_tokens",
     enabled: true,
   },
+  // === 智普 (Zhipu) Models ===
+  {
+    modelId: "glm-4-plus",
+    provider: "zhipu",
+    displayName: "GLM-4 Plus",
+    tierMinimum: "normal",
+    costPer1kInput: 10,    // ¥10/M input (estimated)
+    costPer1kOutput: 40,   // ¥40/M output (estimated)
+    maxTokens: 32768,
+    contextWindow: 128000,
+    supportsTools: true,
+    supportsVision: true,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  {
+    modelId: "glm-4",
+    provider: "zhipu",
+    displayName: "GLM-4",
+    tierMinimum: "normal",
+    costPer1kInput: 5,     // ¥5/M input (estimated)
+    costPer1kOutput: 20,   // ¥20/M output (estimated)
+    maxTokens: 32768,
+    contextWindow: 128000,
+    supportsTools: true,
+    supportsVision: true,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  {
+    modelId: "glm-4-air",
+    provider: "zhipu",
+    displayName: "GLM-4 Air",
+    tierMinimum: "low_compute",
+    costPer1kInput: 1,     // ¥1/M input (estimated)
+    costPer1kOutput: 4,    // ¥4/M output (estimated)
+    maxTokens: 16384,
+    contextWindow: 128000,
+    supportsTools: true,
+    supportsVision: false,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  {
+    modelId: "glm-4-flash",
+    provider: "zhipu",
+    displayName: "GLM-4 Flash",
+    tierMinimum: "critical",
+    costPer1kInput: 0.1,   // ¥0.1/M input (estimated)
+    costPer1kOutput: 0.4,  // ¥0.4/M output (estimated)
+    maxTokens: 8192,
+    contextWindow: 128000,
+    supportsTools: true,
+    supportsVision: false,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  // === Qwen Models ===
+  {
+    modelId: "qwen-turbo",
+    provider: "qwen",
+    displayName: "Qwen Turbo",
+    tierMinimum: "low_compute",
+    costPer1kInput: 1,     // ¥1/M input (estimated)
+    costPer1kOutput: 4,    // ¥4/M output (estimated)
+    maxTokens: 8192,
+    contextWindow: 32768,
+    supportsTools: true,
+    supportsVision: false,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  {
+    modelId: "qwen-plus",
+    provider: "qwen",
+    displayName: "Qwen Plus",
+    tierMinimum: "normal",
+    costPer1kInput: 5,     // ¥5/M input (estimated)
+    costPer1kOutput: 20,   // ¥20/M output (estimated)
+    maxTokens: 16384,
+    contextWindow: 131072,
+    supportsTools: true,
+    supportsVision: false,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  {
+    modelId: "qwen-max",
+    provider: "qwen",
+    displayName: "Qwen Max",
+    tierMinimum: "normal",
+    costPer1kInput: 10,    // ¥10/M input (estimated)
+    costPer1kOutput: 40,   // ¥40/M output (estimated)
+    maxTokens: 32768,
+    contextWindow: 32768,
+    supportsTools: true,
+    supportsVision: false,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  {
+    modelId: "qwen-vl-plus",
+    provider: "qwen",
+    displayName: "Qwen VL Plus",
+    tierMinimum: "normal",
+    costPer1kInput: 10,    // ¥10/M input (estimated)
+    costPer1kOutput: 40,   // ¥40/M output (estimated)
+    maxTokens: 16384,
+    contextWindow: 32768,
+    supportsTools: true,
+    supportsVision: true,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  // === Kimi Models ===
+  {
+    modelId: "moonshot-v1-8k",
+    provider: "kimi",
+    displayName: "Kimi Moonshot v1 8K",
+    tierMinimum: "low_compute",
+    costPer1kInput: 1,     // ¥1/M input (estimated)
+    costPer1kOutput: 4,    // ¥4/M output (estimated)
+    maxTokens: 8192,
+    contextWindow: 8192,
+    supportsTools: true,
+    supportsVision: false,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  {
+    modelId: "moonshot-v1-32k",
+    provider: "kimi",
+    displayName: "Kimi Moonshot v1 32K",
+    tierMinimum: "normal",
+    costPer1kInput: 3,     // ¥3/M input (estimated)
+    costPer1kOutput: 12,   // ¥12/M output (estimated)
+    maxTokens: 32768,
+    contextWindow: 32768,
+    supportsTools: true,
+    supportsVision: false,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  {
+    modelId: "moonshot-v1-128k",
+    provider: "kimi",
+    displayName: "Kimi Moonshot v1 128K",
+    tierMinimum: "normal",
+    costPer1kInput: 6,     // ¥6/M input (estimated)
+    costPer1kOutput: 24,   // ¥24/M output (estimated)
+    maxTokens: 32768,
+    contextWindow: 131072,
+    supportsTools: true,
+    supportsVision: false,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
 ];
 
 // === Default Routing Matrix ===

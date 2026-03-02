@@ -21,11 +21,11 @@ jd/
 
 ## 技术栈
 
-| 子项目 | 技术 |
-|--------|------|
-| automaton | TypeScript, Express, OpenAI, viem, better-sqlite3 |
-| tinyclaw | TypeScript, Hono, Discord.js, Telegram API, WhatsApp |
-| tinyoffice | Next.js 16, React 19, Tailwind CSS 4, Radix UI |
+| 子项目     | 技术                                                 |
+| ---------- | ---------------------------------------------------- |
+| automaton  | TypeScript, Express, OpenAI, viem, better-sqlite3    |
+| tinyclaw   | TypeScript, Hono, Discord.js, Telegram API, WhatsApp |
+| tinyoffice | Next.js 16, React 19, Tailwind CSS 4, Radix UI       |
 
 ## 常用命令
 
@@ -78,4 +78,4 @@ npm run start         # 生产模式运行
 - Node.js 版本要求: >= 20.0.0
 - automaton 使用 pnpm 作为包管理器
 - tinyclaw 使用 npm 作为包管理器
-- 文档必须写到jdDocs/目录下
+- 文档必须写到jdDocs/目录下  需要按照软件开发标准文档分类

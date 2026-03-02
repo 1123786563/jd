@@ -188,4 +188,5 @@ export const QWEN_MODEL_IDS: Record<string, string> = {
     // Aliases
     'qwen': 'qwen-max',
     'tongyi': 'qwen-max',
+    'alibaba': 'qwen-max',
 };

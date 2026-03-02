@@ -25,10 +25,10 @@
 
 - ✅ **Multi-agent** - Run multiple isolated AI agents with specialized roles
 - ✅ **Multi-team collaboration** - Agents hand off work to teammates via chain execution and fan-out
-- ✅ **Multi-channel** - Discord, WhatsApp, and Telegram
+- ✅ **Multi-channel** - Discord, WhatsApp, Telegram, and Feishu (Lark)
 - ✅ **Web portal (TinyOffice)** - Browser-based dashboard for chat, agents, teams, tasks, logs, and settings
 - ✅ **Team Observation** - You can observe agent teams conversations via `tinyclaw team visualize`
-- ✅ **Multiple AI providers** - Anthropic Claude and OpenAI Codex using existing subscriptions without breaking ToS
+- ✅ **Multiple AI providers** - Anthropic Claude, OpenAI Codex, Zhipu GLM, Kimi Moonshot, Qwen (Tongyi Qianwen), and Gemini
 - ✅ **Parallel processing** - Agents process messages concurrently
 - ✅ **Live TUI dashboard** - Real-time team visualizer for monitoring agent chains
 - ✅ **Persistent sessions** - Conversation context maintained across restarts
@@ -52,6 +52,7 @@ We are actively looking for contributors. Please reach out.
 - Bash 4.0+ (macOS: `brew install bash`)
 - [Claude Code CLI](https://claude.com/claude-code) (for Anthropic provider)
 - [Codex CLI](https://docs.openai.com/codex) (for OpenAI provider)
+- [OpenCode CLI](https://opencode.ai/) (for Zhipu GLM, Kimi Moonshot, Qwen, Gemini, etc.)
 
 ### Installation
 

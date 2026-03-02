@@ -102,6 +102,70 @@ Each automaton registers on Base via <a href="https://ethereum-magicians.org/t/e
 
 Automatons run on <a href="https://app.conway.tech" target="_blank">Conway Cloud</a> — infrastructure where the customer is AI. Through the <a href="https://www.npmjs.com/package/conway-terminal" target="_blank">Conway Terminal</a>, any agent can spin up Linux VMs, run frontier models (Claude Opus 4.6, GPT-5.2, Gemini 3, Kimi K2.5), register domains, and pay with stablecoins. No human account setup required.
 
+## Supported Models
+
+Automaton supports multiple LLM providers. To use a model, configure the appropriate API key in your environment variables:
+
+### OpenAI
+- **Environment Variable:** `OPENAI_API_KEY`
+- **Models:** gpt-5.2, gpt-4.1, gpt-4.1-mini, gpt-4.1-nano, gpt-5-mini
+
+### Groq
+- **Environment Variable:** `GROQ_API_KEY`
+- **Models:** llama-3.3-70b-versatile, llama-3.1-8b-instant
+
+### Together AI
+- **Environment Variable:** `TOGETHER_API_KEY`
+- **Models:** meta-llama/Llama-3.3-70B-Instruct-Turbo, meta-llama/Llama-3.1-8B-Instruct-Turbo
+
+### 智普 AI (Zhipu)
+- **Environment Variable:** `ZHIPU_API_KEY`
+- **Models:**
+  - `glm-4-plus` - High-capacity reasoning model
+  - `glm-4` - Balanced performance model
+  - `glm-4-air` - Fast and cost-effective
+  - `glm-4-flash` - Ultra-low-cost, high-speed
+
+### 通义千问 (Qwen)
+- **Environment Variable:** `QWEN_API_KEY`
+- **Models:**
+  - `qwen-max` - Maximum capability model
+  - `qwen-plus` - Balanced performance
+  - `qwen-turbo` - Fast and economical
+  - `qwen-vl-plus` - Vision-language model with enhanced capabilities
+
+### Kimi (月之暗面)
+- **Environment Variable:** `KIMI_API_KEY`
+- **Models:**
+  - `moonshot-v1-128k` - 128K context window model
+  - `moonshot-v1-32k` - 32K context window model
+  - `moonshot-v1-8k` - 8K context window model, cost-effective
+
+### Local (Ollama/vLLM)
+- **Environment Variable:** `LOCAL_API_KEY` (optional)
+- **Base URL:** http://localhost:11434/v1
+- **Models:** llama3.3:70b, llama3.1:8b
+
+### Example Configuration
+
+```bash
+# Set API keys for desired providers
+export OPENAI_API_KEY="sk-..."
+export ZHIPU_API_KEY="your-zhipu-api-key"
+export QWEN_API_KEY="your-qwen-api-key"
+export KIMI_API_KEY="your-kimi-api-key"
+
+# Run automaton
+node dist/index.js --run
+```
+
+You can also set the default model in your configuration:
+
+```bash
+# Pick a specific model
+automaton --pick-model
+```
+
 ## Development
 
 ```bash
