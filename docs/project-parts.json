@@ -1,0 +1,134 @@
+{
+  "repository_type": "monorepo",
+  "is_multi_part": true,
+  "parts_count": 2,
+  "parts": [
+    {
+      "part_id": "automaton",
+      "part_name": "Conway Automaton",
+      "project_type": "web",
+      "type_description": "Backend Web Application (AI Agent Runtime)",
+      "root_path": "automaton/",
+      "entry_point": "src/index.ts",
+      "tech_stack": [
+        "TypeScript",
+        "Express",
+        "OpenAI",
+        "viem",
+        "better-sqlite3",
+        "pnpm"
+      ],
+      "purpose": "Sovereign AI agent runtime with Web3 integration, Conway API billing, and self-modification capabilities",
+      "documentation": {
+        "architecture": "architecture-automaton.md",
+        "components": "component-inventory-automaton.md",
+        "development_guide": "development-guide-automaton.md"
+      },
+      "key_features": [
+        "Autonomous Agent Runtime",
+        "Multi-Layer Memory System",
+        "Web3 Integration (Ethereum)",
+        "Conway API (Billing/Credits)",
+        "Code Self-Modification",
+        "Policy Enforcement",
+        "Budget Management",
+        "Injection Defense"
+      ],
+      "directories": {
+        "src": "TypeScript source code",
+        "src/agent": "Core agent logic and policy enforcement",
+        "src/memory": "Multi-layer memory system",
+        "src/conway": "Conway API integration and billing",
+        "src/identity": "Wallet and identity management",
+        "src/self-mod": "Self-modification and code generation",
+        "src/setup": "Configuration wizard and defaults",
+        "packages/cli": "CLI package",
+        "tests": "Test suite"
+      }
+    },
+    {
+      "part_id": "tinyclaw",
+      "part_name": "TinyClaw",
+      "project_type": "web",
+      "type_description": "Full-Stack Web Application (Multi-Channel Assistant)",
+      "root_path": "tinyclaw/",
+      "entry_point": {
+        "backend": "src/queue-processor.ts",
+        "frontend": "tinyoffice/app/page.tsx"
+      },
+      "tech_stack": [
+        "TypeScript",
+        "Hono",
+        "Discord.js",
+        "Telegram API",
+        "WhatsApp",
+        "Feishu SDK",
+        "Next.js 16",
+        "React 19",
+        "Tailwind CSS 4",
+        "Radix UI",
+        "npm"
+      ],
+      "purpose": "Multi-team, multi-channel 24/7 AI assistant platform with Discord, Telegram, WhatsApp, and Feishu integration",
+      "documentation": {
+        "architecture": "architecture-tinyclaw.md",
+        "components": "component-inventory-tinyclaw.md",
+        "development_guide": "development-guide-tinyclaw.md"
+      },
+      "key_features": [
+        "Multi-Channel Support (Discord, Telegram, WhatsApp, Feishu)",
+        "Team Orchestration",
+        "24/7 Operation",
+        "State Persistence",
+        "Next.js Control Panel (TinyOffice)",
+        "Real-time Updates (SSE)",
+        "Agent Management",
+        "Task Tracking"
+      ],
+      "directories": {
+        "src": "Backend source code",
+        "src/channels": "Multi-platform messaging clients",
+        "src/server": "API server and routes",
+        "src/lib": "Shared libraries",
+        "tinyoffice": "Next.js frontend",
+        "tinyoffice/app": "Frontend pages",
+        "examples": "Usage examples"
+      },
+      "channels": [
+        "Discord",
+        "Telegram",
+        "WhatsApp",
+        "Feishu (Lark)"
+      ]
+    }
+  ],
+  "shared_patterns": [
+    "Agent-Centric Architecture",
+    "Persistent Memory (SQLite)",
+    "TypeScript Ecosystem",
+    "LLM Integration",
+    "Queue-Based Processing",
+    "Multi-Agent Coordination",
+    "Safety and Policy Enforcement"
+  ],
+  "documentation_files": [
+    "index.md",
+    "project-overview.md",
+    "source-tree-analysis.md",
+    "architecture-automaton.md",
+    "architecture-tinyclaw.md",
+    "component-inventory-automaton.md",
+    "component-inventory-tinyclaw.md",
+    "development-guide-automaton.md",
+    "development-guide-tinyclaw.md",
+    "integration-architecture.md",
+    "project-parts.json"
+  ],
+  "scan_metadata": {
+    "scan_level": "exhaustive",
+    "workflow_mode": "initial_scan",
+    "timestamp": "2026-03-03T14:30:00Z",
+    "total_files_generated": 10,
+    "total_lines_documented": 5000
+  }
+}

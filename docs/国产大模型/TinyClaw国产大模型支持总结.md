@@ -13,27 +13,32 @@
 ### 后端支持（已完成）
 
 ✅ **模型解析函数**
+
 - `resolveZhipuModel()` - 智普模型解析
 - `resolveKimiModel()` - Kimi 模型解析
 - `resolveQwenModel()` - Qwen 模型解析
 
 ✅ **Invoke 逻辑**
+
 - 通过 OpenCode CLI 调用智普、Kimi、Qwen 模型
 - 支持会话续接（`-c` 参数）
 - 支持自定义模型选择
 
 ✅ **Provider 支持**
+
 - `zhipu` 或 `glm` → 智普
 - `kimi` 或 `moonshot` → Kimi
 - `qwen`、`tongyi` 或 `alibaba` → Qwen
 
 ✅ **类型定义**
+
 - `AgentConfig` 接口支持所有 provider
 - 模型映射表（`ZHIPU_MODEL_IDS`、`KIMI_MODEL_IDS`、`QWEN_MODEL_IDS`）
 
 ### 前端支持（已完成）
 
 ✅ **TinyOffice 代理管理界面**
+
 - 添加了新 provider 选项到下拉菜单
 - 添加了对应的颜色样式：
   - 智普：紫色系
@@ -42,6 +47,7 @@
 - 动态模型提示词（根据选择的 provider 显示相应的模型示例）
 
 ✅ **构建验证**
+
 - TypeScript 编译通过
 - Next.js 构建成功
 - 所有测试通过
@@ -49,6 +55,7 @@
 ### 文档支持（已完成）
 
 ✅ **中文使用指南** (`使用国产大模型指南.md`)
+
 - 详细的安装和配置步骤
 - 三个模型的完整列表
 - 性能对比和使用建议
@@ -56,24 +63,28 @@
 - 最佳实践示例
 
 ✅ **配置示例** (`国产大模型配置示例.md`)
+
 - 单个代理配置示例
 - 多个代理混合使用示例
 - 团队协作配置示例
 - 完整的 settings.json 配置
 
 ✅ **README 更新**
+
 - 更新了"Multiple AI providers"描述
 - 添加了 OpenCode CLI 到前提条件
 
 ### 测试验证（已完成）
 
 ✅ **模型解析测试** (`test-model-parsing.ts`)
+
 - 智普模型：7/7 通过
 - Kimi 模型：6/6 通过
 - Qwen 模型：8/8 通过
 - 总体：21/21 通过 (100%)
 
 ✅ **前端构建测试**
+
 - Next.js 构建成功
 - 无 TypeScript 错误
 
@@ -210,6 +221,7 @@ opencode config set qwen.api_key "your-api-key"
 ### 3. 创建代理
 
 **方法一：使用 TinyOffice 界面**
+
 1. 打开 `http://localhost:3000`
 2. 点击 "Agents"
 3. 点击 "Add Agent"
@@ -245,6 +257,7 @@ opencode config set qwen.api_key "your-api-key"
 ## 支持的模型
 
 ### 智普（Zhipu）
+
 - `glm-4` (推荐)
 - `glm-4-plus`
 - `glm-4-air`
@@ -253,12 +266,14 @@ opencode config set qwen.api_key "your-api-key"
 - 更多见文档
 
 ### Kimi（Moonshot）
+
 - `kimi-k2.5` (推荐)
 - `kimi-k2.5-free`
 - `moonshot-v1-128k`
 - 更多见文档
 
 ### Qwen（通义千问）
+
 - `qwen-max` (推荐)
 - `qwen-plus`
 - `qwen-turbo`
@@ -268,15 +283,18 @@ opencode config set qwen.api_key "your-api-key"
 ## 文件清单
 
 ### 修改的文件
+
 - `tinyclaw/src/lib/types.ts` - 添加模型映射
 - `tinyclaw/tinyoffice/src/app/agents/page.tsx` - 更新前端界面
 
 ### 新增的文件
+
 - `tinyclaw/test-model-parsing.ts` - 测试脚本
-- `jdDocs/使用国产大模型指南.md` - 完整使用指南
-- `jdDocs/国产大模型配置示例.md` - 配置示例
+- `docs/使用国产大模型指南.md` - 完整使用指南
+- `docs/国产大模型配置示例.md` - 配置示例
 
 ### 更新的文件
+
 - `tinyclaw/README.md` - 更新功能列表和前提条件
 
 ## 下一步

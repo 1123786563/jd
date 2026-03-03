@@ -95,6 +95,10 @@ temp/
 .omc/
 .agents/
 .obsidian/
+_bmad/
+.claude/
+.serena/
+.sisyphus/
 
 # 技术特定忽略
 # Python
