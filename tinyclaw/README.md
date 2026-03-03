@@ -124,6 +124,32 @@ After starting TinyClaw, scan the QR code:
 📱 Settings → Linked Devices → Link a Device
 ```
 
+### Feishu (Lark) Setup
+
+1. Go to [Feishu Open Platform](https://open.feishu.cn/app) and create an Enterprise Self-Built App
+2. In **Credentials**, copy:
+   - App ID
+   - App Secret
+   - Encrypt Key (Verification Token)
+3. Add to `.env`:
+   ```bash
+   FEISHU_APP_ID=your_app_id
+   FEISHU_APP_SECRET=your_app_secret
+   FEISHU_ENCRYPT_KEY=your_encrypt_key
+   ```
+4. In **Event Subscription**:
+   - Configure URL: `http://your-server:8080/webhook`
+   - Select event: `im.message.receive_v1`
+   - Save
+5. In **Function Configuration**, enable **Bot**
+6. Install the app and add bot to private chat
+7. Start Feishu client: `npm run feishu`
+8. Start queue processor: `npm run queue`
+
+> 💡 **Note**: For local development, use ngrok: `ngrok http 8080` and use the generated URL in step 4.
+
+See [飞书对接指南.md](../jdDocs/飞书对接指南.md) for complete Chinese documentation.
+
 </details>
 
 ---

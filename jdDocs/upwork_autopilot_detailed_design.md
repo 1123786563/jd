@@ -835,6 +835,437 @@ COMMIT;
 
 ---
 
+## 3.5 架构增强设计
+
+基于架构文档的审核反馈，本节补充关键的技术优化方案，显著提升系统的可靠性、可维护性和可观测性。
+
+### 3.5.1 消息队列优化：Redis+SQLite混合架构
+
+#### 设计动机
+
+原设计中SQLite队列虽保证强一致性，但在高并发场景下可能成为性能瓶颈。引入Redis作为高速消息代理层，SQLite作为持久化存储，形成混合架构。
+
+#### 协作模式与职责边界
+
+**核心设计理念**：Redis负责实时消息分发和处理，SQLite负责持久化存储和灾难恢复。
+
+```mermaid
+graph LR
+    subgraph MessageFlow [消息流]
+        Channel[Upwork/IM渠道] -->|enqueue| RedisQueue[Redis List]
+        RedisQueue -->|pop| QueueProcessor[队列处理器]
+        QueueProcessor -->|persist| SQLiteDB[SQLite WAL DB]
+        QueueProcessor -->|process| Agent[Agent执行]
+        Agent -->|complete| RedisAck[Redis Ack Set]
+        Agent -->|log| SQLiteDB
+    end
+    
+    subgraph Recovery[灾难恢复]
+        HealthCheck[健康检查] -->|检测异常| RecoveryJob[恢复作业]
+        RecoveryJob -->|sync from| SQLiteDB
+        RecoveryJob -->|requeue to| RedisQueue
+    end
+```
+
+| 组件 | 职责 | 数据特性 | 持久化要求 |
+|------|------|----------|------------|
+| **Redis** | 实时消息分发、去重、ACK跟踪 | 短期内存数据 | 非必需（可配置持久化） |
+| **SQLite** | 事务性持久化、审计日志、恢复源 | 长期持久数据 | 必需（WAL模式） |
+
+#### 数据同步策略
+
+**写入流程**：
+1. 消息入队 → 写入Redis List + 设置TTL (24h)
+2. 处理器消费 → 原子操作：从Redis pop + 写入SQLite (status=processing)
+3. 处理完成 → 更新SQLite (status=completed) + 写入Redis Ack Set
+4. 定期清理 → 删除已ACK且超过保留期的Redis记录
+
+**恢复流程**：
+- 启动时检查SQLite中status=processing的记录
+- 重新入队到Redis或标记为dead
+
+#### 实现代码
+
+```typescript
+// HybridQueueManager.ts
+import Redis from 'ioredis';
+import Database from 'better-sqlite3';
+
+export class HybridQueueManager {
+  private redis: Redis;
+  private sqlite: Database.Database;
+  private readonly MESSAGE_TTL = 24 * 60 * 60; // 24小时
+  
+  async enqueueMessage(message: EnqueueMessageData): Promise<void> {
+    // 1. 写入Redis队列
+    const messageId = message.messageId;
+    await this.redis.lpush('messages:pending', JSON.stringify(message));
+    await this.redis.expire(`messages:${messageId}`, this.MESSAGE_TTL);
+    
+    // 2. 异步持久化到SQLite（非阻塞主流程）
+    setImmediate(() => {
+      this.persistToSQLite(message);
+    });
+    
+    this.emitEvent('message_enqueued', { messageId, channel: message.channel });
+  }
+  
+  async claimNextMessage(): Promise<DbMessage | null> {
+    // 1. 从Redis原子获取消息
+    const redisMsg = await this.redis.brpoplpush(
+      'messages:pending', 
+      'messages:processing', 
+      10 // 10秒超时
+    );
+    
+    if (!redisMsg) return null;
+    
+    const message = JSON.parse(redisMsg);
+    const messageId = message.messageId;
+    
+    // 2. 在SQLite中标记为processing状态
+    try {
+      this.sqlite.prepare(`
+        UPDATE messages 
+        SET status = 'processing', claimed_by = ?, updated_at = ?
+        WHERE message_id = ?
+      `).run(process.pid, Date.now(), messageId);
+      
+      return await this.getMessageFromSQLite(messageId);
+    } catch (error) {
+      // 回滚Redis状态
+      await this.redis.lpush('messages:pending', redisMsg);
+      throw error;
+    }
+  }
+  
+  async completeMessage(messageId: string): Promise<void> {
+    // 1. 更新SQLite状态
+    this.sqlite.prepare(`
+      UPDATE messages SET status = 'completed', updated_at = ? WHERE message_id = ?
+    `).run(Date.now(), messageId);
+    
+    // 2. 记录ACK到Redis
+    await this.redis.sadd('messages:acked', messageId);
+    await this.redis.expire(`messages:${messageId}:ack`, this.MESSAGE_TTL);
+    
+    this.emitEvent('message_completed', { messageId });
+  }
+  
+  async recoverStaleMessages(): Promise<void> {
+    // 从SQLite恢复processing状态的消息
+    const staleMessages = this.sqlite.prepare(`
+      SELECT * FROM messages 
+      WHERE status = 'processing' AND updated_at < ?
+    `).all(Date.now() - 5 * 60 * 1000); // 5分钟前的
+    
+    for (const msg of staleMessages) {
+      // 重新入队到Redis
+      await this.redis.lpush('messages:pending', JSON.stringify(msg));
+      // 更新SQLite状态
+      this.sqlite.prepare(`
+        UPDATE messages SET status = 'pending', updated_at = ? WHERE id = ?
+      `).run(Date.now(), msg.id);
+    }
+  }
+}
+```
+
+#### 配置示例
+
+```yaml
+# queue-config.yaml
+redis:
+  host: localhost
+  port: 6379
+  password: ${REDIS_PASSWORD}
+  maxRetriesPerRequest: 3
+  retryDelayOnFailover: 100
+  
+sqlite:
+  path: ~/.tinyclaw/tinyclaw.db
+  journalMode: WAL
+  busyTimeout: 5000
+  
+recovery:
+  staleThresholdMinutes: 5
+  messageRetentionHours: 24
+```
+
+### 3.5.2 智能错误处理机制
+
+#### 错误分类体系
+
+系统设计了一套完整的错误分类机制，根据错误类型采取不同的处理策略：
+
+```typescript
+// ErrorClassification.ts
+export enum ErrorCategory {
+  // 环境/基础设施错误（立即终止）
+  ENVIRONMENT_CONFIG = 'environment_config',
+  INFRASTRUCTURE_FAILURE = 'infrastructure_failure',
+  SECURITY_VIOLATION = 'security_violation',
+  
+  // 业务逻辑错误（允许重试）
+  BUSINESS_VALIDATION = 'business_validation',
+  THIRD_PARTY_API = 'third_party_api',
+  DATA_INCONSISTENCY = 'data_inconsistency',
+  
+  // AI/LLM相关错误（智能重试）
+  LLM_REASONING = 'llm_reasoning',
+  PROMPT_INJECTION = 'prompt_injection',
+  TOKEN_OVERFLOW = 'token_overflow'
+}
+
+export interface ErrorClassification {
+  category: ErrorCategory;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  shouldRetry: boolean;
+  maxRetries: number;
+  retryStrategy: 'exponential_backoff' | 'fixed_delay' | 'immediate';
+  requiresHumanIntervention: boolean;
+}
+```
+
+#### 处理策略矩阵
+
+| 错误类别 | 处理策略 | 重试次数 | 人工干预 |
+|----------|----------|----------|----------|
+| **环境配置** | 立即终止，生成修复建议 | 0 | 是 |
+| **基础设施** | 服务降级，切换备用方案 | 3 | 条件性 |
+| **安全违规** | 立即终止，触发安全告警 | 0 | 是 |
+| **业务验证** | 返回友好错误信息 | 1 | 否 |
+| **第三方API** | 指数退避重试 | 5 | 否 |
+| **LLM推理** | 重构提示词，降级模型 | 3 | 否 |
+| **提示词注入** | 阻断执行，记录安全事件 | 0 | 是 |
+
+#### 错误恢复实现
+
+```typescript
+// IntelligentErrorHandler.ts
+export class IntelligentErrorHandler {
+  private errorClassifier: ErrorClassifier;
+  private recoveryStrategies: Map<ErrorCategory, RecoveryStrategy>;
+  
+  async handleAgentError(
+    agentId: string,
+    error: Error,
+    context: ExecutionContext
+  ): Promise<RecoveryAction> {
+    // 1. 分类错误
+    const classification = this.errorClassifier.classify(error, context);
+    
+    // 2. 检查重试限制
+    const retryCount = this.getRetryCount(context.conversationId, agentId);
+    if (retryCount >= classification.maxRetries) {
+      return this.handleMaxRetriesExceeded(classification, context);
+    }
+    
+    // 3. 执行对应恢复策略
+    const strategy = this.recoveryStrategies.get(classification.category);
+    if (!strategy) {
+      return RecoveryAction.TERMINATE;
+    }
+    
+    const recoveryResult = await strategy.execute(error, context, retryCount);
+    
+    // 4. 记录错误分析
+    await this.logErrorAnalysis({
+      error,
+      classification,
+      recoveryResult,
+      context,
+      retryCount
+    });
+    
+    return recoveryResult.action;
+  }
+}
+
+// LLM推理错误恢复策略示例
+class LLMReasoningRecoveryStrategy implements RecoveryStrategy {
+  async execute(
+    error: Error,
+    context: ExecutionContext,
+    retryCount: number
+  ): Promise<RecoveryResult> {
+    switch (retryCount) {
+      case 0:
+        // 第一次重试：调整温度参数
+        return {
+          action: RecoveryAction.RETRY_WITH_MODIFIED_PROMPT,
+          modifications: { temperature: 0.3 }
+        };
+        
+      case 1:
+        // 第二次重试：简化任务复杂度
+        return {
+          action: RecoveryAction.RETRY_WITH_SIMPLIFIED_TASK,
+          modifications: { taskComplexity: 'reduced' }
+        };
+        
+      case 2:
+        // 第三次重试：切换到更强大的模型
+        return {
+          action: RecoveryAction.RETRY_WITH_UPGRADED_MODEL,
+          modifications: { model: 'gpt-4-turbo' }
+        };
+        
+      default:
+        return { action: RecoveryAction.TERMINATE };
+    }
+  }
+}
+```
+
+### 3.5.3 完整监控体系与可观测性
+
+#### 关键监控指标
+
+```typescript
+// MetricsCollector.ts
+import client from 'prom-client';
+
+const register = new client.Registry();
+
+// 队列指标
+const queueLength = new client.Gauge({
+  name: 'upwork_autopilot_queue_length',
+  help: 'Number of messages in queue by status',
+  labelNames: ['status', 'channel'],
+  registers: [register]
+});
+
+const queueProcessingTime = new client.Histogram({
+  name: 'upwork_autopilot_message_processing_seconds',
+  help: 'Time spent processing messages',
+  labelNames: ['agent', 'success'],
+  buckets: [0.1, 0.5, 1, 2, 5, 10, 30, 60],
+  registers: [register]
+});
+
+// 预算指标
+const tokenUsage = new client.Counter({
+  name: 'upwork_autopilot_token_usage_total',
+  help: 'Total tokens used by agent',
+  labelNames: ['agent', 'model', 'operation'],
+  registers: [register]
+});
+
+const budgetRemaining = new client.Gauge({
+  name: 'upwork_autopilot_budget_remaining_cents',
+  help: 'Remaining budget in cents',
+  registers: [register]
+});
+
+// 错误指标
+const errorCount = new client.Counter({
+  name: 'upwork_autopilot_errors_total',
+  help: 'Total errors by category',
+  labelNames: ['category', 'agent', 'severity'],
+  registers: [register]
+});
+
+// Agent健康指标
+const agentActive = new client.Gauge({
+  name: 'upwork_autopilot_agent_active',
+  help: 'Agent active status',
+  labelNames: ['agent'],
+  registers: [register]
+});
+```
+
+#### 告警规则定义
+
+```yaml
+# prometheus-alerts.yaml
+groups:
+- name: upwork-autopilot-alerts
+  rules:
+  # 高优先级告警
+  - alert: QueueBacklogHigh
+    expr: upwork_autopilot_queue_length{status="pending"} > 50
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "High queue backlog detected"
+      description: "Pending messages: {{ $value }} exceeds threshold of 50"
+      
+  - alert: BudgetCritical
+    expr: upwork_autopilot_budget_remaining_cents < 1000
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Budget critically low"
+      description: "Remaining budget: {{ $value }} cents"
+      
+  - alert: AgentFailureRateHigh
+    expr: rate(upwork_autopilot_errors_total{severity="critical"}[5m]) > 0.1
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "High agent failure rate"
+      description: "Critical error rate: {{ $value }} per second"
+      
+  # 中优先级告警
+  - alert: ProcessingTimeSlow
+    expr: upwork_autopilot_message_processing_seconds{quantile="0.95"} > 30
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Slow message processing"
+      description: "95th percentile processing time: {{ $value }}s exceeds 30s"
+```
+
+#### Grafana看板设计
+
+监控看板应包含以下核心面板：
+- **队列状态**：实时显示pending/processing消息数量
+- **处理时间分布**：直方图展示各Agent的处理性能
+- **预算消耗**：时间序列图追踪预算使用趋势
+- **错误率统计**：按错误类别和严重程度分类展示
+- **Agent活动状态**：状态时间线显示各Agent的活跃情况
+
+#### 监控集成代码
+
+```typescript
+// MonitoringService.ts
+import express from 'express';
+import { MetricsCollector } from './MetricsCollector';
+
+export class MonitoringService {
+  private metrics: MetricsCollector;
+  
+  setupExpress(app: express.Application): void {
+    // Prometheus metrics endpoint
+    app.get('/metrics', async (req, res) => {
+      try {
+        res.set('Content-Type', this.metrics.register.contentType);
+        res.end(await this.metrics.register.metrics());
+      } catch (err) {
+        res.status(500).end(err.message);
+      }
+    });
+    
+    // Health check endpoint
+    app.get('/health', (req, res) => {
+      const health = {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage()
+      };
+      res.json(health);
+    });
+  }
+}
+```
+
+
 ## 4. 核心流程设计
 
 ### 4.1 关键业务流程时序图
@@ -2386,18 +2817,3 @@ export class AlertHandler {
 }
 ```
 
----
-
-**文档版本**: v1.1 (根据 Architect 和 Critic 评审修订)
-**最后更新**: 2026-03-02
-**修订内容**:
-- 新增第 7 章: 完整测试策略
-- 新增第 8 章: 数据库迁移与备份
-- 新增第 9 章: 错误恢复与幂等性
-- 新增第 10 章: 部署与运维
-- 新增第 11 章: 详细监控告警规则
-- 根据 Architect 建议优化数据库索引设计
-- 补充降级策略和配置管理方案
-**审核状态**: 待最终批准
-
-**作者**: 系统架构师

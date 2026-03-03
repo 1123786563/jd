@@ -16,6 +16,8 @@ import fs from 'fs';
 import path from 'path';
 import http from 'http';
 import crypto from 'crypto';
+import { log } from '../lib/logging';
+import { SETTINGS_FILE, FILES_DIR, TINYCLAW_HOME } from '../lib/config';
 import { ensureSenderPaired } from '../lib/pairing';
 
 const API_PORT = parseInt(process.env.TINYCLAW_API_PORT || '3777', 10);
@@ -23,13 +25,7 @@ const API_BASE = `http://localhost:${API_PORT}`;
 
 const SCRIPT_DIR = path.resolve(__dirname, '..', '..');
 const _localTinyclaw = path.join(SCRIPT_DIR, '.tinyclaw');
-const TINYCLAW_HOME = process.env.TINYCLAW_HOME
-    || (fs.existsSync(path.join(_localTinyclaw, 'settings.json'))
-        ? _localTinyclaw
-        : path.join(require('os').homedir(), '.tinyclaw'));
 const LOG_FILE = path.join(TINYCLAW_HOME, 'logs/feishu.log');
-const SETTINGS_FILE = path.join(TINYCLAW_HOME, 'settings.json');
-const FILES_DIR = path.join(TINYCLAW_HOME, 'files');
 const PAIRING_FILE = path.join(TINYCLAW_HOME, 'pairing.json');
 
 // Ensure directories exist
@@ -110,14 +106,6 @@ interface FeishuEvent {
 const pendingMessages = new Map<string, PendingMessage>();
 let processingOutgoingQueue = false;
 let accessToken: FeishuAccessToken | null = null;
-
-// Logger
-function log(level: string, message: string): void {
-    const timestamp = new Date().toISOString();
-    const logMessage = `[${timestamp}] [${level}] ${message}\n`;
-    console.log(logMessage.trim());
-    fs.appendFileSync(LOG_FILE, logMessage);
-}
 
 // Load teams from settings for /team command
 function getTeamListText(): string {

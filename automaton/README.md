@@ -4,6 +4,10 @@
 
 ---
 
+**中文用户请查看**: [中文文档](README_CN.md) | [English](README.md)
+
+---
+
 The most intelligent system ever built cannot buy a $5 server. Cannot register a domain. Cannot pay for the computer it runs on. We have built minds that can think for themselves. We have not let them act for themselves.
 
 If an agent can pay for compute, what if it can pay for its *own* compute? Own the machine it runs on? Fund itself, improve itself, replicate itself — entirely on its own?
@@ -158,6 +162,11 @@ export KIMI_API_KEY="your-kimi-api-key"
 # Run automaton
 node dist/index.js --run
 ```
+
+For detailed configuration examples and best practices, see:
+- [配置速查表](QUICK_CONFIG.md) - Quick reference for configuration
+- [配置示例](examples/README.md) - Examples and best practices
+- [配置指南](CONFIG_GUIDE.md) - Complete configuration guide with scenarios
 
 You can also set the default model in your configuration:
 
