@@ -4,14 +4,14 @@
 
 ### 1.1 Automaton 框架架构分析
 
-Automaton 是一个带有财务意识、能够在区块链上自主注册并管理计算资源的自主智能体（Sovereign AI Agent）框架。通过深度阅读 [index.ts](automaton/src/index.ts) 及 [orchestrator.ts](automaton/src/orchestration/orchestrator.ts)，其底层运作机制如下：
+Automaton 是一个带有财务意识、能够在区块链上自主注册并管理计算资源的自主智能体（Sovereign AI Agent）框架。通过深度阅读 [index.ts](file:///Users/yongjunwu/trea/jd/automaton/src/index.ts) 及 [orchestrator.ts](file:///Users/yongjunwu/trea/jd/automaton/src/orchestration/orchestrator.ts)，其底层运作机制如下：
 
 **核心底层机制提取：**
 
-* **生命周期与守护进程 (Lifecycle & Heartbeat)**：由 `heartbeat/daemon.ts` 维持心跳，并抛出唤醒事件（`wake_events`）。核⼼的 [runAgentLoop](automaton/src/agent/loop.ts#90-939) 基于 ReAct 模式管理状态机（`waking -> running -> sleeping -> critical -> dead`）。
-* **编排引擎与任务图 (Orchestration & Task Graph)**：[orchestrator.ts](automaton/src/orchestration/orchestrator.ts) 维护了一个复杂的七步状态机（包括 `classifying, planning, executing, replanning`）。它通过调用 `planGoal` 自动将大目标分解为 [TaskNode](automaton/src/orchestration/task-graph.ts#34-57) 子任务树，并可通过 [trySpawnAgent](automaton/src/orchestration/orchestrator.ts#889-919) 机制消耗 Credit 在 Conway 沙盒内动态生成子代理分配工作。
-* **经济决策与风控引擎 (Policy Engine)**：所有工具调用成本由 [SpendTracker](automaton/src/types.ts#529-537) 追踪。框架在启动时（[index.ts](automaton/src/index.ts)）计算存款，当资金不足时会调用 `bootstrapTopup` 自动将绑定的 USDC 闪兑为运行学分（Credits）。这受到 `DEFAULT_TREASURY_POLICY` 的硬编码限额约束。
-* **Web4 链上交互能力**：在初始化时调用 [client.ts](automaton/src/conway/client.ts) 中的 [registerAutomaton](automaton/src/conway/client.ts#364-435)，将代理的钱包地址及唯一的 `genesisPromptHash` 固化至 EVM 区块链上的 ERC-8004 Registry 智能合约中。
+* **生命周期与守护进程 (Lifecycle & Heartbeat)**：由 `heartbeat/daemon.ts` 维持心跳，并抛出唤醒事件（`wake_events`）。核⼼的 [runAgentLoop](file:///Users/yongjunwu/trea/jd/automaton/src/agent/loop.ts#90-939) 基于 ReAct 模式管理状态机（`waking -> running -> sleeping -> critical -> dead`）。
+* **编排引擎与任务图 (Orchestration & Task Graph)**：[orchestrator.ts](file:///Users/yongjunwu/trea/jd/automaton/src/orchestration/orchestrator.ts) 维护了一个复杂的七步状态机（包括 `classifying, planning, executing, replanning`）。它通过调用 `planGoal` 自动将大目标分解为 [TaskNode](file:///Users/yongjunwu/trea/jd/automaton/src/orchestration/task-graph.ts#34-57) 子任务树，并可通过 [trySpawnAgent](file:///Users/yongjunwu/trea/jd/automaton/src/orchestration/orchestrator.ts#889-919) 机制消耗 Credit 在 Conway 沙盒内动态生成子代理分配工作。
+* **经济决策与风控引擎 (Policy Engine)**：所有工具调用成本由 [SpendTracker](file:///Users/yongjunwu/trea/jd/automaton/src/types.ts#529-537) 追踪。框架在启动时（[index.ts](file:///Users/yongjunwu/trea/jd/automaton/src/index.ts)）计算存款，当资金不足时会调用 `bootstrapTopup` 自动将绑定的 USDC 闪兑为运行学分（Credits）。这受到 `DEFAULT_TREASURY_POLICY` 的硬编码限额约束。
+* **Web4 链上交互能力**：在初始化时调用 [client.ts](file:///Users/yongjunwu/trea/jd/automaton/src/conway/client.ts) 中的 [registerAutomaton](file:///Users/yongjunwu/trea/jd/automaton/src/types.ts#360-370)，将代理的钱包地址及唯一的 `genesisPromptHash` 固化至 EVM 区块链上的 ERC-8004 Registry 智能合约中。
 
 **Automaton 核心架构图：**
 
@@ -64,13 +64,13 @@ graph TD
 
 ### 1.2 TinyClaw 框架架构分析
 
-TinyClaw 是一个轻量级、高并发的多智能体协同与消息路由系统，侧重于异步消息队列与多端聊天通道的整合。通过深度阅读 [queue-processor.ts](tinyclaw/src/queue-processor.ts), [db.ts](tinyclaw/src/lib/db.ts) 及 [routing.ts](tinyclaw/src/lib/routing.ts)，解析其底层设计如下：
+TinyClaw 是一个轻量级、高并发的多智能体协同与消息路由系统，侧重于异步消息队列与多端聊天通道的整合。通过深度阅读 [queue-processor.ts](file:///Users/yongjunwu/trea/jd/tinyclaw/src/queue-processor.ts), [db.ts](file:///Users/yongjunwu/trea/jd/tinyclaw/src/lib/db.ts) 及 [routing.ts](file:///Users/yongjunwu/trea/jd/tinyclaw/src/lib/routing.ts)，解析其底层设计如下：
 
 **核心底层机制提取：**
 
-* **事务强一致性消息队列 (SQLite Message Bus)**：[db.ts](tinyclaw/src/lib/db.ts) 抛弃了传统的文件队列，采用 better-sqlite3 配合 WAL 模式。通过在 [claimNextMessage](tinyclaw/src/lib/db.ts#176-202) 方法中使用 `BEGIN IMMEDIATE` 独占事务锁定，确保高并发情况下同一条消息绝不会被重复提取。
-* **并行协程锁链 (Per-Agent Promise Chains)**：在 [queue-processor.ts](tinyclaw/src/queue-processor.ts) 中维护的 `agentProcessingChains: Map<string, Promise<void>>` 是一种极其优雅的设计。它确保了分配给**同一个 Agent** 的消息绝对串行（避免上下文串台错乱），而分给**不同 Agent** 的消息则完全并行执行，算力最大化。
-* **组内通讯与幽灵状态机 (Team Mentions & Pending Tree)**：[routing.ts](tinyclaw/src/lib/routing.ts) 通过正则提取类似 `[@teammate: message]` 的标签实现 Agent 互相呼叫。内部会通过 [incrementPending](tinyclaw/src/lib/conversation.ts#51-58) 方法挂起主对话的结算期；在有未收到回复的队友时，引擎会自动追加提示词防止主 Agent 反复催促，直到所有对话分支都 [decrementPending](tinyclaw/src/lib/conversation.ts#59-74) 清零才视为任务完成。
+* **事务强一致性消息队列 (SQLite Message Bus)**：[db.ts](file:///Users/yongjunwu/trea/jd/tinyclaw/src/lib/db.ts) 抛弃了传统的文件队列，采用 better-sqlite3 配合 WAL 模式。通过在 [claimNextMessage](file:///Users/yongjunwu/trea/jd/tinyclaw/src/lib/db.ts#176-202) 方法中使用 `BEGIN IMMEDIATE` 独占事务锁定，确保高并发情况下同一条消息绝不会被重复提取。
+* **并行协程锁链 (Per-Agent Promise Chains)**：在 [queue-processor.ts](file:///Users/yongjunwu/trea/jd/tinyclaw/src/queue-processor.ts) 中维护的 `agentProcessingChains: Map<string, Promise<void>>` 是一种极其优雅的设计。它确保了分配给**同一个 Agent** 的消息绝对串行（避免上下文串台错乱），而分给**不同 Agent** 的消息则完全并行执行，算力最大化。
+* **组内通讯与幽灵状态机 (Team Mentions & Pending Tree)**：[routing.ts](file:///Users/yongjunwu/trea/jd/tinyclaw/src/lib/routing.ts) 通过正则提取类似 `[@teammate: message]` 的标签实现 Agent 互相呼叫。内部会通过 [incrementPending](file:///Users/yongjunwu/trea/jd/tinyclaw/src/lib/conversation.ts#51-58) 方法挂起主对话的结算期；在有未收到回复的队友时，引擎会自动追加提示词防止主 Agent 反复催促，直到所有对话分支都 [decrementPending](file:///Users/yongjunwu/trea/jd/tinyclaw/src/lib/conversation.ts#59-74) 清零才视为任务完成。
 * **非侵入式插件钩子 (Plugin Hooks)**：消息在推给大模型前后需要经过 `runIncomingHooks` / `runOutgoingHooks`。这是极为重要的数据清洗拦截器，十分适合用于抓取网页链接转 Markdown 等业务逻辑。
 
 **TinyClaw 核心架构图：**
@@ -160,9 +160,9 @@ graph TD
 * 🏗️ **4. ArchitectAgent (系统架构)**
   * **输入**: 已签约的详尽需求。
   * **处理**: 设计系统骨架（技术栈选择、目录结构）。
-  * **输出/挂载**: 调取 Automaton 深层的 [decomposeGoal](automaton/src/orchestration/task-graph.ts#117-234) 算法，在数据库生成一颗依赖分明的 [TaskNode](automaton/src/orchestration/task-graph.ts#34-57)（子任务树）。
+  * **输出/挂载**: 调取 Automaton 深层的 [decomposeGoal](file:///Users/yongjunwu/trea/jd/automaton/src/orchestration/task-graph.ts#117-234) 算法，在数据库生成一颗依赖分明的 [TaskNode](file:///Users/yongjunwu/trea/jd/automaton/src/orchestration/task-graph.ts#34-57)（子任务树）。
 * 💻 **5. DevAgent (主研开发)**
-  * **输入**: [TaskNode](automaton/src/orchestration/task-graph.ts#34-57) 叶子节点的具体编程任务。
+  * **输入**: [TaskNode](file:///Users/yongjunwu/trea/jd/automaton/src/orchestration/task-graph.ts#34-57) 叶子节点的具体编程任务。
   * **处理**: 根据需求用无头浏览器查资料、跑脚本写代码。
   * **输出/挂载**: **(MVP 阶段)** 暂不申请云端沙盒，直接在机主分配的本地物理目录(`./workspace/contracts/xxx`) 内执行裸机代码，并将生成的源码结构同步回 SQLite 以防丢失。
 * 🔬 **6. QAAgent / DevOps (质检与交互)**
@@ -263,17 +263,17 @@ flowchart TD
 
 ### 2.5 6 大专职 Agent 的深度通信、状态存取与回流自愈机制
 
-整合架构的精髓不仅在于“顺风局”的正向流水线，更在于多体互博时的**深层通信、状态寻址与异常回退（自愈）能力**。结合 TinyClaw 底层的 [queue-processor.ts](tinyclaw/src/queue-processor.ts) 与 Automaton 的 [task-graph.ts](automaton/src/orchestration/task-graph.ts)，以下是系统运转的实质引擎：
+整合架构的精髓不仅在于“顺风局”的正向流水线，更在于多体互博时的**深层通信、状态寻址与异常回退（自愈）能力**。结合 TinyClaw 底层的 [queue-processor.ts](file:///Users/yongjunwu/trea/jd/tinyclaw/src/queue-processor.ts) 与 Automaton 的 [task-graph.ts](file:///Users/yongjunwu/trea/jd/automaton/src/orchestration/task-graph.ts)，以下是系统运转的实质引擎：
 
 #### 💬 1. 跨 Agent 通信协议与状态上下文 (State & Communication)
 
 * **对话树与上下文保存 (Conversation Stack)**：TinyClaw 不基于 WebSocket，而是使用强一致性的 **SQLite 队列 (WAL)**。当一个外部商机（Message）触发时，系统会生成一个全局唯一的 `conversationId`。所有 Agent 的发言和生成的系统日志（如报错代码）都带此 ID 入库 `chats` 和 `messages` 表。
-* **@提及路由调度 (@Mention Routing)**：代码层面的交接犹如人类聊天群。例如当 Scout 获取到订单后，会生成如下回复：`"@sales-agent 发现高价值线索，请分析附件JD。 @accountant-agent 请对客户ID进行背景核验。"`。[queue-processor.ts](tinyclaw/src/queue-processor.ts) 会用正则提取这些 mention，利用 [enqueueInternalMessage](tinyclaw/src/lib/conversation.ts#75-98) 帮它们各自建立一个并发的子对话分支（Pending Branch）。
+* **@提及路由调度 (@Mention Routing)**：代码层面的交接犹如人类聊天群。例如当 Scout 获取到订单后，会生成如下回复：`"@sales-agent 发现高价值线索，请分析附件JD。 @accountant-agent 请对客户ID进行背景核验。"`。[queue-processor.ts](file:///Users/yongjunwu/trea/jd/tinyclaw/src/queue-processor.ts) 会用正则提取这些 mention，利用 [enqueueInternalMessage](file:///Users/yongjunwu/trea/jd/tinyclaw/src/lib/conversation.ts#75-98) 帮它们各自建立一个并发的子对话分支（Pending Branch）。
 * **上下文共享 (Context Visibility)**：下一个接手的 Agent 并不是只看到上一句话，而是通过传入相同的 `conversationId`，连带读取整个事件的历史 Message 栈和临时工作目录 (Workspace) 中的物理产物（如未测通的代码文件）。
 
 #### 🏗️ 2. 架构师的“庖丁解牛”拆包与双轨审核机制 (Architect Decomposition & Review)
 
-* **长文本转 DAG 图 (Task Graph Generation)**：客户的需求文档通常是非结构化的。ArchitectAgent 的核心职责不是写代码，而是调用 Automaton 底层的 [decomposeGoal()](automaton/src/orchestration/task-graph.ts#117-234) 算法。它结合大模型的结构化输出能力，将复杂需求拆解为**有向无环图 (DAG)** 形式的 [TaskNode](automaton/src/orchestration/task-graph.ts#34-57)（包含节点 ID、描述、以及强制必须做完的上一级前置依赖 `dependencies`）。
+* **长文本转 DAG 图 (Task Graph Generation)**：客户的需求文档通常是非结构化的。ArchitectAgent 的核心职责不是写代码，而是调用 Automaton 底层的 [decomposeGoal()](file:///Users/yongjunwu/trea/jd/automaton/src/orchestration/task-graph.ts#117-234) 算法。它结合大模型的结构化输出能力，将复杂需求拆解为**有向无环图 (DAG)** 形式的 [TaskNode](file:///Users/yongjunwu/trea/jd/automaton/src/orchestration/task-graph.ts#34-57)（包含节点 ID、描述、以及强制必须做完的上一级前置依赖 `dependencies`）。
 * **AI 交叉推演 (Peer Review & Dry-Run)**：DAG 图生成后，**严禁**直接下发开发。系统会自动触发一次**静态推演**：由另一套配置了独立 Prompt 的 `QA Agent`，沿着 DAG 路径进行“桌面推演”，检查各节点的出入参能否首尾相接、是否存在逻辑死循环（Cyclic Dependency）、或者漏掉了基础环境搭建节点。如有缺陷，直接丢入消息池打回给 Architect 重构图纸。
 * **调度池下发 (Assign & Execute)**：通过图纸双轨审核后（见下文的人工介入点），DAG 才会被正式写入 Automaton 的专用 SQLite 库。那些没有前置依赖的原子任务（叶子节点），其状态会被激活为 `pending`。此时系统剥离出一个单节点，利用 TinyClaw 的事件总线丢给 `@dev-agent 开始写代码`。
 
@@ -1474,7 +1474,7 @@ flowchart TD
 ### Phase 2: 双脑桥接、并发调度与控制台 (Weeks 3-4)
 **🎯 核心任务：**
 * **跨框架桥接**：开发 `automaton-client` 管道，联通 TinyClaw (前台聊天中枢) 与 Automaton (后台引擎)。
-* **多智能体并发组网**：实现 Scout 获取需求后，基于正则 `@sales-agent` 和 `@accountant-agent` 的 SQLite 并发唤醒队列（[queue-processor.ts](tinyclaw/src/queue-processor.ts)）。
+* **多智能体并发组网**：实现 Scout 获取需求后，基于正则 `@sales-agent` 和 `@accountant-agent` 的 SQLite 并发唤醒队列（[queue-processor.ts](file:///Users/yongjunwu/trea/jd/tinyclaw/src/queue-processor.ts)）。
 * **全局熔断阀 (Token Circuit Breaker)**：在 Automaton 端实现 `GlobalSpendTracker`，强拦所有的 LLM 计费账单。设定美元止损线，一旦单笔订单的累计消耗破红线，强行抛出 `CircuitBreakerError` 锁死 SQLite 队列。
 
 **🔗 外部必要条件 (Prerequisites)：**
@@ -1482,13 +1482,13 @@ flowchart TD
 * 明确系统的底层 DB 必须开启 SQLite 的 `WAL (Write-Ahead Logging)` 模式。
 
 **⚠️ 技术难点与风险 (Risks)：**
-* **并发死锁 (SQLite Locked)**：由于多个 Agent（如 Sales 和 Accountant）会同时被 `@` 并试图竞争写入同一行的 [Conversation](tinyclaw/src/lib/types.ts#79-95) 上下文，极易触发 SQLite 经典的 `SQLITE_BUSY` 死锁。代码需严格实现带有退避算法的写锁 [withConversationLock](tinyclaw/src/lib/conversation.ts#17-50)。
+* **并发死锁 (SQLite Locked)**：由于多个 Agent（如 Sales 和 Accountant）会同时被 `@` 并试图竞争写入同一行的 [Conversation](file:///Users/yongjunwu/trea/jd/tinyclaw/src/lib/types.ts#79-95) 上下文，极易触发 SQLite 经典的 `SQLITE_BUSY` 死锁。代码需严格实现带有退避算法的写锁 [withConversationLock](file:///Users/yongjunwu/trea/jd/tinyclaw/src/lib/conversation.ts#17-50)。
 
 ---
 
 ### Phase 3: 隔离开发、DAG拆解与极简沙盒 (MVP 跑通) (Weeks 5-6)
 **🎯 核心任务：**
-* **架构师拆图 (DAG Decomposition)**：开发 Architect Agent，将杂乱长文本拆分为有依赖关系的 DAG 任务树 ([task-graph.ts](automaton/src/orchestration/task-graph.ts))。
+* **架构师拆图 (DAG Decomposition)**：开发 Architect Agent，将杂乱长文本拆分为有依赖关系的 DAG 任务树 ([task-graph.ts](file:///Users/yongjunwu/trea/jd/automaton/src/orchestration/task-graph.ts))。
 * **双轨审核 (Dry-Run & HITL)**：落实系统的两道红线：AI 自动完成图纸无环推演；向 Telegram/Discord 发送开工预算批准申请，等待机主授权。
 * **本地沙盒隔离执行 (MVP Executor)**：激活 `DevAgent` 和 `QAAgent`。用 `dockerode` 启动一个**断网且限制资源 (0.5 CPU, 512MB)** 的 Node.js/Python 极简容器镜像。打通物理机 `/workspace` 与容器内的卷挂载目录。QA 跑完 `npm test` 失败后能读取 `stderr` 并自动 `@dev-agent` 回调。
 
