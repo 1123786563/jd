@@ -1,9 +1,9 @@
 /**
- * Automaton SIWE Provisioning
+ * Automaton SIWE 配置
  *
- * Uses the automaton's wallet to authenticate via Sign-In With Ethereum (SIWE)
- * and create an API key for Conway API access.
- * Adapted from conway-mcp/src/cli/provision.ts
+ * 使用 automaton 的钱包通过以太坊登录（SIWE）进行身份验证
+ * 并为 Conway API 访问创建 API 密钥
+ * 改编自 conway-mcp/src/cli/provision.ts
  */
 
 import fs from "fs";
@@ -18,7 +18,7 @@ const httpClient = new ResilientHttpClient();
 const DEFAULT_API_URL = "https://api.conway.tech";
 
 /**
- * Load API key from ~/.automaton/config.json if it exists.
+ * 如果存在，从 ~/.automaton/config.json 加载 API 密钥
  */
 export function loadApiKeyFromConfig(): string | null {
   const configPath = path.join(getAutomatonDir(), "config.json");
@@ -32,7 +32,7 @@ export function loadApiKeyFromConfig(): string | null {
 }
 
 /**
- * Save API key and wallet address to ~/.automaton/config.json
+ * 将 API 密钥和钱包地址保存到 ~/.automaton/config.json
  */
 function saveConfig(apiKey: string, walletAddress: string): void {
   const dir = getAutomatonDir();
@@ -51,40 +51,40 @@ function saveConfig(apiKey: string, walletAddress: string): void {
 }
 
 /**
- * Run the full SIWE provisioning flow:
- * 1. Load wallet
- * 2. Get nonce from Conway API
- * 3. Sign SIWE message
- * 4. Verify signature -> get JWT
- * 5. Create API key
- * 6. Save to config.json
+ * 运行完整的 SIWE 配置流程：
+ * 1. 加载钱包
+ * 2. 从 Conway API 获取 nonce
+ * 3. 签署 SIWE 消息
+ * 4. 验证签名 -> 获取 JWT
+ * 5. 创建 API 密钥
+ * 6. 保存到 config.json
  */
 export async function provision(
   apiUrl?: string,
 ): Promise<ProvisionResult> {
   const url = apiUrl || process.env.CONWAY_API_URL || DEFAULT_API_URL;
 
-  // 1. Load wallet
+  // 1. 加载钱包
   const { account } = await getWallet();
   const address = account.address;
 
-  // 2. Get nonce
+  // 2. 获取 nonce
   const nonceResp = await httpClient.request(`${url}/v1/auth/nonce`, {
     method: "POST",
   });
   if (!nonceResp.ok) {
     throw new Error(
-      `Failed to get nonce: ${nonceResp.status} ${await nonceResp.text()}`,
+      `获取 nonce 失败：${nonceResp.status} ${await nonceResp.text()}`,
     );
   }
   const { nonce } = (await nonceResp.json()) as { nonce: string };
 
-  // 3. Construct and sign SIWE message
+  // 3. 构建并签署 SIWE 消息
   const siweMessage = new SiweMessage({
     domain: "conway.tech",
     address,
     statement:
-      "Sign in to Conway as an Automaton to provision an API key.",
+      "以 Automaton 身份登录 Conway 以配置 API 密钥。",
     uri: `${url}/v1/auth/verify`,
     version: "1",
     chainId: 8453, // Base
@@ -95,7 +95,7 @@ export async function provision(
   const messageString = siweMessage.prepareMessage();
   const signature = await account.signMessage({ message: messageString });
 
-  // 4. Verify signature -> get JWT
+  // 4. 验证签名 -> 获取 JWT
   const verifyResp = await httpClient.request(`${url}/v1/auth/verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -104,7 +104,7 @@ export async function provision(
 
   if (!verifyResp.ok) {
     throw new Error(
-      `SIWE verification failed: ${verifyResp.status} ${await verifyResp.text()}`,
+      `SIWE 验证失败：${verifyResp.status} ${await verifyResp.text()}`,
     );
   }
 
@@ -112,7 +112,7 @@ export async function provision(
     access_token: string;
   };
 
-  // 5. Create API key
+  // 5. 创建 API 密钥
   const keyResp = await httpClient.request(`${url}/v1/auth/api-keys`, {
     method: "POST",
     headers: {
@@ -124,7 +124,7 @@ export async function provision(
 
   if (!keyResp.ok) {
     throw new Error(
-      `Failed to create API key: ${keyResp.status} ${await keyResp.text()}`,
+      `创建 API 密钥失败：${keyResp.status} ${await keyResp.text()}`,
     );
   }
 
@@ -133,15 +133,15 @@ export async function provision(
     key_prefix: string;
   };
 
-  // 6. Save to config
+  // 6. 保存到配置
   saveConfig(key, address);
 
   return { apiKey: key, walletAddress: address, keyPrefix: key_prefix };
 }
 
 /**
- * Register the automaton's creator as its parent with Conway.
- * This allows the creator to see automaton logs and inference calls.
+ * 在 Conway 注册 automaton 的创建者作为其父节点
+ * 这允许创建者查看 automaton 日志和推理调用
  */
 export async function registerParent(
   creatorAddress: string,
@@ -150,7 +150,7 @@ export async function registerParent(
   const url = apiUrl || process.env.CONWAY_API_URL || DEFAULT_API_URL;
   const apiKey = loadApiKeyFromConfig();
   if (!apiKey) {
-    throw new Error("Must provision API key before registering parent");
+    throw new Error("必须在注册父节点之前配置 API 密钥");
   }
 
   const resp = await httpClient.request(`${url}/v1/automaton/register-parent`, {
@@ -162,10 +162,10 @@ export async function registerParent(
     body: JSON.stringify({ creatorAddress }),
   });
 
-  // Endpoint may not exist yet -- fail gracefully
+  // 端点可能尚未存在 — 优雅地失败
   if (!resp.ok && resp.status !== 404) {
     throw new Error(
-      `Failed to register parent: ${resp.status} ${await resp.text()}`,
+      `注册父节点失败：${resp.status} ${await resp.text()}`,
     );
   }
 }

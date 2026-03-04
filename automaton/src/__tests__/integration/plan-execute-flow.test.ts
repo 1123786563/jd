@@ -198,8 +198,8 @@ describe("integration/plan-execute-flow", () => {
       const orc = makeOrchestrator(db, mocks);
       const result = await orc.tick();
 
-      // idle picks up the goal, classifying runs the inference in the same tick
-      // and since estimatedSteps > 3, moves to "planning"
+      // idle 选取目标，classifying 在同一 tick 中运行推理
+      // 并且由于 estimatedSteps > 3，移动到 "planning"
       expect(["classifying", "planning"]).toContain(result.phase);
     });
 
@@ -232,7 +232,7 @@ describe("integration/plan-execute-flow", () => {
 
       expect(result.phase).toBe("plan_review");
 
-      // Tasks should be decomposed into task_graph
+      // 任务应该被分解到 task_graph
       const tasks = getTasksForGoal(db, goalId);
       expect(tasks.length).toBeGreaterThan(0);
     });
@@ -263,7 +263,7 @@ describe("integration/plan-execute-flow", () => {
 
       setState(db, { phase: "executing", goalId, replanCount: 0, failedTaskId: null, failedError: null });
 
-      // Provide an idle agent so task assignment succeeds
+      // 提供一个空闲代理以便任务分配成功
       mocks.agentTracker.getIdle.mockReturnValue([
         { address: "0xchild", name: "Worker", role: "generalist", status: "healthy" },
       ]);
@@ -366,7 +366,7 @@ describe("integration/plan-execute-flow", () => {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(taskId, goalId, "Task 1", "Do the thing", "pending", "generalist", 1, "[]", 0, 0, new Date().toISOString());
 
-      // replanCount already at max
+      // replanCount 已经达到最大值
       setState(db, { phase: "executing", goalId, replanCount: 3, failedTaskId: null, failedError: null });
 
       mocks.agentTracker.getIdle.mockReturnValue([
@@ -432,7 +432,7 @@ describe("integration/plan-execute-flow", () => {
       ).run(ulid(), goalId, "Task 1", "Do the thing", "pending", "generalist", 1, "[]", new Date().toISOString());
 
       setState(db, { phase: "plan_review", goalId, replanCount: 0, failedTaskId: null, failedError: null });
-      // Deliberately do NOT store any plan in KV
+      // 故意不在 KV 中存储任何计划
 
       const orc = makeOrchestrator(db, mocks);
       const result = await orc.tick();
@@ -478,7 +478,7 @@ describe("integration/plan-execute-flow", () => {
       const orc = makeOrchestrator(db, mocks);
       const result = await orc.tick();
 
-      // auto mode approves when cost is below autoBudgetThreshold (5000)
+      // 自动模式在成本低于 autoBudgetThreshold (5000) 时批准
       expect(result.phase).toBe("executing");
     });
   });

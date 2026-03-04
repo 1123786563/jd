@@ -98,7 +98,7 @@ export class Orchestrator {
     inference: UnifiedInferenceClient;
     identity: AutomatonIdentity;
     config: any;
-    /** Check if a worker agent is still alive. Used to recover stale tasks. */
+    /** 检查工作器代理是否仍然存活。用于恢复过时的任务。 */
     isWorkerAlive?: (address: string) => boolean;
   }) {}
 
@@ -160,7 +160,7 @@ export class Orchestrator {
       }
     } catch (error) {
       const err = normalizeError(error);
-      logger.error("Orchestrator tick failed", err, {
+      logger.error("协调器周期执行失败", err, {
         phase: state.phase,
         goalId: state.goalId,
       });
@@ -225,11 +225,10 @@ export class Orchestrator {
       };
     }
 
-    // Fallback: assign to the parent agent itself (self-execution mode).
-    // This handles local dev environments where spawning child sandboxes
-    // is not available, and ensures goals still make progress.
+    // 后备方案：分配给父代理自身（自执行模式）。
+    // 这适用于无法生成子沙箱的本地开发环境，并确保目标仍能取得进展。
     if (this.params.identity?.address) {
-      logger.warn("No child agents available, self-assigning task to parent", {
+      logger.warn("没有可用的子代理，将任务自分配给父代理", {
         taskId: task.id,
         role: requestedRole,
       });
@@ -254,7 +253,7 @@ export class Orchestrator {
 
     const result = await this.params.funding.fundChild(addr, amountCents);
     if (!result.success) {
-      throw new Error(`Funding transfer failed for ${addr}`);
+      throw new Error(`为 ${addr} 资金转账失败`);
     }
   }
 
@@ -402,13 +401,13 @@ export class Orchestrator {
       );
     } catch (error) {
       const err = normalizeError(error);
-      logger.warn("Planner inference failed, falling back to single-task plan", {
+      logger.warn("规划器推理失败，回退到单任务计划", {
         goalId: goal.id,
         error: err.message,
       });
       output = {
-        analysis: `Planner fallback: ${err.message}`,
-        strategy: "Execute goal as a single generalist task",
+        analysis: `规划器回退: ${err.message}`,
+        strategy: "作为单个通才任务执行目标",
         customRoles: [],
         tasks: [{
           title: goal.title,
@@ -419,15 +418,15 @@ export class Orchestrator {
           priority: 50,
           timeoutMs: 300_000,
         }],
-        risks: ["Planner unavailable — executing without decomposition"],
+        risks: ["规划器不可用 — 在不分解的情况下执行"],
         estimatedTotalCostCents: 200,
         estimatedTimeMinutes: 30,
       };
     }
 
     if (output.tasks.length === 0) {
-      // Planner returned valid JSON but empty tasks — use fallback single task
-      logger.warn("Planner returned no tasks, falling back to single-task plan", { goalId: goal.id });
+      // 规划器返回了有效的 JSON 但任务为空 — 使用后备单任务
+      logger.warn("规划器未返回任务，回退到单任务计划", { goalId: goal.id });
       output = {
         ...output,
         tasks: [{
@@ -516,15 +515,15 @@ export class Orchestrator {
       };
     }
 
-    // Recover stale tasks: workers that died (process restart, sandbox crash)
-    // leave tasks stuck in 'assigned' forever. Detect and reset them.
+    // 恢复过时任务：已死亡的工作器（进程重启、沙箱崩溃）
+    // 会导致任务永远卡在 'assigned' 状态。检测并重置它们。
     if (this.params.isWorkerAlive) {
       const assignedTasks = getTasksByGoal(this.params.db, goal.id)
         .filter((t) => t.status === "assigned" && t.assignedTo);
       for (const task of assignedTasks) {
         const alive = this.params.isWorkerAlive(task.assignedTo!);
         if (!alive) {
-          logger.warn("Recovering stale task from dead worker", {
+          logger.warn("从死亡的工作器恢复过时任务", {
             taskId: task.id,
             worker: task.assignedTo,
           });
@@ -546,9 +545,8 @@ export class Orchestrator {
         const isLocalWorker = assignment.agentAddress.startsWith("local://");
         const isSelfAssigned = assignment.agentAddress === this.params.identity?.address;
 
-        // Local workers receive their task directly at spawn time and run
-        // their own inference loop. Self-assigned tasks are handled by the
-        // parent agent via its normal turn. Neither needs funding or messaging.
+        // 本地工作器在生成时直接接收任务并运行自己的推理循环。
+        // 自分配的任务由父代理通过其正常轮次处理。两者都不需要资金或消息传递。
         if (!isLocalWorker && !isSelfAssigned) {
           await this.fundAgentForTask(assignment.agentAddress, task);
 
@@ -577,10 +575,10 @@ export class Orchestrator {
       } catch (error) {
         const err = normalizeError(error);
 
-        // If no agent is available, skip this task — it stays pending and will
-        // be retried on the next tick when an agent becomes available or is spawned.
+        // 如果没有可用的代理，跳过此任务 — 它保持待处理状态，
+        // 并将在代理可用或生成时的下一个周期中重试。
         if (err.message.startsWith("No available agent")) {
-          logger.warn("No agent available for task, will retry next tick", {
+          logger.warn("没有可用的代理处理任务，将在下一个周期重试", {
             taskId: task.id,
             role: task.agentRole,
           });
@@ -649,7 +647,7 @@ export class Orchestrator {
         ...state,
         phase: state.replanCount < maxReplans ? "replanning" : "failed",
         failedTaskId: state.failedTaskId ?? this.findFirstFailedTaskId(goal.id),
-        failedError: state.failedError ?? "Task execution failed",
+        failedError: state.failedError ?? "任务执行失败",
       };
     }
 
@@ -694,13 +692,13 @@ export class Orchestrator {
       );
     } catch (error) {
       const err = normalizeError(error);
-      logger.warn("Replanner inference failed, falling back to single-task plan", {
+      logger.warn("重新规划器推理失败，回退到单任务计划", {
         goalId: goal.id,
         error: err.message,
       });
       output = {
-        analysis: `Replanner fallback: ${err.message}`,
-        strategy: "Re-execute goal as a single generalist task",
+        analysis: `重新规划器回退: ${err.message}`,
+        strategy: "作为单个通才任务重新执行目标",
         customRoles: [],
         tasks: [{
           title: goal.title,
@@ -711,14 +709,14 @@ export class Orchestrator {
           priority: 50,
           timeoutMs: 300_000,
         }],
-        risks: ["Replanner unavailable — re-executing without decomposition"],
+        risks: ["重新规划器不可用 — 在不分解的情况下重新执行"],
         estimatedTotalCostCents: 200,
         estimatedTimeMinutes: 30,
       };
     }
 
     if (output.tasks.length === 0) {
-      logger.warn("Replanner returned no tasks, falling back to single-task plan", { goalId: goal.id });
+      logger.warn("重新规划器未返回任务，回退到单任务计划", { goalId: goal.id });
       output = {
         ...output,
         tasks: [{
@@ -768,7 +766,7 @@ export class Orchestrator {
   }
 
   private handleFailedPhase(state: OrchestratorState): OrchestratorState {
-    logger.warn("Goal execution failed", {
+    logger.warn("目标执行失败", {
       goalId: state.goalId,
       error: state.failedError,
       replanCount: state.replanCount,
@@ -780,8 +778,8 @@ export class Orchestrator {
 
     updateGoalStatus(this.params.db, state.goalId, "failed");
 
-    // Reset to idle so the orchestrator can pick up other active goals
-    // instead of being stuck in "failed" forever.
+    // 重置为空闲状态，以便协调器可以接手其他活动目标
+    // 而不是永远停留在"失败"状态。
     return { ...DEFAULT_STATE };
   }
 
@@ -794,14 +792,14 @@ export class Orchestrator {
           {
             role: "system",
             content: [
-              "Classify execution complexity.",
-              "Return JSON with keys: estimatedSteps (number), reason (string), stepOutline (array of strings).",
-              "No markdown.",
+              "分类执行复杂度。",
+              "返回 JSON，包含键: estimatedSteps（数字）、reason（字符串）、stepOutline（字符串数组）。",
+              "不要使用 markdown。",
             ].join(" "),
           },
           {
             role: "user",
-            content: `Goal title: ${goal.title}\nGoal description: ${goal.description}`,
+            content: `目标标题: ${goal.title}\n目标描述: ${goal.description}`,
           },
         ],
       });
@@ -927,7 +925,7 @@ export class Orchestrator {
         await this.params.funding.recallCredits(child.address);
       } catch (error) {
         const err = normalizeError(error);
-        logger.warn("Failed to recall credits", {
+        logger.warn("召回积分失败", {
           address: child.address,
           error: err.message,
         });

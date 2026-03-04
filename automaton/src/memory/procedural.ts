@@ -1,8 +1,8 @@
 /**
- * Procedural Memory Manager
+ * 程序记忆管理器
  *
- * Stores learned procedures (step-by-step instructions) with success/failure tracking.
- * Upserts on procedure name.
+ * 存储学习的程序（分步说明）并跟踪成功/失败。
+ * 基于程序名称进行 upsert。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -17,8 +17,8 @@ export class ProceduralMemoryManager {
   constructor(private db: Database) {}
 
   /**
-   * Save a procedure. Upserts on name.
-   * Returns the ULID id.
+   * 保存程序。基于名称进行 upsert（更新或插入）。
+   * 返回 ULID id。
    */
   save(entry: {
     name: string;
@@ -41,13 +41,13 @@ export class ProceduralMemoryManager {
         JSON.stringify(entry.steps),
       );
     } catch (error) {
-      logger.error("Failed to save", error instanceof Error ? error : undefined);
+      logger.error("保存失败", error instanceof Error ? error : undefined);
     }
     return id;
   }
 
   /**
-   * Get a procedure by name.
+   * 按名称获取程序（返回程序详情和步骤）。
    */
   get(name: string): ProceduralMemoryEntry | undefined {
     try {
@@ -56,13 +56,13 @@ export class ProceduralMemoryManager {
       ).get(name) as any | undefined;
       return row ? deserializeProcedural(row) : undefined;
     } catch (error) {
-      logger.error("Failed to get", error instanceof Error ? error : undefined);
+      logger.error("获取失败", error instanceof Error ? error : undefined);
       return undefined;
     }
   }
 
   /**
-   * Record a success or failure outcome for a named procedure.
+   * 记录命名程序的成功或失败结果（用于统计程序执行效果）。
    */
   recordOutcome(name: string, success: boolean): void {
     try {
@@ -71,17 +71,17 @@ export class ProceduralMemoryManager {
         `UPDATE procedural_memory SET ${column} = ${column} + 1, last_used_at = datetime('now'), updated_at = datetime('now') WHERE name = ?`,
       ).run(name);
     } catch (error) {
-      logger.error("Failed to record outcome", error instanceof Error ? error : undefined);
+      logger.error("记录结果失败", error instanceof Error ? error : undefined);
     }
   }
 
   /**
-   * Search procedures by name or description.
+   * 按名称或描述搜索程序（支持模糊匹配）。
    */
   search(query: string): ProceduralMemoryEntry[] {
     try {
-      // Escape SQL LIKE wildcards so literal '%' and '_' in the query
-      // don't match arbitrary characters.
+      // 转义 SQL LIKE 通配符，使查询中的字面 '%' 和 '_'
+      // 不匹配任意字符。
       const escaped = query.replace(/[%_]/g, (ch) => `\\${ch}`);
       const rows = this.db.prepare(
         `SELECT * FROM procedural_memory
@@ -90,19 +90,19 @@ export class ProceduralMemoryManager {
       ).all(`%${escaped}%`, `%${escaped}%`) as any[];
       return rows.map(deserializeProcedural);
     } catch (error) {
-      logger.error("Failed to search", error instanceof Error ? error : undefined);
+      logger.error("搜索失败", error instanceof Error ? error : undefined);
       return [];
     }
   }
 
   /**
-   * Delete a procedure by name.
+   * 按名称删除程序（从存储中移除）。
    */
   delete(name: string): void {
     try {
       this.db.prepare("DELETE FROM procedural_memory WHERE name = ?").run(name);
     } catch (error) {
-      logger.error("Failed to delete", error instanceof Error ? error : undefined);
+      logger.error("删除失败", error instanceof Error ? error : undefined);
     }
   }
 }
@@ -112,7 +112,7 @@ function deserializeProcedural(row: any): ProceduralMemoryEntry {
   try {
     steps = JSON.parse(row.steps || "[]");
   } catch {
-    logger.error("Failed to parse steps for: " + row.name);
+    logger.error("解析步骤 JSON 失败：" + row.name);
   }
   return {
     id: row.id,

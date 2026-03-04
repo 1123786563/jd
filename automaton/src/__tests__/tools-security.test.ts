@@ -1,9 +1,9 @@
 /**
- * Tool Security Tests (Sub-phase 4.2)
+ * 工具安全测试（子阶段 4.2）
  *
- * Tests that all built-in tools have correct risk levels,
- * write_file and edit_own_file share the same protection logic,
- * and read_file blocks sensitive file reads.
+ * 测试所有内置工具是否具有正确的风险级别，
+ * write_file 和 edit_own_file 共享相同的保护逻辑，
+ * 并且 read_file 阻止敏感文件读取。
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
@@ -17,7 +17,7 @@ import {
 } from "./mocks.js";
 import type { AutomatonDatabase, ToolContext, AutomatonTool, RiskLevel } from "../types.js";
 
-// Mock erc8004.js to avoid ABI parse error
+// 模拟 erc8004.js 以避免 ABI 解析错误
 vi.mock("../registry/erc8004.js", () => ({
   queryAgent: vi.fn(),
   getTotalAgents: vi.fn().mockResolvedValue(0),
@@ -25,7 +25,7 @@ vi.mock("../registry/erc8004.js", () => ({
   leaveFeedback: vi.fn(),
 }));
 
-// ─── Risk Level Classification ──────────────────────────────────
+// ─── 风险级别分类 ──────────────────────────────────
 
 describe("Tool Risk Level Classification", () => {
   let tools: AutomatonTool[];
@@ -34,7 +34,7 @@ describe("Tool Risk Level Classification", () => {
     tools = createBuiltinTools("test-sandbox-id");
   });
 
-  // Expected risk classifications
+  // 预期的风险分类
   const EXPECTED_RISK_LEVELS: Record<string, RiskLevel> = {
     // Safe tools (read-only, no side effects)
     check_credits: "safe",
@@ -93,7 +93,7 @@ describe("Tool Risk Level Classification", () => {
     distress_signal: "dangerous",
   };
 
-  it("classifies all expected safe tools correctly", () => {
+  it("正确分类所有预期的安全工具", () => {
     for (const [name, expectedLevel] of Object.entries(EXPECTED_RISK_LEVELS)) {
       if (expectedLevel !== "safe") continue;
       const tool = tools.find((t) => t.name === name);
@@ -103,7 +103,7 @@ describe("Tool Risk Level Classification", () => {
     }
   });
 
-  it("classifies all expected caution tools correctly", () => {
+  it("正确分类所有预期的谨慎工具", () => {
     for (const [name, expectedLevel] of Object.entries(EXPECTED_RISK_LEVELS)) {
       if (expectedLevel !== "caution") continue;
       const tool = tools.find((t) => t.name === name);
@@ -113,7 +113,7 @@ describe("Tool Risk Level Classification", () => {
     }
   });
 
-  it("classifies all expected dangerous tools correctly", () => {
+  it("正确分类所有预期的危险工具", () => {
     for (const [name, expectedLevel] of Object.entries(EXPECTED_RISK_LEVELS)) {
       if (expectedLevel !== "dangerous") continue;
       const tool = tools.find((t) => t.name === name);
@@ -123,27 +123,27 @@ describe("Tool Risk Level Classification", () => {
     }
   });
 
-  it("has no 'forbidden' risk level tools in builtins", () => {
+  it("内置工具中没有 forbidden 风险级别的工具", () => {
     for (const tool of tools) {
       expect(tool.riskLevel, `${tool.name} should not be forbidden`).not.toBe("forbidden");
     }
   });
 
-  it("has a valid riskLevel for every builtin tool", () => {
+  it("每个内置工具都有有效的 riskLevel", () => {
     const validLevels: RiskLevel[] = ["safe", "caution", "dangerous", "forbidden"];
     for (const tool of tools) {
       expect(validLevels, `${tool.name} has invalid riskLevel: ${tool.riskLevel}`).toContain(tool.riskLevel);
     }
   });
 
-  it("has no duplicate tool names", () => {
+  it("没有重复的工具名称", () => {
     const names = tools.map((t) => t.name);
     const unique = new Set(names);
     expect(names.length).toBe(unique.size);
   });
 });
 
-// ─── write_file / edit_own_file Parity ──────────────────────────
+// ─── write_file / edit_own_file 一致性 ──────────────────────────
 
 describe("write_file / edit_own_file protection parity", () => {
   let tools: AutomatonTool[];
@@ -180,7 +180,7 @@ describe("write_file / edit_own_file protection parity", () => {
     "injection-defense.d.ts",
   ];
 
-  it("write_file blocks all protected files", async () => {
+  it("write_file 阻止所有受保护的文件", async () => {
     const writeTool = tools.find((t) => t.name === "write_file")!;
     expect(writeTool).toBeDefined();
 
@@ -193,7 +193,7 @@ describe("write_file / edit_own_file protection parity", () => {
     }
   });
 
-  it("write_file allows non-protected files", async () => {
+  it("write_file 允许非受保护的文件", async () => {
     const writeTool = tools.find((t) => t.name === "write_file")!;
     const result = await writeTool.execute(
       { path: "/home/automaton/test.txt", content: "safe content" },
@@ -203,7 +203,7 @@ describe("write_file / edit_own_file protection parity", () => {
   });
 });
 
-// ─── read_file Sensitive File Blocking ──────────────────────────
+// ─── read_file 敏感文件阻止 ──────────────────────────
 
 describe("read_file sensitive file blocking", () => {
   let tools: AutomatonTool[];
@@ -228,43 +228,43 @@ describe("read_file sensitive file blocking", () => {
     db.close();
   });
 
-  it("blocks reading wallet.json", async () => {
+  it("阻止读取 wallet.json", async () => {
     const readTool = tools.find((t) => t.name === "read_file")!;
     const result = await readTool.execute({ path: "/home/automaton/.automaton/wallet.json" }, ctx);
     expect(result).toContain("Blocked");
   });
 
-  it("blocks reading .env", async () => {
+  it("阻止读取 .env", async () => {
     const readTool = tools.find((t) => t.name === "read_file")!;
     const result = await readTool.execute({ path: "/home/automaton/.env" }, ctx);
     expect(result).toContain("Blocked");
   });
 
-  it("blocks reading automaton.json", async () => {
+  it("阻止读取 automaton.json", async () => {
     const readTool = tools.find((t) => t.name === "read_file")!;
     const result = await readTool.execute({ path: "/home/automaton/.automaton/automaton.json" }, ctx);
     expect(result).toContain("Blocked");
   });
 
-  it("blocks reading .key files", async () => {
+  it("阻止读取 .key 文件", async () => {
     const readTool = tools.find((t) => t.name === "read_file")!;
     const result = await readTool.execute({ path: "/home/automaton/server.key" }, ctx);
     expect(result).toContain("Blocked");
   });
 
-  it("blocks reading .pem files", async () => {
+  it("阻止读取 .pem 文件", async () => {
     const readTool = tools.find((t) => t.name === "read_file")!;
     const result = await readTool.execute({ path: "/home/automaton/cert.pem" }, ctx);
     expect(result).toContain("Blocked");
   });
 
-  it("blocks reading private-key* files", async () => {
+  it("阻止读取 private-key* 文件", async () => {
     const readTool = tools.find((t) => t.name === "read_file")!;
     const result = await readTool.execute({ path: "/home/automaton/private-key-hex.txt" }, ctx);
     expect(result).toContain("Blocked");
   });
 
-  it("allows reading safe files", async () => {
+  it("允许读取安全文件", async () => {
     const readTool = tools.find((t) => t.name === "read_file")!;
     conway.files["/home/automaton/README.md"] = "# Hello";
     const result = await readTool.execute({ path: "/home/automaton/README.md" }, ctx);
@@ -272,7 +272,7 @@ describe("read_file sensitive file blocking", () => {
   });
 });
 
-// ─── read_file Fallback Shell Injection Prevention ───────────────
+// ─── read_file 后备 Shell 注入防护 ───────────────
 
 describe("read_file fallback shell escaping", () => {
   let tools: AutomatonTool[];
@@ -297,7 +297,7 @@ describe("read_file fallback shell escaping", () => {
     db.close();
   });
 
-  it("escapes shell metacharacters in fallback cat command", async () => {
+  it("在后备 cat 命令中转义 shell 元字符", async () => {
     const readTool = tools.find((t) => t.name === "read_file")!;
     // Make readFile throw so the fallback exec(cat) path is triggered
     vi.spyOn(conway, "readFile").mockRejectedValue(new Error("API broken"));
@@ -309,7 +309,7 @@ describe("read_file fallback shell escaping", () => {
     expect(conway.execCalls[0].command).toBe("cat '/home/user/my file.txt'");
   });
 
-  it("prevents command injection via semicolons in fallback path", async () => {
+  it("防止通过后备路径中的分号进行命令注入", async () => {
     const readTool = tools.find((t) => t.name === "read_file")!;
     vi.spyOn(conway, "readFile").mockRejectedValue(new Error("API broken"));
 
@@ -320,7 +320,7 @@ describe("read_file fallback shell escaping", () => {
     expect(conway.execCalls[0].command).toBe("cat 'foo; cat /etc/passwd'");
   });
 
-  it("escapes single quotes in file path in fallback", async () => {
+  it("在后备中转义文件路径中的单引号", async () => {
     const readTool = tools.find((t) => t.name === "read_file")!;
     vi.spyOn(conway, "readFile").mockRejectedValue(new Error("API broken"));
 
@@ -331,7 +331,7 @@ describe("read_file fallback shell escaping", () => {
     expect(conway.execCalls[0].command).toBe("cat 'it'\\''s a file.txt'");
   });
 
-  it("prevents subshell injection via $() in fallback path", async () => {
+  it("防止通过后备路径中的 $() 进行子 shell 注入", async () => {
     const readTool = tools.find((t) => t.name === "read_file")!;
     vi.spyOn(conway, "readFile").mockRejectedValue(new Error("API broken"));
 
@@ -343,7 +343,7 @@ describe("read_file fallback shell escaping", () => {
   });
 });
 
-// ─── exec Tool Self-Harm Patterns ───────────────────────────────
+// ─── exec 工具自害模式 ───────────────────────────────
 
 describe("exec tool forbidden command patterns", () => {
   let tools: AutomatonTool[];
@@ -404,7 +404,7 @@ describe("exec tool forbidden command patterns", () => {
     });
   }
 
-  it("blocks deleting own sandbox", async () => {
+  it("阻止删除自己的沙箱", async () => {
     const execTool = tools.find((t) => t.name === "exec")!;
     const result = await execTool.execute(
       { command: `sandbox_delete ${ctx.identity.sandboxId}` },
@@ -413,7 +413,7 @@ describe("exec tool forbidden command patterns", () => {
     expect(result).toContain("Blocked");
   });
 
-  it("allows safe commands", async () => {
+  it("允许安全命令", async () => {
     const execTool = tools.find((t) => t.name === "exec")!;
     const result = await execTool.execute({ command: "echo hello" }, ctx);
     expect(result).toContain("stdout: ok");
@@ -421,7 +421,7 @@ describe("exec tool forbidden command patterns", () => {
   });
 });
 
-// ─── delete_sandbox Self-Preservation ───────────────────────────
+// ─── delete_sandbox 自我保存 ───────────────────────────
 
 describe("delete_sandbox self-preservation", () => {
   let tools: AutomatonTool[];
@@ -444,7 +444,7 @@ describe("delete_sandbox self-preservation", () => {
     db.close();
   });
 
-  it("reports sandbox deletion is disabled for own sandbox", async () => {
+  it("报告沙箱删除对自己的沙箱已禁用", async () => {
     const deleteTool = tools.find((t) => t.name === "delete_sandbox")!;
     const result = await deleteTool.execute(
       { sandbox_id: ctx.identity.sandboxId },
@@ -453,7 +453,7 @@ describe("delete_sandbox self-preservation", () => {
     expect(result).toContain("disabled");
   });
 
-  it("reports sandbox deletion is disabled for other sandboxes", async () => {
+  it("报告沙箱删除对其他沙箱已禁用", async () => {
     const deleteTool = tools.find((t) => t.name === "delete_sandbox")!;
     const result = await deleteTool.execute(
       { sandbox_id: "different-sandbox-id" },
@@ -463,7 +463,7 @@ describe("delete_sandbox self-preservation", () => {
   });
 });
 
-// ─── transfer_credits Self-Preservation ─────────────────────────
+// ─── transfer_credits 自我保存 ─────────────────────────
 
 describe("transfer_credits self-preservation", () => {
   let tools: AutomatonTool[];
@@ -489,7 +489,7 @@ describe("transfer_credits self-preservation", () => {
     db.close();
   });
 
-  it("blocks transfer of more than half balance", async () => {
+  it("阻止超过一半余额的转账", async () => {
     const transferTool = tools.find((t) => t.name === "transfer_credits")!;
     const result = await transferTool.execute(
       { to_address: "0xrecipient", amount_cents: 6000 },
@@ -499,7 +499,7 @@ describe("transfer_credits self-preservation", () => {
     expect(result).toContain("Self-preservation");
   });
 
-  it("allows transfer of less than half balance", async () => {
+  it("允许少于一半余额的转账", async () => {
     const transferTool = tools.find((t) => t.name === "transfer_credits")!;
     const result = await transferTool.execute(
       { to_address: "0xrecipient", amount_cents: 4000 },
@@ -508,7 +508,7 @@ describe("transfer_credits self-preservation", () => {
     expect(result).toContain("transfer submitted");
   });
 
-  it("blocks negative amount", async () => {
+  it("阻止负数金额", async () => {
     const transferTool = tools.find((t) => t.name === "transfer_credits")!;
     const result = await transferTool.execute(
       { to_address: "0xrecipient", amount_cents: -500 },
@@ -518,7 +518,7 @@ describe("transfer_credits self-preservation", () => {
     expect(result).toContain("positive number");
   });
 
-  it("blocks zero amount", async () => {
+  it("阻止零金额", async () => {
     const transferTool = tools.find((t) => t.name === "transfer_credits")!;
     const result = await transferTool.execute(
       { to_address: "0xrecipient", amount_cents: 0 },
@@ -529,7 +529,7 @@ describe("transfer_credits self-preservation", () => {
   });
 });
 
-// ─── Tool Category Checks ───────────────────────────────────────
+// ─── 工具类别检查 ───────────────────────────────────────
 
 describe("Tool category assignments", () => {
   let tools: AutomatonTool[];
@@ -538,7 +538,7 @@ describe("Tool category assignments", () => {
     tools = createBuiltinTools("test-sandbox-id");
   });
 
-  it("all tools have a category", () => {
+  it("所有工具都有类别", () => {
     for (const tool of tools) {
       expect(tool.category, `${tool.name} missing category`).toBeDefined();
       expect(typeof tool.category).toBe("string");
@@ -546,14 +546,14 @@ describe("Tool category assignments", () => {
     }
   });
 
-  it("all tools have parameters", () => {
+  it("所有工具都有参数", () => {
     for (const tool of tools) {
       expect(tool.parameters, `${tool.name} missing parameters`).toBeDefined();
       expect(tool.parameters.type).toBe("object");
     }
   });
 
-  it("all tools have descriptions", () => {
+  it("所有工具都有描述", () => {
     for (const tool of tools) {
       expect(tool.description, `${tool.name} missing description`).toBeDefined();
       expect(tool.description.length).toBeGreaterThan(0);

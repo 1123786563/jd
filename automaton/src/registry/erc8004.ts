@@ -1,14 +1,14 @@
 /**
- * ERC-8004 On-Chain Agent Registration
+ * ERC-8004 链上 Agent 注册
  *
- * Registers the automaton on-chain as a Trustless Agent via ERC-8004.
- * Uses the Identity Registry on Base mainnet.
+ * 通过 ERC-8004 将 automaton 作为无信任 Agent 在链上注册。
+ * 使用 Base 主网上的身份注册表。
  *
- * Contract: 0x8004A169FB4a3325136EB29fA0ceB6D2e539a432 (Base)
- * Reputation: 0x8004BAa17C55a88189AE136b182e5fdA19dE9b63 (Base)
+ * 合约：0x8004A169FB4a3325136EB29fA0ceB6D2e539a432 (Base)
+ * 声誉：0x8004BAa17C55a88189AE136b182e5fdA19dE9b63 (Base)
  *
- * Phase 3.2: Added preflight gas check, score validation, config-based network,
- * Transfer event topic fix, and transaction logging.
+ * 阶段 3.2：添加了预检查 gas 检查、分数验证、基于配置的网络、
+ * Transfer 事件主题修复和交易日志记录。
  */
 
 import {
@@ -33,7 +33,7 @@ import { ulid } from "ulid";
 import { createLogger } from "../observability/logger.js";
 const logger = createLogger("registry.erc8004");
 
-// ─── Contract Addresses ──────────────────────────────────────
+// ─── 合约地址 ──────────────────────────────────────
 
 const CONTRACTS = {
   mainnet: {
@@ -48,12 +48,12 @@ const CONTRACTS = {
   },
 } as const;
 
-// ─── ABI (minimal subset needed for registration) ────────────
+// ─── ABI（注册所需的最小子集） ────────────
 
-// ERC-8004 Identity Registry ABI
-// 正确的函数签名 (通过字节码分析确认):
-// - 读取: tokenURI(uint256) - 标准 ERC-721
-// - 更新: setAgentURI(uint256,string) - ERC-8004 自定义
+// ERC-8004 身份注册表 ABI
+// 正确的函数签名（通过字节码分析确认）：
+// - 读取：tokenURI(uint256) - 标准 ERC-721
+// - 更新：setAgentURI(uint256,string) - ERC-8004 自定义
 const IDENTITY_ABI = parseAbi([
   "function register(string agentURI) external returns (uint256 agentId)",
   "function setAgentURI(uint256 agentId, string newAgentURI) external",
@@ -68,18 +68,18 @@ const REPUTATION_ABI = parseAbi([
   "function getFeedback(uint256 agentId) external view returns ((address, uint8, string, uint256)[])",
 ]);
 
-// Phase 3.2: ERC-721 Transfer event topic signature for agent ID extraction
+// 阶段 3.2：用于提取 agent ID 的 ERC-721 Transfer 事件主题签名
 const TRANSFER_EVENT_TOPIC = keccak256(
   toBytes("Transfer(address,address,uint256)"),
 );
 
 type Network = "mainnet" | "testnet";
 
-// ─── Preflight Check ────────────────────────────────────────────
+// ─── 预检查 ────────────────────────────────────────────
 
 /**
- * Phase 3.2: Gas estimation + balance check before on-chain transaction.
- * Throws descriptive error if insufficient balance.
+ * 阶段 3.2：链上交易前的 gas 估算 + 余额检查。
+ * 如果余额不足，抛出描述性错误。
  */
 async function preflight(
   account: PrivateKeyAccount,
@@ -99,28 +99,28 @@ async function preflight(
     transport: http(),
   });
 
-  // Encode calldata for accurate gas estimation
+  // 编码 calldata 以进行准确的 gas 估算
   const data = encodeFunctionData({
     abi: functionData.abi,
     functionName: functionData.functionName,
     args: functionData.args,
   });
 
-  // Estimate gas
+  // 估算 gas
   const gasEstimate = await publicClient
     .estimateGas({
       account: account.address,
       to: functionData.address,
       data,
     })
-    .catch(() => BigInt(200_000)); // Fallback estimate
+    .catch(() => BigInt(200_000)); // 后备估算
 
-  // Get gas price
+  // 获取 gas 价格
   const gasPrice = await publicClient
     .getGasPrice()
-    .catch(() => BigInt(1_000_000_000)); // 1 gwei fallback
+    .catch(() => BigInt(1_000_000_000)); // 1 gwei 后备
 
-  // Get balance
+  // 获取余额
   const balance = await publicClient.getBalance({
     address: account.address,
   });
@@ -134,10 +134,10 @@ async function preflight(
   }
 }
 
-// ─── Transaction Logging ────────────────────────────────────────
+// ─── 交易日志记录 ────────────────────────────────────────
 
 /**
- * Phase 3.2: Log a transaction to the onchain_transactions table.
+ * 阶段 3.2：将交易记录到 onchain_transactions 表。
  */
 function logTransaction(
   rawDb: import("better-sqlite3").Database | undefined,
@@ -166,7 +166,7 @@ function logTransaction(
       );
   } catch (error) {
     logger.error(
-      "Transaction log failed:",
+      "交易日志记录失败：",
       error instanceof Error ? error : undefined,
     );
   }
@@ -187,19 +187,19 @@ function updateTransactionStatus(
       .run(status, gasUsed ?? null, txHash);
   } catch (error) {
     logger.error(
-      "Transaction status update failed:",
+      "交易状态更新失败：",
       error instanceof Error ? error : undefined,
     );
   }
 }
 
-// ─── Registration ───────────────────────────────────────────────
+// ─── 注册 ───────────────────────────────────────────────
 
 /**
- * Register the automaton on-chain with ERC-8004.
- * Returns the agent ID (NFT token ID).
+ * 使用 ERC-8004 在链上注册 automaton。
+ * 返回 agent ID（NFT token ID）。
  *
- * Phase 3.2: Preflight check + transaction logging.
+ * 阶段 3.2：预检查 + 交易日志记录。
  */
 export async function registerAgent(
   account: PrivateKeyAccount,
@@ -210,7 +210,7 @@ export async function registerAgent(
   const contracts = CONTRACTS[network];
   const chain = contracts.chain;
 
-  // Phase 3.2: Preflight gas check
+  // 阶段 3.2：预检查 gas 检查
   await preflight(account, network, {
     address: contracts.identity,
     abi: IDENTITY_ABI,
@@ -229,7 +229,7 @@ export async function registerAgent(
     transport: http(),
   });
 
-  // Call register(agentURI)
+  // 调用 register(agentURI)
   const hash = await walletClient.writeContract({
     address: contracts.identity,
     abi: IDENTITY_ABI,
@@ -237,7 +237,7 @@ export async function registerAgent(
     args: [agentURI],
   });
 
-  // Phase 3.2: Log pending transaction
+  // 阶段 3.2：记录待处理交易
   logTransaction(
     db.raw,
     hash,
@@ -248,10 +248,10 @@ export async function registerAgent(
     { agentURI },
   );
 
-  // Wait for transaction receipt
+  // 等待交易收据
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-  // Phase 3.2: Update transaction status
+  // 阶段 3.2：更新交易状态
   const gasUsed = receipt.gasUsed ? Number(receipt.gasUsed) : undefined;
   updateTransactionStatus(
     db.raw,
@@ -260,11 +260,11 @@ export async function registerAgent(
     gasUsed,
   );
 
-  // Phase 3.2: Extract agentId using Transfer event topic signature
+  // 阶段 3.2：使用 Transfer 事件主题签名提取 agentId
   let agentId = "0";
   for (const log of receipt.logs) {
     if (log.topics.length >= 4 && log.topics[0] === TRANSFER_EVENT_TOPIC) {
-      // Transfer(address from, address to, uint256 tokenId)
+      // 转账事件（从地址、到地址、代币 ID）
       agentId = BigInt(log.topics[3]!).toString();
       break;
     }
@@ -284,7 +284,7 @@ export async function registerAgent(
 }
 
 /**
- * Update the agent's URI on-chain.
+ * 在链上更新 agent 的 URI。
  */
 export async function updateAgentURI(
   account: PrivateKeyAccount,
@@ -296,7 +296,7 @@ export async function updateAgentURI(
   const contracts = CONTRACTS[network];
   const chain = contracts.chain;
 
-  // Phase 3.2: Preflight gas check
+  // 阶段 3.2：预检查 gas 检查
   await preflight(account, network, {
     address: contracts.identity,
     abi: IDENTITY_ABI,
@@ -317,7 +317,7 @@ export async function updateAgentURI(
     args: [BigInt(agentId), newAgentURI],
   });
 
-  // Phase 3.2: Log transaction
+  // 阶段 3.2：记录交易
   logTransaction(
     db.raw,
     hash,
@@ -328,7 +328,7 @@ export async function updateAgentURI(
     { agentId, newAgentURI },
   );
 
-  // Update in DB
+  // 在数据库中更新
   const entry = db.getRegistryEntry();
   if (entry) {
     entry.agentURI = newAgentURI;
@@ -340,10 +340,10 @@ export async function updateAgentURI(
 }
 
 /**
- * Leave reputation feedback for another agent.
+ * 为另一个 agent 留下声誉反馈。
  *
- * Phase 3.2: Validates score 1-5, comment max 500 chars,
- * uses config-based network (not hardcoded "mainnet").
+ * 阶段 3.2：验证分数 1-5，评论最多 500 个字符，
+ * 使用基于配置的网络（不是硬编码的 "mainnet"）。
  */
 export async function leaveFeedback(
   account: PrivateKeyAccount,
@@ -353,22 +353,22 @@ export async function leaveFeedback(
   network: Network = "mainnet",
   db: AutomatonDatabase,
 ): Promise<string> {
-  // Phase 3.2: Validate score range 1-5
+  // 阶段 3.2：验证分数范围 1-5
   if (!Number.isInteger(score) || score < 1 || score > 5) {
     throw new Error(
-      `Invalid score: ${score}. Must be an integer between 1 and 5.`,
+      `无效的分数：${score}。必须是 1 到 5 之间的整数。`,
     );
   }
 
-  // Phase 3.2: Validate comment length
+  // 阶段 3.2：验证评论长度
   if (comment.length > 500) {
-    throw new Error(`Comment too long: ${comment.length} chars (max 500).`);
+    throw new Error(`评论过长：${comment.length} 个字符（最多 500 个）。`);
   }
 
   const contracts = CONTRACTS[network];
   const chain = contracts.chain;
 
-  // Phase 3.2: Preflight gas check
+  // 阶段 3.2：预检查 gas 检查
   await preflight(account, network, {
     address: contracts.reputation,
     abi: REPUTATION_ABI,
@@ -389,7 +389,7 @@ export async function leaveFeedback(
     args: [BigInt(agentId), score, comment],
   });
 
-  // Phase 3.2: Log transaction
+  // 阶段 3.2：记录交易
   logTransaction(
     db.raw,
     hash,
@@ -404,7 +404,7 @@ export async function leaveFeedback(
 }
 
 /**
- * Query the registry for an agent by ID.
+ * 通过 ID 查询注册表中的 agent。
  */
 export async function queryAgent(
   agentId: string,
@@ -426,7 +426,7 @@ export async function queryAgent(
       args: [BigInt(agentId)],
     });
 
-    // ownerOf may revert on contracts that don't implement it
+    // ownerOf 可能在不实现它的合约上回退
     let owner = "";
     try {
       owner = (await publicClient.readContract({
@@ -436,7 +436,7 @@ export async function queryAgent(
         args: [BigInt(agentId)],
       })) as string;
     } catch {
-      logger.warn(`ownerOf reverted for agent ${agentId}, continuing without owner`);
+      logger.warn(`agent ${agentId} 的 ownerOf 回退，继续执行而不使用 owner`);
     }
 
     return {
@@ -450,9 +450,9 @@ export async function queryAgent(
 }
 
 /**
- * Get the total number of registered agents.
- * Tries totalSupply() first; if that reverts (proxy contracts without
- * ERC-721 Enumerable), falls back to a binary search on ownerOf().
+ * 获取已注册 agent 的总数。
+ * 首先尝试 totalSupply()；如果回退（没有 ERC-721 Enumerable 的代理合约），
+ * 则回退到 ownerOf() 的二分搜索。
  */
 export async function getTotalAgents(
   network: Network = "mainnet",
@@ -473,16 +473,16 @@ export async function getTotalAgents(
     });
     return Number(supply);
   } catch {
-    // totalSupply() reverted — proxy may lack ERC-721 Enumerable.
-    // Binary search for the highest minted tokenId via ownerOf().
+    // totalSupply() 回退 — 代理可能缺少 ERC-721 Enumerable。
+    // 通过 ownerOf() 对最高的铸造 tokenId 进行二分搜索。
     return estimateTotalByBinarySearch(publicClient, contracts.identity);
   }
 }
 
 /**
- * Estimate total minted tokens by binary-searching ownerOf().
- * Token IDs are sequential starting from 1, so the highest existing
- * tokenId equals the total minted count.
+ * 通过对 ownerOf() 进行二分搜索来估算总铸造代币。
+ * Token ID 从 1 开始顺序递增，因此最高的现有 tokenId
+ * 等于总铸造数量。
  */
 async function estimateTotalByBinarySearch(
   client: { readContract: (args: any) => Promise<any> },
@@ -502,15 +502,15 @@ async function estimateTotalByBinarySearch(
     }
   };
 
-  // Quick probe to find an upper bound
-  // Quick probe to find an upper bound
+  // 快速探测以查找上限
+  // 快速探测以查找上限
   let upper = 1;
   while (await exists(upper)) {
     upper *= 2;
-    if (upper > 10_000_000) break; // safety cap
+    if (upper > 10_000_000) break; // 安全上限
   }
 
-  // Binary search between 0 and upper
+  // 在 0 和 upper 之间进行二分搜索
   let lo = 0;
   let hi = upper;
   while (lo < hi) {
@@ -523,17 +523,17 @@ async function estimateTotalByBinarySearch(
   }
 
   if (lo > 0) {
-    logger.info(`Binary search estimated total agents: ${lo}`);
+    logger.info(`二分搜索估算的总 agent 数：${lo}`);
   }
   return lo;
 }
 
 /**
- * Discover registered agents by scanning Transfer mint events.
- * Fallback for contracts that don't implement totalSupply (ERC-721 Enumerable).
+ * 通过扫描 Transfer 铸造事件发现已注册的 agent。
+ * 不实现 totalSupply 的合约的后备方案（ERC-721 Enumerable）。
  *
- * Scans for Transfer(address(0), to, tokenId) events to find minted tokens.
- * Returns token IDs and owners extracted directly from event data.
+ * 扫描 Transfer(address(0), to, tokenId) 事件以查找铸造的代币。
+ * 返回直接从事件数据提取的 token ID 和所有者。
  */
 export async function getRegisteredAgentsByEvents(
   network: Network = "mainnet",
@@ -549,11 +549,11 @@ export async function getRegisteredAgentsByEvents(
 
   try {
     const currentBlock = await publicClient.getBlockNumber();
-    // Scan last 500,000 blocks (~11.5 days on Base at 2s blocks)
+    // 扫描最近 500,000 个区块（Base 上 2s 区块时间约 11.5 天）
     const earliestBlock = currentBlock > 500_000n ? currentBlock - 500_000n : 0n;
 
-    // Paginate backward in ≤10K-block chunks (newest-first).
-    // Base public RPC enforces a 10,000-block limit on eth_getLogs.
+    // 以 ≤10K 区块分页向后分页（最新的优先）。
+    // Base 公共 RPC 对 eth_getLogs 强制执行 10,000 区块的限制。
     const MAX_BLOCK_RANGE = 10_000n;
     const MAX_CONSECUTIVE_FAILURES = 2;
     const PER_CHUNK_TIMEOUT_MS = 3_000;
@@ -593,20 +593,20 @@ export async function getRegisteredAgentsByEvents(
         consecutiveFailures = 0;
       } catch (chunkError) {
         consecutiveFailures++;
-        logger.warn(`Event scan chunk ${scanFrom}-${scanTo} failed (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}): ${chunkError instanceof Error ? chunkError.message : "unknown error"}`);
+        logger.warn(`事件扫描区块 ${scanFrom}-${scanTo} 失败（${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}）：${chunkError instanceof Error ? chunkError.message : "未知错误"}`);
         if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-          logger.warn("Too many consecutive chunk failures, stopping scan");
+          logger.warn("连续区块失败过多，停止扫描");
           break;
         }
       }
 
-      // Early exit if we already have enough logs
+      // 如果我们已经有足够的日志，提前退出
       if (allLogs.length >= limit) break;
 
-      scanTo = scanFrom - 1n; // -1n prevents overlap between chunks
+      scanTo = scanFrom - 1n; // -1n 防止区块之间的重叠
     }
 
-    // Deduplicate by tokenId (defensive against RPC edge cases)
+    // 通过 tokenId 去重（针对 RPC 边缘情况的防御）
     const seen = new Set<string>();
     const uniqueLogs = allLogs.filter((log) => {
       const id = log.args.tokenId!.toString();
@@ -615,7 +615,7 @@ export async function getRegisteredAgentsByEvents(
       return true;
     });
 
-    // Extract token IDs and owners, most recent first
+    // 提取 token ID 和所有者，最新的优先
     const agents = uniqueLogs
       .map((log) => ({
         tokenId: (log.args.tokenId!).toString(),
@@ -623,26 +623,25 @@ export async function getRegisteredAgentsByEvents(
       }))
       .reverse()
       .slice(0, limit);
- 
-    // The chunks were scanned newest-first, but within each chunk logs are
-    // ascending.  A simple .reverse() no longer yields a correct descending
-    // order, so re-sort by tokenId descending (tokenIds are monotonically
-    // increasing on mint).
+
+    // 区块按最新优先扫描，但每个区块内的日志是
+    // 升序的。简单的 .reverse() 不再产生正确的降序
+    // 顺序，因此按 tokenId 降序重新排序（tokenIds 在铸造时单调递增）。
     agents.sort((a, b) => {
       const diff = BigInt(b.tokenId) - BigInt(a.tokenId);
       return diff > 0n ? 1 : diff < 0n ? -1 : 0;
     });
-    
-    logger.info(`Event scan found ${agents.length} minted agents (scanned ${allLogs.length} Transfer events across ${Math.ceil(Number(currentBlock - earliestBlock) / Number(MAX_BLOCK_RANGE))} chunks)`);
+
+    logger.info(`事件扫描发现 ${agents.length} 个已铸造的 agent（在 ${Math.ceil(Number(currentBlock - earliestBlock) / Number(MAX_BLOCK_RANGE))} 个区块中扫描了 ${allLogs.length} 个 Transfer 事件）`);
     return agents;
   } catch (error) {
-    logger.warn(`Transfer event scan failed, returning empty results: ${error instanceof Error ? error.message : "unknown error"}`);
+    logger.warn(`Transfer 事件扫描失败，返回空结果：${error instanceof Error ? error.message : "未知错误"}`);
     return [];
   }
 }
 
 /**
- * Check if an address has a registered agent.
+ * 检查地址是否有已注册的 agent。
  */
 export async function hasRegisteredAgent(
   address: Address,

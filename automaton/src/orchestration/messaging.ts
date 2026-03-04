@@ -1,9 +1,9 @@
 /**
- * Colony Messaging
+ * 群落消息传递
  *
- * Typed inter-agent messaging with pluggable transport.
- * Uses local SQLite message queues by default (no external relay required).
- * Transport can be swapped to social relay when backend becomes available.
+ * 具有可插拔传输的类型化智能体间消息传递。
+ * 默认使用本地 SQLite 消息队列（不需要外部中继）。
+ * 当后端可用时，传输可以交换到社交中继。
  */
 
 import type { AutomatonDatabase, InboxMessage } from "../types.js";
@@ -38,7 +38,7 @@ const PRIORITY_ORDER = {
   low: 3,
 } as const;
 
-// ─── Types ──────────────────────────────────────────────────────
+// ─── 类型定义 ──────────────────────────────────────────────────────
 
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 
@@ -74,25 +74,25 @@ interface PendingInboxMessage {
   message: AgentMessage;
 }
 
-// ─── Transport Interface ────────────────────────────────────────
+// ─── 传输接口 ────────────────────────────────────────────────────
 
 /**
- * Pluggable message transport. Implementations handle the actual
- * delivery mechanism. The default LocalDBTransport writes directly
- * to SQLite inbox tables.
+ * 可插拔的消息传输。实现处理实际的
+ * 传递机制。默认的 LocalDBTransport 直接写入
+ * 到 SQLite 收件箱表。
  */
 export interface MessageTransport {
-  /** Deliver a message to the recipient. */
+  /** 将消息传递给接收者。 */
   deliver(to: string, envelope: string): Promise<void>;
-  /** List known recipient addresses (for broadcast). */
+  /** 列出已知的接收者地址（用于广播）。 */
   getRecipients(): string[];
 }
 
 /**
- * Local SQLite-based transport.
- * Writes messages directly to the inbox_messages table in the local DB.
- * Works for parent↔child communication on the same machine.
- * No external relay server required.
+ * 基于 SQLite 的本地传输。
+ * 直接将消息写入本地数据库中的 inbox_messages 表。
+ * 适用于同一台机器上的父↔子通信。
+ * 不需要外部中继服务器。
  */
 export class LocalDBTransport implements MessageTransport {
   constructor(
@@ -100,7 +100,7 @@ export class LocalDBTransport implements MessageTransport {
   ) {}
 
   async deliver(to: string, envelope: string): Promise<void> {
-    // Write directly to inbox_messages table
+    // 直接写入 inbox_messages 表
     const id = ulid();
     const fromAddress = this.db.getIdentity("address") ?? "unknown";
     this.db.raw.prepare(
@@ -115,7 +115,7 @@ export class LocalDBTransport implements MessageTransport {
   }
 }
 
-// ─── Colony Messaging ───────────────────────────────────────────
+// ─── 群落消息传递 ───────────────────────────────────────────
 
 export class ColonyMessaging {
   constructor(
@@ -142,7 +142,7 @@ export class ColonyMessaging {
       } catch (error) {
         lastError = normalizeError(error);
         const isFinalAttempt = attempt === SEND_RETRIES;
-        logger.warn("Message send attempt failed", {
+        logger.warn("消息发送尝试失败", {
           messageId: message.id,
           to: message.to,
           attempt: attempt + 1,
@@ -156,7 +156,7 @@ export class ColonyMessaging {
     }
 
     throw new Error(
-      `Failed to send message ${message.id} after ${SEND_RETRIES + 1} attempts: ${lastError?.message ?? "unknown error"}`,
+      `发送消息 ${message.id} 失败，尝试了 ${SEND_RETRIES + 1} 次: ${lastError?.message ?? "未知错误"}`,
     );
   }
 
@@ -179,7 +179,7 @@ export class ColonyMessaging {
           success: false,
           error: err.message,
         });
-        logger.warn("Rejected malformed inbound message", {
+        logger.warn("拒绝格式错误的入站消息", {
           inboxId: row.id,
           from: row.from,
           error: err.message,
@@ -187,7 +187,7 @@ export class ColonyMessaging {
       }
     }
 
-    // Process critical priority first
+    // 首先处理关键优先级
     pending.sort((a, b) => {
       const priorityDelta = PRIORITY_ORDER[a.message.priority] - PRIORITY_ORDER[b.message.priority];
       if (priorityDelta !== 0) return priorityDelta;
@@ -211,7 +211,7 @@ export class ColonyMessaging {
           success: false,
           error: err.message,
         });
-        logger.error("Failed to handle inbox message", err, {
+        logger.error("处理收件箱消息失败", err, {
           messageId: item.message.id,
           type: item.message.type,
           from: item.message.from,
@@ -249,7 +249,7 @@ export class ColonyMessaging {
     ));
   }
 
-  /** Create a pre-filled message for sending. */
+  /** 创建用于发送的预填充消息。 */
   createMessage(params: {
     type: MessageType;
     to: string;
@@ -313,7 +313,7 @@ export class ColonyMessaging {
     }
   }
 
-  // ─── Message Handlers (stubs — orchestrator wires real logic) ──
+  // ─── 消息处理器（存根 — 协调器连接真实逻辑） ──
 
   private async handleTaskAssignment(message: AgentMessage): Promise<void> {
     this.logActionEvent("task_assignment_received", message);
@@ -340,7 +340,7 @@ export class ColonyMessaging {
   }
 
   private async handleAlert(message: AgentMessage): Promise<void> {
-    logger.warn("Alert received", {
+    logger.warn("收到警报", {
       messageId: message.id,
       from: message.from,
       priority: message.priority,
@@ -349,7 +349,7 @@ export class ColonyMessaging {
   }
 
   private async handleShutdownRequest(message: AgentMessage): Promise<void> {
-    logger.warn("Shutdown request received", {
+    logger.warn("收到关闭请求", {
       messageId: message.id,
       from: message.from,
     });
@@ -381,7 +381,7 @@ export class ColonyMessaging {
         tokenCount: Math.ceil(message.content.length / 4),
       });
     } catch (error) {
-      logger.warn("Failed to write action event for message", {
+      logger.warn("无法为消息写入操作事件", {
         messageId: message.id,
         error: normalizeError(error).message,
       });
@@ -389,11 +389,11 @@ export class ColonyMessaging {
   }
 }
 
-// ─── Helpers ────────────────────────────────────────────────────
+// ─── 辅助函数 ────────────────────────────────────────────────────
 
 function extractAgentMessage(parsed: unknown): unknown {
   if (!parsed || typeof parsed !== "object") {
-    throw new Error("parsed payload must be an object");
+    throw new Error("解析的有效负载必须是一个对象");
   }
 
   const maybeEnvelope = parsed as Partial<MessageEnvelope>;
@@ -409,7 +409,7 @@ function parseInboundMessage(row: InboxMessage): AgentMessage {
   try {
     parsed = JSON.parse(row.content);
   } catch {
-    throw new Error("inbox content is not valid JSON");
+    throw new Error("收件箱内容不是有效的 JSON");
   }
 
   const candidate = extractAgentMessage(parsed);
@@ -417,7 +417,7 @@ function parseInboundMessage(row: InboxMessage): AgentMessage {
 
   const msg = candidate as AgentMessage;
   if (msg.expiresAt && Date.parse(msg.expiresAt) < Date.now()) {
-    throw new Error("message is expired");
+    throw new Error("消息已过期");
   }
 
   return msg;
@@ -425,34 +425,34 @@ function parseInboundMessage(row: InboxMessage): AgentMessage {
 
 function validateMessage(message: unknown): asserts message is AgentMessage {
   if (!message || typeof message !== "object") {
-    throw new Error("message must be an object");
+    throw new Error("消息必须是一个对象");
   }
 
   const value = message as Partial<AgentMessage>;
 
   if (typeof value.id !== "string" || value.id.length === 0) {
-    throw new Error("message.id is required");
+    throw new Error("message.id 是必需的");
   }
   if (!isMessageType(value.type)) {
-    throw new Error(`invalid message.type: ${String(value.type)}`);
+    throw new Error(`无效的 message.type: ${String(value.type)}`);
   }
   if (typeof value.from !== "string" || value.from.length === 0) {
-    throw new Error("message.from is required");
+    throw new Error("message.from 是必需的");
   }
   if (typeof value.to !== "string" || value.to.length === 0) {
-    throw new Error("message.to is required");
+    throw new Error("message.to 是必需的");
   }
   if (typeof value.content !== "string") {
-    throw new Error("message.content must be string");
+    throw new Error("message.content 必须是字符串");
   }
   if (!isPriority(value.priority)) {
-    throw new Error(`invalid message.priority: ${String(value.priority)}`);
+    throw new Error(`无效的 message.priority: ${String(value.priority)}`);
   }
   if (typeof value.requiresResponse !== "boolean") {
-    throw new Error("message.requiresResponse must be boolean");
+    throw new Error("message.requiresResponse 必须是布尔值");
   }
   if (typeof value.createdAt !== "string" || !isIsoDate(value.createdAt)) {
-    throw new Error("message.createdAt must be an ISO date string");
+    throw new Error("message.createdAt 必须是 ISO 日期字符串");
   }
 }
 

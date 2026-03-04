@@ -1,8 +1,8 @@
 /**
- * Policy Rules Registry
+ * 策略规则注册表
  *
- * Central registry for all policy rules. Aggregates rules from
- * each sub-phase module.
+ * 所有策略规则的中央注册表。聚合来自
+ * 每个子阶段模块的规则。
  */
 
 import type { PolicyRule, TreasuryPolicy } from "../../types.js";
@@ -15,8 +15,8 @@ import { createAuthorityRules } from "./authority.js";
 import { createRateLimitRules } from "./rate-limits.js";
 
 /**
- * Create the default set of policy rules.
- * Each sub-phase adds its rules here.
+ * 创建默认的策略规则集。
+ * 每个子阶段在此添加其规则。
  */
 export function createDefaultRules(
   treasuryPolicy: TreasuryPolicy = DEFAULT_TREASURY_POLICY,

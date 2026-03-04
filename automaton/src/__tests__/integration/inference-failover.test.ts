@@ -219,8 +219,8 @@ describe("integration/inference-failover", () => {
 
       const result = await client.chat({ tier: "reasoning", messages: BASE_MESSAGES });
 
-      // costPerInputToken=1.0 -> 1000/1000 * 1.0 = 1.0 credit
-      // costPerOutputToken=2.0 -> 500/1000 * 2.0 = 1.0 credit
+      // costPerInputToken=1.0 -> 1000/1000 * 1.0 = 1.0 积分
+      // costPerOutputToken=2.0 -> 500/1000 * 2.0 = 1.0 积分
       expect(result.cost.inputCostCredits).toBeCloseTo(1.0);
       expect(result.cost.outputCostCredits).toBeCloseTo(1.0);
       expect(result.cost.totalCostCredits).toBeCloseTo(2.0);
@@ -328,7 +328,7 @@ describe("integration/inference-failover", () => {
       const registry = makeRegistry([alpha, beta], "alpha");
       const client = makeClient(registry);
 
-      // Trip the circuit on alpha via chatDirect
+      // 通过 chatDirect 触发 alpha 上的断路器
       for (let i = 0; i < 5; i++) {
         queueError(400, `trip-${i}`);
         await expect(
@@ -387,7 +387,7 @@ describe("integration/inference-failover", () => {
       // Advance past the 5-minute cooldown (CIRCUIT_BREAKER_DISABLE_MS = 5 * 60_000)
       vi.advanceTimersByTime(5 * 60_000 + 1);
 
-      // A successful call to alpha resets the state
+      // 对 alpha 的成功调用重置状态
       queueCompletion("alpha-recovered");
       const result = await client.chatDirect({
         providerId: "alpha",

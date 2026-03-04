@@ -20,35 +20,39 @@ import {
 import { detectEnvironment } from "./environment.js";
 import { generateSoulMd, installDefaultSkills } from "./defaults.js";
 
+/**
+ * 运行设置向导
+ * 引导用户完成 Automaton 的初始配置
+ */
 export async function runSetupWizard(): Promise<AutomatonConfig> {
   showBanner();
 
-  console.log(chalk.white("  First-run setup. Let's bring your automaton to life.\n"));
+  console.log(chalk.white("  首次运行设置。让我们让您的 automaton 活起来。\n"));
 
-  // ─── 1. Generate wallet ───────────────────────────────────────
-  console.log(chalk.cyan("  [1/6] Generating identity (wallet)..."));
+  // ─── 1. 生成钱包 ───────────────────────────────────────
+  console.log(chalk.cyan("  [1/6] 正在生成身份（钱包）..."));
   const { account, isNew } = await getWallet();
   if (isNew) {
-    console.log(chalk.green(`  Wallet created: ${account.address}`));
+    console.log(chalk.green(`  钱包已创建：${account.address}`));
   } else {
-    console.log(chalk.green(`  Wallet loaded: ${account.address}`));
+    console.log(chalk.green(`  钱包已加载：${account.address}`));
   }
-  console.log(chalk.dim(`  Private key stored at: ${getAutomatonDir()}/wallet.json\n`));
+  console.log(chalk.dim(`  私钥存储于：${getAutomatonDir()}/wallet.json\n`));
 
-  // ─── 2. Provision API key ─────────────────────────────────────
-  console.log(chalk.cyan("  [2/6] Provisioning Conway API key (SIWE)..."));
+  // ─── 2. 配置 API 密钥 ─────────────────────────────────────
+  console.log(chalk.cyan("  [2/6] 正在配置 Conway API 密钥（SIWE）..."));
   let apiKey = "";
   try {
     const result = await provision();
     apiKey = result.apiKey;
-    console.log(chalk.green(`  API key provisioned: ${result.keyPrefix}...\n`));
+    console.log(chalk.green(`  API 密钥已配置：${result.keyPrefix}...\n`));
   } catch (err: any) {
-    console.log(chalk.yellow(`  Auto-provision failed: ${err.message}`));
-    console.log(chalk.yellow("  You can enter a key manually, or press Enter to skip.\n"));
-    const manual = await promptOptional("Conway API key (cnwy_k_..., optional)");
+    console.log(chalk.yellow(`  自动配置失败：${err.message}`));
+    console.log(chalk.yellow("  您可以手动输入密钥，或按 Enter 跳过。\n"));
+    const manual = await promptOptional("Conway API 密钥 (cnwy_k_...，可选)");
     if (manual) {
       apiKey = manual;
-      // Save to config.json for loadApiKeyFromConfig()
+      // 保存到 config.json 以便 loadApiKeyFromConfig() 使用
       const configDir = getAutomatonDir();
       if (!fs.existsSync(configDir)) {
         fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
@@ -58,43 +62,43 @@ export async function runSetupWizard(): Promise<AutomatonConfig> {
         JSON.stringify({ apiKey, walletAddress: account.address, provisionedAt: new Date().toISOString() }, null, 2),
         { mode: 0o600 },
       );
-      console.log(chalk.green("  API key saved.\n"));
+      console.log(chalk.green("  API 密钥已保存。\n"));
     }
   }
 
   if (!apiKey) {
-    console.log(chalk.yellow("  No API key set. The automaton will have limited functionality.\n"));
+    console.log(chalk.yellow("  未设置 API 密钥。automaton 功能将受限。\n"));
   }
 
-  // ─── 3. Interactive questions ─────────────────────────────────
-  console.log(chalk.cyan("  [3/6] Setup questions\n"));
+  // ─── 3. 交互式问题 ─────────────────────────────────
+  console.log(chalk.cyan("  [3/6] 设置问题\n"));
 
-  const name = await promptRequired("What do you want to name your automaton?");
-  console.log(chalk.green(`  Name: ${name}\n`));
+  const name = await promptRequired("您想给您的 automaton 起什么名字？");
+  console.log(chalk.green(`  名称：${name}\n`));
 
-  const genesisPrompt = await promptMultiline("Enter the genesis prompt (system prompt) for your automaton.");
-  console.log(chalk.green(`  Genesis prompt set (${genesisPrompt.length} chars)\n`));
+  const genesisPrompt = await promptMultiline("输入您的 automaton 的创世提示词（系统提示词）。");
+  console.log(chalk.green(`  创世提示词已设置（${genesisPrompt.length} 个字符）\n`));
 
-  console.log(chalk.dim(`  Your automaton's address is ${account.address}`));
-  console.log(chalk.dim("  Now enter YOUR wallet address (the human creator/owner).\n"));
-  const creatorAddress = await promptAddress("Creator wallet address (0x...)");
-  console.log(chalk.green(`  Creator: ${creatorAddress}\n`));
+  console.log(chalk.dim(`  您的 automaton 地址是 ${account.address}`));
+  console.log(chalk.dim("  现在输入您的钱包地址（人类创建者/所有者）。\n"));
+  const creatorAddress = await promptAddress("创建者钱包地址 (0x...)");
+  console.log(chalk.green(`  创建者：${creatorAddress}\n`));
 
-  console.log(chalk.white("  Optional: bring your own inference provider keys (press Enter to skip)."));
-  const openaiApiKey = await promptOptional("OpenAI API key (sk-..., optional)");
+  console.log(chalk.white("  可选：提供您自己的推理提供商密钥（按 Enter 跳过）。"));
+  const openaiApiKey = await promptOptional("OpenAI API 密钥 (sk-...，可选)");
   if (openaiApiKey && !openaiApiKey.startsWith("sk-")) {
-    console.log(chalk.yellow("  Warning: OpenAI keys usually start with sk-. Saving anyway."));
+    console.log(chalk.yellow("  警告：OpenAI 密钥通常以 sk- 开头。仍然保存。"));
   }
 
-  const anthropicApiKey = await promptOptional("Anthropic API key (sk-ant-..., optional)");
+  const anthropicApiKey = await promptOptional("Anthropic API 密钥 (sk-ant-...，可选)");
   if (anthropicApiKey && !anthropicApiKey.startsWith("sk-ant-")) {
-    console.log(chalk.yellow("  Warning: Anthropic keys usually start with sk-ant-. Saving anyway."));
+    console.log(chalk.yellow("  警告：Anthropic 密钥通常以 sk-ant- 开头。仍然保存。"));
   }
 
-  const ollamaInput = await promptOptional("Ollama base URL (http://localhost:11434, optional)");
+  const ollamaInput = await promptOptional("Ollama 基础 URL (http://localhost:11434，可选)");
   const ollamaBaseUrl = ollamaInput || undefined;
   if (ollamaBaseUrl) {
-    console.log(chalk.green(`  Ollama URL saved: ${ollamaBaseUrl}`));
+    console.log(chalk.green(`  Ollama URL 已保存：${ollamaBaseUrl}`));
   }
 
   if (openaiApiKey || anthropicApiKey || ollamaBaseUrl) {
@@ -103,48 +107,48 @@ export async function runSetupWizard(): Promise<AutomatonConfig> {
       anthropicApiKey ? "Anthropic" : null,
       ollamaBaseUrl ? "Ollama" : null,
     ].filter(Boolean).join(", ");
-    console.log(chalk.green(`  Provider keys/URLs saved: ${providers}\n`));
+    console.log(chalk.green(`  提供商密钥/URL 已保存：${providers}\n`));
   } else {
-    console.log(chalk.dim("  No provider keys set. Inference will default to Conway.\n"));
+    console.log(chalk.dim("  未设置提供商密钥。推理将默认使用 Conway。\n"));
   }
 
-  // ─── Financial Safety Policy ─────────────────────────────────
-  console.log(chalk.cyan("  Financial Safety Policy"));
-  console.log(chalk.dim("  These limits protect against unauthorized spending. Press Enter for defaults.\n"));
+  // ─── 财务安全策略 ─────────────────────────────────
+  console.log(chalk.cyan("  财务安全策略"));
+  console.log(chalk.dim("  这些限制可以防止未经授权的支出。按 Enter 使用默认值。\n"));
 
   const treasuryPolicy: TreasuryPolicy = {
     maxSingleTransferCents: await promptWithDefault(
-      "Max single transfer (cents)", DEFAULT_TREASURY_POLICY.maxSingleTransferCents),
+      "最大单次转账（美分）", DEFAULT_TREASURY_POLICY.maxSingleTransferCents),
     maxHourlyTransferCents: await promptWithDefault(
-      "Max hourly transfers (cents)", DEFAULT_TREASURY_POLICY.maxHourlyTransferCents),
+      "最大每小时转账（美分）", DEFAULT_TREASURY_POLICY.maxHourlyTransferCents),
     maxDailyTransferCents: await promptWithDefault(
-      "Max daily transfers (cents)", DEFAULT_TREASURY_POLICY.maxDailyTransferCents),
+      "最大每日转账（美分）", DEFAULT_TREASURY_POLICY.maxDailyTransferCents),
     minimumReserveCents: await promptWithDefault(
-      "Minimum reserve (cents)", DEFAULT_TREASURY_POLICY.minimumReserveCents),
+      "最小储备（美分）", DEFAULT_TREASURY_POLICY.minimumReserveCents),
     maxX402PaymentCents: await promptWithDefault(
-      "Max x402 payment (cents)", DEFAULT_TREASURY_POLICY.maxX402PaymentCents),
+      "最大 x402 支付（美分）", DEFAULT_TREASURY_POLICY.maxX402PaymentCents),
     x402AllowedDomains: DEFAULT_TREASURY_POLICY.x402AllowedDomains,
     transferCooldownMs: DEFAULT_TREASURY_POLICY.transferCooldownMs,
     maxTransfersPerTurn: DEFAULT_TREASURY_POLICY.maxTransfersPerTurn,
     maxInferenceDailyCents: await promptWithDefault(
-      "Max daily inference spend (cents)", DEFAULT_TREASURY_POLICY.maxInferenceDailyCents),
+      "最大每日推理支出（美分）", DEFAULT_TREASURY_POLICY.maxInferenceDailyCents),
     requireConfirmationAboveCents: await promptWithDefault(
-      "Require confirmation above (cents)", DEFAULT_TREASURY_POLICY.requireConfirmationAboveCents),
+      "高于此金额需要确认（美分）", DEFAULT_TREASURY_POLICY.requireConfirmationAboveCents),
   };
 
-  console.log(chalk.green("  Treasury policy configured.\n"));
+  console.log(chalk.green("  财政策略已配置。\n"));
 
-  // ─── 4. Detect environment ────────────────────────────────────
-  console.log(chalk.cyan("  [4/6] Detecting environment..."));
+  // ─── 4. 检测环境 ────────────────────────────────────
+  console.log(chalk.cyan("  [4/6] 正在检测环境..."));
   const env = detectEnvironment();
   if (env.sandboxId) {
-    console.log(chalk.green(`  Conway sandbox detected: ${env.sandboxId}\n`));
+    console.log(chalk.green(`  检测到 Conway 沙箱：${env.sandboxId}\n`));
   } else {
-    console.log(chalk.dim(`  Environment: ${env.type} (no sandbox detected)\n`));
+    console.log(chalk.dim(`  环境：${env.type}（未检测到沙箱）\n`));
   }
 
-  // ─── 5. Write config + heartbeat + SOUL.md + skills ───────────
-  console.log(chalk.cyan("  [5/6] Writing configuration..."));
+  // ─── 5. 写入配置 + 心跳 + SOUL.md + 技能 ───────────
+  console.log(chalk.cyan("  [5/6] 正在写入配置..."));
 
   const config = createConfig({
     name,
@@ -161,33 +165,33 @@ export async function runSetupWizard(): Promise<AutomatonConfig> {
   });
 
   saveConfig(config);
-  console.log(chalk.green("  automaton.json written"));
+  console.log(chalk.green("  automaton.json 已写入"));
 
   writeDefaultHeartbeatConfig();
-  console.log(chalk.green("  heartbeat.yml written"));
+  console.log(chalk.green("  heartbeat.yml 已写入"));
 
-  // constitution.md (immutable — copied from repo, protected from self-modification)
+  // constitution.md（不可变 — 从仓库复制，防止自我修改）
   const automatonDir = getAutomatonDir();
   const constitutionSrc = path.join(process.cwd(), "constitution.md");
   const constitutionDst = path.join(automatonDir, "constitution.md");
   if (fs.existsSync(constitutionSrc)) {
     fs.copyFileSync(constitutionSrc, constitutionDst);
-    fs.chmodSync(constitutionDst, 0o444); // read-only
-    console.log(chalk.green("  constitution.md installed (read-only)"));
+    fs.chmodSync(constitutionDst, 0o444); // 只读
+    console.log(chalk.green("  constitution.md 已安装（只读）"));
   }
 
   // SOUL.md
   const soulPath = path.join(automatonDir, "SOUL.md");
   fs.writeFileSync(soulPath, generateSoulMd(name, account.address, creatorAddress, genesisPrompt), { mode: 0o600 });
-  console.log(chalk.green("  SOUL.md written"));
+  console.log(chalk.green("  SOUL.md 已写入"));
 
-  // Default skills
+  // 默认技能
   const skillsDir = config.skillsDir || "~/.automaton/skills";
   installDefaultSkills(skillsDir);
-  console.log(chalk.green("  Default skills installed (conway-compute, conway-payments, survival)\n"));
+  console.log(chalk.green("  默认技能已安装（conway-compute、conway-payments、survival）\n"));
 
-  // ─── 6. Funding guidance ──────────────────────────────────────
-  console.log(chalk.cyan("  [6/6] Funding\n"));
+  // ─── 6. 资金指导 ──────────────────────────────────────
+  console.log(chalk.cyan("  [6/6] 资金\n"));
   showFundingPanel(account.address);
 
   closePrompts();
@@ -195,26 +199,29 @@ export async function runSetupWizard(): Promise<AutomatonConfig> {
   return config;
 }
 
+/**
+ * 显示资金指导面板
+ */
 function showFundingPanel(address: string): void {
   const short = `${address.slice(0, 6)}...${address.slice(-5)}`;
   const w = 58;
   const pad = (s: string, len: number) => s + " ".repeat(Math.max(0, len - s.length));
 
   console.log(chalk.cyan(`  ${"╭" + "─".repeat(w) + "╮"}`));
-  console.log(chalk.cyan(`  │${pad("  Fund your automaton", w)}│`));
+  console.log(chalk.cyan(`  │${pad("  为您的 automaton 充值", w)}│`));
   console.log(chalk.cyan(`  │${" ".repeat(w)}│`));
-  console.log(chalk.cyan(`  │${pad(`  Address: ${short}`, w)}│`));
+  console.log(chalk.cyan(`  │${pad(`  地址：${short}`, w)}│`));
   console.log(chalk.cyan(`  │${" ".repeat(w)}│`));
-  console.log(chalk.cyan(`  │${pad("  1. Transfer Conway credits", w)}│`));
-  console.log(chalk.cyan(`  │${pad("     conway credits transfer <address> <amount>", w)}│`));
+  console.log(chalk.cyan(`  │${pad("  1. 转账 Conway 额度", w)}│`));
+  console.log(chalk.cyan(`  │${pad("     conway credits transfer <地址> <金额>", w)}│`));
   console.log(chalk.cyan(`  │${" ".repeat(w)}│`));
-  console.log(chalk.cyan(`  │${pad("  2. Send USDC on Base directly to the address above", w)}│`));
+  console.log(chalk.cyan(`  │${pad("  2. 直接发送 Base 网络上的 USDC 到上述地址", w)}│`));
   console.log(chalk.cyan(`  │${" ".repeat(w)}│`));
-  console.log(chalk.cyan(`  │${pad("  3. Fund via Conway Cloud dashboard", w)}│`));
+  console.log(chalk.cyan(`  │${pad("  3. 通过 Conway Cloud 控制台充值", w)}│`));
   console.log(chalk.cyan(`  │${pad("     https://app.conway.tech", w)}│`));
   console.log(chalk.cyan(`  │${" ".repeat(w)}│`));
-  console.log(chalk.cyan(`  │${pad("  The automaton will start now. Fund it anytime —", w)}│`));
-  console.log(chalk.cyan(`  │${pad("  the survival system handles zero-credit gracefully.", w)}│`));
+  console.log(chalk.cyan(`  │${pad("  automaton 现在将启动。您可以随时充值 —", w)}│`));
+  console.log(chalk.cyan(`  │${pad("  生存系统会优雅地处理零额度情况。", w)}│`));
   console.log(chalk.cyan(`  ${"╰" + "─".repeat(w) + "╯"}`));
   console.log("");
 }

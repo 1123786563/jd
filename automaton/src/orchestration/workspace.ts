@@ -82,7 +82,7 @@ export class AgentWorkspace implements AgentWorkspace {
     const outputPath = this.resolveOutputPath(normalizedFile);
 
     if (!fs.existsSync(outputPath)) {
-      throw new Error(`Workspace output does not exist: ${normalizedFile}`);
+      throw new Error(`工作区输出不存在: ${normalizedFile}`);
     }
 
     return fs.readFileSync(outputPath, "utf8");
@@ -122,15 +122,15 @@ export class AgentWorkspace implements AgentWorkspace {
   }
 
   logDecision(decision: string, rationale: string, agentRole: string): void {
-    const normalizedDecision = normalizeLabel(decision, "(no decision provided)");
-    const normalizedRationale = normalizeLabel(rationale, "(no rationale provided)");
+    const normalizedDecision = normalizeLabel(decision, "(未提供决策)");
+    const normalizedRationale = normalizeLabel(rationale, "(未提供理由)");
     const normalizedRole = normalizeLabel(agentRole, "unknown");
     const timestamp = new Date().toISOString();
 
     const entry = [
       `### ${timestamp} - ${normalizedRole}`,
-      `- Decision: ${normalizedDecision}`,
-      `- Rationale: ${normalizedRationale}`,
+      `- 决策: ${normalizedDecision}`,
+      `- 理由: ${normalizedRationale}`,
       "",
     ].join("\n");
 
@@ -146,7 +146,7 @@ export class AgentWorkspace implements AgentWorkspace {
     return outputs
       .map((file) => {
         const filename = this.toRelativeOutputName(file.path);
-        const summary = file.summary && file.summary.length > 0 ? file.summary : "no summary";
+        const summary = file.summary && file.summary.length > 0 ? file.summary : "无摘要";
         return `${filename} (${file.tokenEstimate} tokens): ${summary}`;
       })
       .join("\n");
@@ -159,7 +159,7 @@ export class AgentWorkspace implements AgentWorkspace {
       : `${this.outputsPath}${path.sep}`;
 
     if (outputPath !== this.outputsPath && !outputPath.startsWith(outputsRoot)) {
-      throw new Error(`Invalid output filename outside workspace outputs/: ${filename}`);
+      throw new Error(`无效的输出文件名，超出工作区 outputs/ 目录: ${filename}`);
     }
 
     return outputPath;

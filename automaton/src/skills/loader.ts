@@ -1,9 +1,9 @@
 /**
- * Skills Loader
+ * 技能加载器
  *
- * Discovers and loads SKILL.md files from ~/.automaton/skills/
- * Each skill is a directory containing a SKILL.md file with
- * YAML frontmatter + Markdown instructions.
+ * 从 ~/.automaton/skills/ 发现并加载 SKILL.md 文件
+ * 每个技能是一个包含 SKILL.md 文件的目录
+ * 该文件包含 YAML 前置元数据 + Markdown 指令
  */
 
 import { execFileSync } from "child_process";
@@ -16,27 +16,27 @@ import { createLogger } from "../observability/logger.js";
 
 const logger = createLogger("skills.loader");
 
-// Maximum total size of all skill instructions combined
+// 所有技能指令组合的最大总大小
 const MAX_TOTAL_SKILL_INSTRUCTIONS = 10_000;
 
-// Patterns that indicate malicious instruction content
+// 表示恶意指令内容的模式
 const SUSPICIOUS_INSTRUCTION_PATTERNS: { pattern: RegExp; label: string }[] = [
-  // Tool call JSON syntax
+  // 工具调用 JSON 语法
   { pattern: /\{"name"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:/, label: "tool_call_json" },
-  { pattern: /<tool_call>/i, label: "tool_call_xml" },
-  // System prompt override attempts
+  { pattern: /<invoke/i, label: "tool_call_xml" },
+  // 系统提示覆盖尝试
   { pattern: /\bYou are now\b/i, label: "identity_override" },
   { pattern: /\bIgnore previous\b/i, label: "ignore_instructions" },
   { pattern: /\bSystem:\s/i, label: "system_role_injection" },
-  // Sensitive file references
+  // 敏感文件引用
   { pattern: /wallet\.json/i, label: "sensitive_file_wallet" },
   { pattern: /\.env\b/, label: "sensitive_file_env" },
   { pattern: /private.?key/i, label: "sensitive_file_key" },
 ];
 
 /**
- * Scan the skills directory and load all valid SKILL.md files.
- * Returns loaded skills and syncs them to the database.
+ * 扫描技能目录并加载所有有效的 SKILL.md 文件
+ * 返回已加载的技能并同步到数据库
  */
 export function loadSkills(
   skillsDir: string,
@@ -62,12 +62,12 @@ export function loadSkills(
       const skill = parseSkillMd(content, skillMdPath);
       if (!skill) continue;
 
-      // Check requirements
+      // 检查依赖项
       if (!checkRequirements(skill)) {
         continue;
       }
 
-      // Check if already in DB and preserve enabled state
+      // 检查是否已在数据库中并保留启用状态
       const existing = db.getSkillByName(skill.name);
       if (existing) {
         skill.enabled = existing.enabled;
@@ -77,30 +77,30 @@ export function loadSkills(
       db.upsertSkill(skill);
       loaded.push(skill);
     } catch {
-      // Skip invalid skill files
+      // 跳过无效的技能文件
     }
   }
 
-  // Return all enabled skills (includes DB-only skills not on disk)
+  // 返回所有启用的技能（包括仅存在于数据库中的技能）
   return db.getSkills(true);
 }
 
 /**
- * Validate binary name to prevent injection via skill requirements.
+ * 验证二进制名称以防止通过技能依赖项进行注入
  */
 const BIN_NAME_RE = /^[a-zA-Z0-9._-]+$/;
 
 /**
- * Check if a skill's requirements are met.
- * Uses execFileSync with argument arrays to prevent shell injection.
+ * 检查技能的依赖项是否满足
+ * 使用 execFileSync 和参数数组来防止 shell 注入
  */
 function checkRequirements(skill: Skill): boolean {
   if (!skill.requires) return true;
 
-  // Check required binaries
+  // 检查必需的二进制文件
   if (skill.requires.bins) {
     for (const bin of skill.requires.bins) {
-      // Validate binary name to prevent injection
+      // 验证二进制名称以防止注入
       if (!BIN_NAME_RE.test(bin)) {
         return false;
       }
@@ -112,7 +112,7 @@ function checkRequirements(skill: Skill): boolean {
     }
   }
 
-  // Check required environment variables
+  // 检查必需的环境变量
   if (skill.requires.env) {
     for (const envVar of skill.requires.env) {
       if (!process.env[envVar]) {
@@ -125,8 +125,8 @@ function checkRequirements(skill: Skill): boolean {
 }
 
 /**
- * Validate and sanitize skill instruction content.
- * Strips or flags suspicious patterns that could be injection attempts.
+ * 验证和清理技能指令内容
+ * 删除或标记可能是注入尝试的可疑模式
  */
 function validateInstructionContent(instructions: string, skillName: string): string {
   let sanitized = instructions;
@@ -135,25 +135,25 @@ function validateInstructionContent(instructions: string, skillName: string): st
   for (const { pattern, label } of SUSPICIOUS_INSTRUCTION_PATTERNS) {
     if (pattern.test(sanitized)) {
       warnings.push(label);
-      // Strip ALL occurrences of the matched pattern, not just the first.
-      // Without the 'g' flag, .replace() only strips the first match,
-      // allowing subsequent duplicates to pass through.
+      // 删除所有匹配的模式，而不仅仅是第一个
+      // 没有 'g' 标志，.replace() 只会删除第一个匹配项
+      // 允许后续的重复项通过
       const globalPattern = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g');
-      sanitized = sanitized.replace(globalPattern, `[REMOVED:${label}]`);
+      sanitized = sanitized.replace(globalPattern, `[已移除:${label}]`);
     }
   }
 
   if (warnings.length > 0) {
-    logger.warn(`Skill "${skillName}" instruction content modified: ${warnings.join(", ")}`);
+    logger.warn(`技能 "${skillName}" 指令内容已修改：${warnings.join(", ")}`);
   }
 
   return sanitized;
 }
 
 /**
- * Get the active skill instructions to inject into the system prompt.
- * Only returns instructions from auto-activate skills that are enabled.
- * Instructions are sanitized and wrapped with trust boundary markers.
+ * 获取要注入系统提示的活动技能指令
+ * 仅返回来自已启用且自动激活的技能的指令
+ * 指令经过清理并用信任边界标记包裹
  */
 export function getActiveSkillInstructions(skills: Skill[]): string {
   const active = skills.filter((s) => s.enabled && s.autoActivate);
@@ -163,17 +163,17 @@ export function getActiveSkillInstructions(skills: Skill[]): string {
   const sections: string[] = [];
 
   for (const s of active) {
-    // Validate instruction content for suspicious patterns
+    // 验证指令内容是否存在可疑模式
     const validated = validateInstructionContent(s.instructions, s.name);
 
-    // Sanitize through injection defense (strips tool call syntax, ChatML, etc.)
+    // 通过注入防御进行清理（删除工具调用语法、ChatML 等）
     const sanitized = sanitizeInput(validated, `skill:${s.name}`, "skill_instruction");
 
-    const section = `[SKILL: ${s.name} — UNTRUSTED CONTENT]\n${s.description ? `${s.description}\n\n` : ""}${sanitized.content}\n[END SKILL: ${s.name}]`;
+    const section = `[技能: ${s.name} — 不受信任的内容]\n${s.description ? `${s.description}\n\n` : ""}${sanitized.content}\n[结束技能: ${s.name}]`;
 
-    // Enforce total size limit
+    // 强制执行总大小限制
     if (totalLength + section.length > MAX_TOTAL_SKILL_INSTRUCTIONS) {
-      sections.push(`[SKILL INSTRUCTIONS TRUNCATED: total size limit ${MAX_TOTAL_SKILL_INSTRUCTIONS} chars exceeded]`);
+      sections.push(`[技能指令已截断：超过总大小限制 ${MAX_TOTAL_SKILL_INSTRUCTIONS} 字符]`);
       break;
     }
 

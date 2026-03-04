@@ -1,8 +1,8 @@
 /**
- * Inference Budget Tracker
+ * 推理预算跟踪器
  *
- * Tracks inference costs and enforces budget limits per call,
- * per hour, per session, and per day.
+ * 跟踪推理成本并强制执行每次调用、
+ * 每小时、每个会话和每天的预算限制。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -28,64 +28,64 @@ export class InferenceBudgetTracker {
   }
 
   /**
-   * Check whether a call with estimated cost is within budget.
-   * Returns { allowed: true } or { allowed: false, reason: "..." }.
+   * 检查具有估算成本的调用是否在预算内。
+   * 返回 { allowed: true } 或 { allowed: false, reason: "..." }。
    */
   checkBudget(
     estimatedCostCents: number,
     model: string,
   ): { allowed: boolean; reason?: string } {
-    // Per-call ceiling check
+    // 每次调用上限检查
     if (this.config.perCallCeilingCents > 0 && estimatedCostCents > this.config.perCallCeilingCents) {
       return {
         allowed: false,
-        reason: `Per-call cost ${estimatedCostCents}c exceeds ceiling of ${this.config.perCallCeilingCents}c`,
+        reason: `每次调用成本 ${estimatedCostCents}c 超过上限 ${this.config.perCallCeilingCents}c`,
       };
     }
 
-    // Hourly budget check
+    // 每小时预算检查
     if (this.config.hourlyBudgetCents > 0) {
       const hourlyCost = this.getHourlyCost();
       if (hourlyCost + estimatedCostCents > this.config.hourlyBudgetCents) {
         return {
           allowed: false,
-          reason: `Hourly budget exhausted: ${hourlyCost}c spent + ${estimatedCostCents}c estimated > ${this.config.hourlyBudgetCents}c limit`,
+          reason: `每小时预算已用尽：已花费 ${hourlyCost}c + 预估 ${estimatedCostCents}c > 限制 ${this.config.hourlyBudgetCents}c`,
         };
       }
     }
 
-    // Session budget check
+    // 会话预算检查
     if (this.config.sessionBudgetCents > 0) {
-      // Session budget is enforced via getSessionCost when sessionId is known
-      // This is a guard for the overall session — enforced in router.route()
+      // 当 sessionId 已知时，通过 getSessionCost 强制执行会话预算
+      // 这是对整个会话的保护 —— 在 router.route() 中强制执行
     }
 
     return { allowed: true };
   }
 
   /**
-   * Record a completed inference cost.
+   * 记录已完成的推理成本。
    */
   recordCost(cost: Omit<InferenceCostRow, "id" | "createdAt">): void {
     inferenceInsertCost(this.db, cost);
   }
 
   /**
-   * Get total cost for the current hour.
+   * 获取当前小时的总成本。
    */
   getHourlyCost(): number {
     return inferenceGetHourlyCost(this.db);
   }
 
   /**
-   * Get total cost for today (or a specific date).
+   * 获取今天（或特定日期）的总成本。
    */
   getDailyCost(date?: string): number {
     return inferenceGetDailyCost(this.db, date);
   }
 
   /**
-   * Get total cost for a specific session.
+   * 获取特定会话的总成本。
    */
   getSessionCost(sessionId: string): number {
     const costs = inferenceGetSessionCosts(this.db, sessionId);
@@ -93,7 +93,7 @@ export class InferenceBudgetTracker {
   }
 
   /**
-   * Get cost breakdown for a specific model.
+   * 获取特定模型的成本细分。
    */
   getModelCosts(model: string, days?: number): { totalCents: number; callCount: number } {
     return inferenceGetModelCosts(this.db, model, days);

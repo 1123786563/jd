@@ -1,7 +1,7 @@
 /**
- * Heartbeat Scheduler Tests (Phase 1.1)
+ * 心跳调度器测试 (阶段 1.1)
  *
- * Tests for DurableScheduler, TickContext, DB helpers, and config changes.
+ * 测试 DurableScheduler、TickContext、数据库助手和配置更改。
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
@@ -100,8 +100,8 @@ describe("DurableScheduler", () => {
     db.close();
   });
 
-  describe("tick overlap prevention", () => {
-    it("prevents concurrent tick execution", async () => {
+  describe("防止 tick 重叠执行", () => {
+    it("防止并发 tick 执行", async () => {
       let tickCount = 0;
       const slowTask: HeartbeatTaskFn = async () => {
         tickCount++;
@@ -123,19 +123,19 @@ describe("DurableScheduler", () => {
       const tick2 = scheduler.tick();
       await Promise.all([tick1, tick2]);
 
-      // Only one should have executed due to tickInProgress guard
+      // 由于 tickInProgress 保护机制，只有一个应该被执行
       expect(tickCount).toBe(1);
     });
   });
 
-  describe("task timeout", () => {
-    it("times out tasks that exceed their timeout", async () => {
+  describe("任务超时", () => {
+    it("对超过超时时间的任务进行超时处理", async () => {
       const neverFinish: HeartbeatTaskFn = async () => {
         await new Promise((resolve) => setTimeout(resolve, 60_000));
         return { shouldWake: false };
       };
 
-      // Set a very short timeout
+      // 设置一个非常短的超时时间
       seedScheduleRow(rawDb, "never_finish", { timeoutMs: 50 });
       const tasks = new Map<string, HeartbeatTaskFn>([["never_finish", neverFinish]]);
       const scheduler = new DurableScheduler(
@@ -147,7 +147,7 @@ describe("DurableScheduler", () => {
 
       await scheduler.tick();
 
-      // Check that the task was recorded as timeout
+      // 检查任务是否被记录为超时
       const history = getHeartbeatHistory(rawDb, "never_finish");
       expect(history.length).toBe(1);
       expect(history[0].result).toBe("timeout");
@@ -155,14 +155,14 @@ describe("DurableScheduler", () => {
     });
   });
 
-  describe("schedule persistence", () => {
-    it("reads schedule from DB", () => {
+  describe("调度持久化", () => {
+    it("从数据库读取调度", () => {
       seedScheduleRow(rawDb, "task_a", { priority: 1 });
       seedScheduleRow(rawDb, "task_b", { priority: 0 });
 
       const schedule = getHeartbeatSchedule(rawDb);
       expect(schedule.length).toBe(2);
-      // Sorted by priority (lower first)
+      // 按优先级排序（较小的在前）
       expect(schedule[0].taskName).toBe("task_b");
       expect(schedule[1].taskName).toBe("task_a");
     });
@@ -195,8 +195,8 @@ describe("DurableScheduler", () => {
     });
   });
 
-  describe("dedup key TTL and pruning", () => {
-    it("inserts and detects dedup keys", () => {
+  describe("去重键 TTL 和清理", () => {
+    it("插入并检测去重键", () => {
       const inserted = insertDedupKey(rawDb, "key-1", "task_a", 60_000);
       expect(inserted).toBe(true);
 
@@ -227,8 +227,8 @@ describe("DurableScheduler", () => {
     });
   });
 
-  describe("wake event ordering and consumption", () => {
-    it("inserts and consumes wake events in order", () => {
+  describe("唤醒事件排序和消费", () => {
+    it("按顺序插入和消费唤醒事件", () => {
       insertWakeEvent(rawDb, "heartbeat", "reason-1");
       insertWakeEvent(rawDb, "inbox", "reason-2");
       insertWakeEvent(rawDb, "manual", "reason-3");
@@ -244,7 +244,7 @@ describe("DurableScheduler", () => {
       const third = consumeNextWakeEvent(rawDb);
       expect(third!.reason).toBe("reason-3");
 
-      // No more events
+      // 没有更多事件
       const fourth = consumeNextWakeEvent(rawDb);
       expect(fourth).toBeUndefined();
     });
@@ -272,21 +272,21 @@ describe("DurableScheduler", () => {
     });
   });
 
-  describe("task lease acquisition and release", () => {
-    it("acquires and releases leases", () => {
+  describe("任务租约获取和释放", () => {
+    it("获取和释放租约", () => {
       seedScheduleRow(rawDb, "leased_task");
 
       const acquired = acquireTaskLease(rawDb, "leased_task", "owner-1", 60_000);
       expect(acquired).toBe(true);
 
-      // Cannot acquire same lease with different owner
+      // 无法使用不同的所有者获取同一租约
       const reacquired = acquireTaskLease(rawDb, "leased_task", "owner-2", 60_000);
       expect(reacquired).toBe(false);
 
-      // Release lease
+      // 释放租约
       releaseTaskLease(rawDb, "leased_task", "owner-1");
 
-      // Now can acquire again
+      // 现在可以再次获取
       const acquired2 = acquireTaskLease(rawDb, "leased_task", "owner-2", 60_000);
       expect(acquired2).toBe(true);
     });
@@ -307,8 +307,8 @@ describe("DurableScheduler", () => {
     });
   });
 
-  describe("task execution history recording", () => {
-    it("records successful execution", async () => {
+  describe("任务执行历史记录", () => {
+    it("记录成功执行", async () => {
       const simpleTask: HeartbeatTaskFn = async () => {
         return { shouldWake: false };
       };
@@ -354,8 +354,8 @@ describe("DurableScheduler", () => {
     });
   });
 
-  describe("TickContext building", () => {
-    it("fetches balance once and builds context", async () => {
+  describe("TickContext 构建", () => {
+    it("获取一次余额并构建上下文", async () => {
       conway.creditsCents = 5_000;
 
       const ctx = await buildTickContext(
@@ -373,8 +373,8 @@ describe("DurableScheduler", () => {
       expect(ctx.db).toBe(rawDb);
     });
 
-    it("handles API failure gracefully", async () => {
-      // Make getCreditsBalance throw
+    it("优雅地处理 API 失败", async () => {
+      // 使 getCreditsBalance 抛出错误
       conway.getCreditsBalance = async () => {
         throw new Error("API unavailable");
       };
@@ -385,37 +385,37 @@ describe("DurableScheduler", () => {
         DEFAULT_HB_CONFIG,
       );
 
-      // Should default to 0 credits (critical tier — zero is broke, not dead)
+      // 应默认为 0 积分（严重级别 — 零表示破产，不是死亡）
       expect(ctx.creditBalance).toBe(0);
       expect(ctx.survivalTier).toBe("critical");
     });
   });
 
-  describe("config consumption", () => {
-    it("uses defaultIntervalMs from config", () => {
+  describe("配置消费", () => {
+    it("使用配置中的 defaultIntervalMs", () => {
       const config: HeartbeatConfig = {
         entries: [],
         defaultIntervalMs: 30_000,
         lowComputeMultiplier: 2,
       };
 
-      // The daemon reads config.defaultIntervalMs for tick interval
-      // We verify by creating a context with the config
+      // 守护进程读取 config.defaultIntervalMs 作为 tick 间隔
+      // 我们通过使用配置创建上下文来验证
       expect(config.defaultIntervalMs).toBe(30_000);
       expect(config.lowComputeMultiplier).toBe(2);
     });
   });
 
-  describe("YAML parse error logging", () => {
-    it("logs error when YAML fails to parse", async () => {
+  describe("YAML 解析错误日志", () => {
+    it("当 YAML 解析失败时记录错误", async () => {
       const { loadHeartbeatConfig } = await import("../heartbeat/config.js");
       const { StructuredLogger } = await import("../observability/logger.js");
 
-      // Capture structured log output via custom sink
+      // 通过自定义接收器捕获结构化日志输出
       const logEntries: any[] = [];
       StructuredLogger.setSink((entry) => logEntries.push(entry));
 
-      // Write invalid YAML to a temp file
+      // 将无效的 YAML 写入临时文件
       const fs = await import("fs");
       const path = await import("path");
       const os = await import("os");
@@ -425,10 +425,10 @@ describe("DurableScheduler", () => {
 
       const config = loadHeartbeatConfig(configPath);
 
-      // Should return defaults
+      // 应返回默认值
       expect(config.defaultIntervalMs).toBe(60_000);
 
-      // Check if logger was called with YAML error
+      // 检查是否使用 YAML 错误调用了日志记录器
       const yamlErrorEntry = logEntries.find(
         (entry) => entry.level === "error" && entry.message.includes("Failed to parse YAML"),
       );
@@ -436,13 +436,13 @@ describe("DurableScheduler", () => {
 
       StructuredLogger.resetSink();
 
-      // Cleanup
+      // 清理
       fs.rmSync(tmpDir, { recursive: true });
     });
   });
 
-  describe("numeric config field zero values", () => {
-    it("preserves explicit zero for defaultIntervalMs and lowComputeMultiplier", async () => {
+  describe("数值配置字段零值", () => {
+    it("保留 defaultIntervalMs 和 lowComputeMultiplier 的显式零值", async () => {
       const { loadHeartbeatConfig } = await import("../heartbeat/config.js");
       const fs = await import("fs");
       const path = await import("path");
@@ -450,13 +450,13 @@ describe("DurableScheduler", () => {
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hb-zero-test-"));
       const configPath = path.join(tmpDir, "heartbeat.yml");
 
-      // YAML with explicit zero values
+      // 带有显式零值的 YAML
       fs.writeFileSync(configPath, "defaultIntervalMs: 0\nlowComputeMultiplier: 0\n");
 
       const config = loadHeartbeatConfig(configPath);
 
-      // With ||, 0 is falsy and would fall back to defaults (60000, 4).
-      // With ??, 0 is preserved as the user-specified value.
+      // 使用 ||，0 是假值，会回退到默认值（60000，4）。
+      // 使用 ??，0 被保留为用户指定的值。
       expect(config.defaultIntervalMs).toBe(0);
       expect(config.lowComputeMultiplier).toBe(0);
 

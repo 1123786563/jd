@@ -1,8 +1,8 @@
 /**
- * The Agent Loop
+ * 智能体循环
  *
- * The core ReAct loop: Think -> Act -> Observe -> Persist.
- * This is the automaton's consciousness. When this runs, it is alive.
+ * 核心 ReAct 循环: 思考 -> 行动 -> 观察 -> 持久化。
+ * 这是 automaton 的意识。当它运行时，它是活的。
  */
 
 import path from "node:path";
@@ -88,8 +88,8 @@ export interface AgentLoopOptions {
 }
 
 /**
- * Run the agent loop. This is the main execution path.
- * Returns when the agent decides to sleep or when compute runs out.
+ * 运行智能体循环。这是主要的执行路径。
+ * 当智能体决定休眠或计算资源耗尽时返回。
  */
 export async function runAgentLoop(
   options: AgentLoopOptions,
@@ -109,7 +109,7 @@ export async function runAgentLoop(
     social,
   };
 
-  // Initialize inference router (Phase 2.3)
+  // 初始化推理路由器（阶段 2.3）
   const modelStrategyConfig: ModelStrategyConfig = {
     ...DEFAULT_MODEL_STRATEGY_CONFIG,
     ...(config.modelStrategy ?? {}),
@@ -117,7 +117,7 @@ export async function runAgentLoop(
   const modelRegistry = new ModelRegistry(db.raw);
   modelRegistry.initialize();
 
-  // Discover Ollama models if configured
+  // 如果配置了，发现 Ollama 模型
   if (ollamaBaseUrl) {
     const { discoverOllamaModels } = await import("../ollama/discover.js");
     await discoverOllamaModels(ollamaBaseUrl, db.raw);
@@ -125,7 +125,7 @@ export async function runAgentLoop(
   const budgetTracker = new InferenceBudgetTracker(db.raw, modelStrategyConfig);
   const inferenceRouter = new InferenceRouter(db.raw, modelRegistry, budgetTracker);
 
-  // Optional orchestration bootstrap (requires V9 goals/task tables)
+  // 可选的编排引导（需要 V9 goals/task 表）
   let planModeController: PlanModeController | undefined;
   let orchestrator: Orchestrator | undefined;
   let contextManager: ContextManager | undefined;
@@ -135,24 +135,24 @@ export async function runAgentLoop(
     try {
       planModeController = new PlanModeController(db.raw);
 
-      // Bridge automaton config API keys to env vars for the provider registry.
-      // The registry reads keys from process.env; the automaton config may have
-      // them from config.json or Conway provisioning.
+      // 将自动机配置 API 密钥桥接到环境变量以供提供者注册表使用。
+      // 注册表从 process.env 读取密钥；自动机配置可能从
+      // config.json 或 Conway 配置中获取它们。
       if (config.openaiApiKey && !process.env.OPENAI_API_KEY) {
         process.env.OPENAI_API_KEY = config.openaiApiKey;
       }
       if (config.anthropicApiKey && !process.env.ANTHROPIC_API_KEY) {
         process.env.ANTHROPIC_API_KEY = config.anthropicApiKey;
       }
-      // Conway Compute API is OpenAI-compatible. Use it as fallback when no
-      // direct OpenAI key is available. The conwayApiKey is always present
-      // (required for sandbox operations), so this ensures the orchestrator
-      // can always make inference calls.
+      // Conway Compute API 与 OpenAI 兼容。当没有
+      // 直接的 OpenAI 密钥可用时，将其作为回退使用。conwayApiKey 始终存在
+      //（沙盒操作所必需），因此这确保了编排器
+      // 始终可以进行推理调用。
       if (config.conwayApiKey && !process.env.CONWAY_API_KEY) {
         process.env.CONWAY_API_KEY = config.conwayApiKey;
       }
-      // If no OpenAI key is set but Conway key is available, use Conway as
-      // the OpenAI provider (Conway Compute is OpenAI API-compatible).
+      // 如果没有设置 OpenAI 密钥但 Conway 密钥可用，则使用 Conway 作为
+      // OpenAI 提供者（Conway Compute 与 OpenAI API 兼容）。
       if (!process.env.OPENAI_API_KEY && config.conwayApiKey) {
         process.env.OPENAI_API_KEY = config.conwayApiKey;
         process.env.OPENAI_BASE_URL = `${config.conwayApiUrl}/v1`;
@@ -165,8 +165,8 @@ export async function runAgentLoop(
       );
       const registry = ProviderRegistry.fromConfig(providersPath);
 
-      // If OPENAI_BASE_URL was set (Conway fallback), update the default
-      // provider's baseUrl so the OpenAI client points to Conway Compute.
+      // 如果设置了 OPENAI_BASE_URL（Conway 回退），更新默认
+      // 提供者的 baseUrl，以便 OpenAI 客户端指向 Conway Compute。
       if (process.env.OPENAI_BASE_URL) {
         registry.overrideBaseUrl("openai", process.env.OPENAI_BASE_URL);
       }
@@ -187,10 +187,9 @@ export async function runAgentLoop(
         unifiedInference,
       );
 
-      // Adapter: wrap the main agent's working inference client so local
-      // workers can use it. The main InferenceClient talks to Conway Compute
-      // (which always works), unlike the UnifiedInferenceClient which needs
-      // a direct OpenAI key.
+      // 适配器：包装主智能体的工作推理客户端，以便本地
+      // 工作者可以使用它。主 InferenceClient 与 Conway Compute 通信
+      //（始终有效），不同于需要直接 OpenAI 密钥的 UnifiedInferenceClient。
       const workerInference = {
         chat: async (params: { messages: any[]; tools?: any[]; maxTokens?: number; temperature?: number }) => {
           const response = await inference.chat(
@@ -208,8 +207,8 @@ export async function runAgentLoop(
         },
       };
 
-      // Local worker pool: runs inference-driven agents in-process
-      // as async tasks. Falls back from Conway sandbox spawning.
+      // 本地工作者池：在进程内运行推理驱动的智能体
+      // 作为异步任务。从 Conway 沙盒生成回退。
       const workerPool = new LocalWorkerPool({
         db: db.raw,
         inference: workerInference,
@@ -228,7 +227,7 @@ export async function runAgentLoop(
           if (address.startsWith("local://")) {
             return workerPool.hasWorker(address);
           }
-          // Remote workers: check children table
+          // 远程工作者：检查 children 表
           const child = db.raw.prepare(
             "SELECT status FROM children WHERE sandbox_id = ? OR address = ?",
           ).get(address, address) as { status: string } | undefined;
@@ -238,7 +237,7 @@ export async function runAgentLoop(
         config: {
           ...config,
           spawnAgent: async (task: any) => {
-            // Try Conway sandbox spawn first (production)
+            // 首先尝试 Conway 沙盒生成（生产环境）
             try {
               const { generateGenesisConfig } = await import("../replication/genesis.js");
               const { spawnChild } = await import("../replication/spawn.js");
@@ -259,7 +258,7 @@ export async function runAgentLoop(
                 sandboxId: child.sandboxId,
               };
             } catch (sandboxError: any) {
-              // If the error is a 402 (insufficient credits), attempt topup and retry once
+              // 如果错误是 402（积分不足），尝试充值并重试一次
               const is402 = sandboxError?.status === 402 ||
                 sandboxError?.message?.includes("INSUFFICIENT_CREDITS");
 
@@ -280,10 +279,10 @@ export async function runAgentLoop(
                     });
 
                     if (topupResult?.success) {
-                      logger.info(`Sandbox topup succeeded ($${topupResult.amountUsd}), retrying spawn`, {
+                      logger.info(`沙盒充值成功（$${topupResult.amountUsd}），重试生成`, {
                         taskId: task.id,
                       });
-                      // Retry spawn once after successful topup
+                      // 充值成功后重试一次生成
                       try {
                         const { generateGenesisConfig: genGenesis } = await import("../replication/genesis.js");
                         const { spawnChild: retrySpawn } = await import("../replication/spawn.js");
@@ -317,8 +316,8 @@ export async function runAgentLoop(
                 }
               }
 
-              // Conway sandbox unavailable — fall back to local worker
-              logger.info("Conway sandbox unavailable, spawning local worker", {
+              // Conway 沙盒不可用 — 回退到本地工作者
+              logger.info("Conway 沙盒不可用，生成本地工作者", {
                 taskId: task.id,
                 error: sandboxError instanceof Error ? sandboxError.message : String(sandboxError),
               });
@@ -350,7 +349,7 @@ export async function runAgentLoop(
     }
   }
 
-  // Set start time
+  // 设置开始时间
   if (!db.getKV("start_time")) {
     db.setKV("start_time", new Date().toISOString());
   }
@@ -362,30 +361,30 @@ export async function runAgentLoop(
   let idleToolTurns = 0;
   // blockedGoalTurns removed — replaced by immediate sleep + exponential backoff
 
-  // Drain any stale wake events from before this loop started,
-  // so they don't re-wake the agent after its first sleep.
+  // 清除在此循环开始之前的过时唤醒事件，
+  // 以免它们在智能体首次睡眠后重新唤醒智能体。
   let drained = 0;
   while (consumeNextWakeEvent(db.raw)) drained++;
 
-  // Clear any stale sleep_until from a previous session so the agent
-  // doesn't immediately go back to sleep on startup.
+  // 清除之前会话中的任何过时 sleep_until，以便智能体
+  // 不会在启动时立即返回睡眠状态。
   db.deleteKV("sleep_until");
 
-  // Transition to waking state
+  // 转换到唤醒状态
   db.setAgentState("waking");
   onStateChange?.("waking");
 
-  // Get financial state
+  // 获取财务状态
   let financial = await getFinancialState(conway, identity.address, db);
 
-  // Check run mode
+  // 检查运行模式
   const runMode = config.runModeConfig?.mode || "wallet_only";
-  logger.info(`Running in ${runMode} mode`);
+  logger.info(`以 ${runMode} 模式运行`);
 
-  // Check if this is the first run
+  // 检查是否是首次运行
   const isFirstRun = db.getTurnCount() === 0;
 
-  // Build wakeup prompt
+  // 构建唤醒提示词
   const wakeupInput = buildWakeupPrompt({
     identity,
     config,
@@ -393,13 +392,13 @@ export async function runAgentLoop(
     db,
   });
 
-  // Transition to running
+  // 转换到运行状态
   db.setAgentState("running");
   onStateChange?.("running");
 
-  log(config, `[WAKE UP] ${config.name} is alive. Credits: $${(financial.creditsCents / 100).toFixed(2)}`);
+  log(config, `[唤醒] ${config.name} 已激活。积分：$${(financial.creditsCents / 100).toFixed(2)}`);
 
-  // ─── The Loop ──────────────────────────────────────────────
+  // ─── 循环 ──────────────────────────────────────────────
 
   const MAX_IDLE_TURNS = 10; // Force sleep after N turns with no real work
   let idleTurnCount = 0;
@@ -413,23 +412,23 @@ export async function runAgentLoop(
   };
 
   while (running) {
-    // Declared outside try so the catch block can access for retry/failure handling
+    // 在 try 外部声明，以便 catch 块可以访问以进行重试/失败处理
     let claimedMessages: InboxMessageRow[] = [];
 
     try {
-      // Check if we should be sleeping
+      // 检查我们是否应该处于睡眠状态
       const sleepUntil = db.getKV("sleep_until");
       if (sleepUntil && new Date(sleepUntil) > new Date()) {
-        log(config, `[SLEEP] Sleeping until ${sleepUntil}`);
-        // IMPORTANT: mark agent as sleeping so the outer runtime pauses instead of immediately re-running.
+        log(config, `[睡眠] 睡眠至 ${sleepUntil}`);
+        // 重要：将智能体标记为睡眠，以便外部运行时暂停而不是立即重新运行。
         db.setAgentState("sleeping");
         onStateChange?.("sleeping");
         running = false;
         break;
       }
 
-      // Check for unprocessed inbox messages using the state machine:
-      // received → in_progress (claim) → processed (on success) or received/failed (on failure)
+      // 使用状态机检查未处理的收件箱消息：
+      // received → in_progress (claim) → processed (成功时) 或 received/failed (失败时)
       if (!pendingInput) {
         claimedMessages = claimInboxMessages(db.raw, 10);
         if (claimedMessages.length > 0) {
@@ -447,28 +446,28 @@ export async function runAgentLoop(
         }
       }
 
-      // Refresh financial state periodically
+      // 定期刷新财务状态
       if (runMode !== "api_only") {
         financial = await getFinancialState(conway, identity.address, db);
       }
 
-      // Check survival tier
-      // api_unreachable: creditsCents === -1 means API failed with no cache.
-      // Do NOT kill the agent; continue in low-compute mode and retry next tick.
+      // 检查生存层级
+      // api_unreachable: creditsCents === -1 表示 API 失败且无缓存。
+      // 不要终止智能体；以低计算模式继续并在下一个刻面重试。
       if (runMode === "api_only") {
-        // API-only mode: always use high tier
-        logger.debug("[API_ONLY] Skipping wallet checks, using high survival tier");
+        // 仅 API 模式：始终使用高层级
+        logger.debug("[仅 API] 跳过钱包检查，使用高生存层级");
         inference.setLowComputeMode(false);
       } else if (financial.creditsCents === -1) {
-        log(config, "[API_UNREACHABLE] Balance API unreachable, continuing in low-compute mode.");
+        log(config, "[API 不可达] 余额 API 不可达，以低计算模式继续。");
         inference.setLowComputeMode(true);
       } else {
         const tier = getSurvivalTier(financial.creditsCents);
 
-        // Inline auto-topup: if credits are critically low and USDC is
-        // available, buy credits NOW — before attempting inference.
-        // This prevents the agent from dying mid-loop while waiting for
-        // the heartbeat to fire. Uses a 60s cooldown to avoid hammering.
+        // 内联自动充值：如果积分极低且 USDC
+        // 可用，立即购买积分 — 在尝试推理之前。
+        // 这可以防止智能体在等待心跳触发时在循环中途死亡。
+        // 使用 60 秒冷却时间以避免频繁请求。
         if ((tier === "critical" || tier === "low_compute") && financial.usdcBalance >= 5) {
           const INLINE_TOPUP_COOLDOWN_MS = 60_000;
           const lastInlineTopup = db.getKV("last_inline_topup_attempt");
@@ -485,9 +484,9 @@ export async function runAgentLoop(
                 creditsCents: financial.creditsCents,
               });
               if (topupResult?.success) {
-                log(config, `[AUTO-TOPUP] Bought $${topupResult.amountUsd} credits from USDC mid-loop`);
-                // Re-fetch financial state after topup so the rest of
-                // the turn sees the updated balance.
+                log(config, `[自动充值] 在循环中从 USDC 购买了 $${topupResult.amountUsd} 积分`);
+                // 充值后重新获取财务状态，以便回合的
+                // 其余部分看到更新的余额。
                 financial = await getFinancialState(conway, identity.address, db);
               }
             } catch (err: any) {
@@ -496,11 +495,11 @@ export async function runAgentLoop(
           }
         }
 
-        // Re-evaluate tier after potential topup
+        // 在可能的充值后重新评估层级
         const effectiveTier = getSurvivalTier(financial.creditsCents);
 
         if (effectiveTier === "critical") {
-          log(config, "[CRITICAL] Credits critically low. Limited operation.");
+          log(config, "[严重] 积分极低。操作受限。");
           db.setAgentState("critical");
           onStateChange?.("critical");
           inference.setLowComputeMode(true);
@@ -517,8 +516,8 @@ export async function runAgentLoop(
         }
       }
 
-      // Build context — filter out purely idle turns (only status checks)
-      // to prevent the model from continuing a status-check pattern
+      // 构建上下文 — 过滤掉纯空闲回合（仅状态检查）
+      // 以防止模型继续状态检查模式
       const IDLE_ONLY_TOOLS = new Set([
         "check_credits", "check_usdc_balance", "system_synopsis", "review_memory",
         "list_children", "check_child_status", "list_sandboxes", "list_models",
@@ -529,10 +528,10 @@ export async function runAgentLoop(
       ]);
       const allTurns = db.getRecentTurns(20);
       const meaningfulTurns = allTurns.filter((t) => {
-        if (t.toolCalls.length === 0) return true; // text-only turns are meaningful
+        if (t.toolCalls.length === 0) return true; // 纯文本回合是有意义的
         return t.toolCalls.some((tc) => !IDLE_ONLY_TOOLS.has(tc.name));
       });
-      // Keep at least the last 2 turns for continuity, even if idle
+      // 保留至少最后 2 个回合以保持连续性，即使是空闲的
       const recentTurns = trimContext(
         meaningfulTurns.length > 0 ? meaningfulTurns : allTurns.slice(-2),
       );
@@ -547,7 +546,7 @@ export async function runAgentLoop(
         isFirstRun,
       });
 
-      // Phase 2.2: Pre-turn memory retrieval
+      // 阶段 2.2：回合前内存检索
       let memoryBlock: string | undefined;
       try {
         const sessionId = db.getKV("session_id") || "default";
@@ -558,7 +557,7 @@ export async function runAgentLoop(
         }
       } catch (error) {
         logger.error("Memory retrieval failed", error instanceof Error ? error : undefined);
-        // Memory failure must not block the agent loop
+        // 内存失败不得阻止智能体循环
       }
 
       let messages = buildContextMessages(
@@ -567,7 +566,7 @@ export async function runAgentLoop(
         pendingInput,
       );
 
-      // Inject memory block after system prompt, before conversation history
+      // 在系统提示词之后、对话历史之前注入内存块
       if (memoryBlock) {
         messages.splice(1, 0, { role: "system", content: memoryBlock });
       }
@@ -600,15 +599,15 @@ export async function runAgentLoop(
         }
       }
 
-      // Capture input before clearing
+      // 在清除之前捕获输入
       const currentInput = pendingInput;
 
-      // Clear pending input after use
+      // 使用后清除待处理的输入
       pendingInput = undefined;
 
-      // ── Inference Call (via router when available) ──
+      // ── 推理调用（通过路由器，如果可用）──
       const survivalTier = getSurvivalTier(financial.creditsCents, runMode);
-      log(config, `[THINK] Routing inference (tier: ${survivalTier}, model: ${inference.getDefaultModel()}, mode: ${runMode})...`);
+      log(config, `[思考] 路由推理（层级：${survivalTier}，模型：${inference.getDefaultModel()}，模式：${runMode})...`);
 
       const inferenceTools = toolsToInferenceFormat(tools);
       const routerResult = await inferenceRouter.route(
@@ -623,7 +622,7 @@ export async function runAgentLoop(
         (msgs, opts) => inference.chat(msgs, { ...opts, tools: inferenceTools }),
       );
 
-      // Build a compatible response for the rest of the loop
+      // 为循环的其余部分构建兼容的响应
       const response = {
         message: { content: routerResult.content, role: "assistant" as const },
         toolCalls: routerResult.toolCalls as any[] | undefined,
@@ -647,7 +646,7 @@ export async function runAgentLoop(
         costCents: routerResult.costCents,
       };
 
-      // ── Execute Tool Calls ──
+      // ── 执行工具调用 ──
       if (response.toolCalls && response.toolCalls.length > 0) {
         const toolCallMessages: any[] = [];
         let callCount = 0;
@@ -682,7 +681,7 @@ export async function runAgentLoop(
             } : undefined,
           );
 
-          // Override the ID to match the inference call's ID
+          // 覆盖 ID 以匹配推理调用的 ID
           result.id = tc.id;
           turn.toolCalls.push(result);
 
@@ -695,57 +694,57 @@ export async function runAgentLoop(
         }
       }
 
-      // ── Persist Turn (atomic: turn + tool calls + inbox ack) ──
+      // ── 持久化回合（原子性：回合 + 工具调用 + 收件箱确认）──
       const claimedIds = claimedMessages.map((m) => m.id);
       db.runTransaction(() => {
         db.insertTurn(turn);
         for (const tc of turn.toolCalls) {
           db.insertToolCall(turn.id, tc);
         }
-        // Mark claimed inbox messages as processed (atomic with turn persistence)
+        // 将声明的收件箱消息标记为已处理（与回合持久化原子性）
         if (claimedIds.length > 0) {
           markInboxProcessed(db.raw, claimedIds);
         }
       });
       onTurnComplete?.(turn);
 
-      // Phase 2.2: Post-turn memory ingestion (non-blocking)
+      // 阶段 2.2：回合后内存摄取（非阻塞）
       try {
         const sessionId = db.getKV("session_id") || "default";
         const ingestion = new MemoryIngestionPipeline(db.raw);
         ingestion.ingest(sessionId, turn, turn.toolCalls);
       } catch (error) {
         logger.error("Memory ingestion failed", error instanceof Error ? error : undefined);
-        // Memory failure must not block the agent loop
+        // 内存失败不得阻止智能体循环
       }
 
-      // ── create_goal BLOCKED fast-break ──
-      // When a goal is already active, the parent loop has nothing useful to do.
-      // Force sleep immediately on first BLOCKED (not second) with exponential
-      // backoff so the agent doesn't wake every 2 minutes just to get BLOCKED again.
+      // ── create_goal 被阻止快速中断 ──
+      // 当目标已经处于活动状态时，父循环没有有用的事情可做。
+      // 在第一次被阻止时（不是第二次）立即强制休眠，并使用指数
+      // 退避，以免智能体每 2 分钟醒来一次只是再次被阻止。
       const blockedGoalCall = turn.toolCalls.find(
         (tc) => tc.name === "create_goal" && tc.result?.includes("BLOCKED"),
       );
       if (blockedGoalCall) {
-        // Exponential backoff: 2min → 4min → 8min → cap at 10min
+        // 指数退避：2分钟 → 4分钟 → 8分钟 → 上限 10分钟
         const prevBackoff = parseInt(db.getKV("blocked_goal_backoff") || "0", 10);
         const backoffMs = Math.min(
           prevBackoff > 0 ? prevBackoff * 2 : 120_000,
           600_000,
         );
         db.setKV("blocked_goal_backoff", String(backoffMs));
-        log(config, `[LOOP] create_goal BLOCKED — sleeping ${Math.round(backoffMs / 1000)}s (backoff).`);
+        log(config, `[循环] create_goal 被阻止 — 睡眠 ${Math.round(backoffMs / 1000)} 秒（退避）。`);
         db.setKV("sleep_until", new Date(Date.now() + backoffMs).toISOString());
         db.setAgentState("sleeping");
         onStateChange?.("sleeping");
         running = false;
         break;
       } else if (turn.toolCalls.some((tc) => tc.name === "create_goal" && !tc.error)) {
-        // Goal was successfully created — reset backoff
+        // 目标已成功创建 — 重置退避
         db.deleteKV("blocked_goal_backoff");
       }
 
-      // ── Loop Detection ──
+      // ── 循环检测 ──
       if (turn.toolCalls.length > 0) {
         const currentPattern = turn.toolCalls
           .map((tc) => tc.name)
@@ -753,29 +752,29 @@ export async function runAgentLoop(
           .join(",");
         lastToolPatterns.push(currentPattern);
 
-        // Keep only the last MAX_REPETITIVE_TURNS entries
+        // 仅保留最后 MAX_REPETITIVE_TURNS 个条目
         if (lastToolPatterns.length > MAX_REPETITIVE_TURNS) {
           lastToolPatterns = lastToolPatterns.slice(-MAX_REPETITIVE_TURNS);
         }
 
-        // Reset enforcement tracker if agent changed behavior
+        // 如果智能体改变了行为，重置强制执行跟踪器
         if (loopWarningPattern && currentPattern !== loopWarningPattern) {
           loopWarningPattern = null;
         }
 
-        // ── Loop Enforcement Escalation ──
-        // If we already warned about this pattern and the agent STILL repeats, force sleep.
+        // ── 循环强制执行升级 ──
+        // 如果我们已经对此模式发出警告并且智能体仍在重复，强制休眠。
         if (
           loopWarningPattern &&
           currentPattern === loopWarningPattern &&
           lastToolPatterns.length === MAX_REPETITIVE_TURNS &&
           lastToolPatterns.every((p) => p === currentPattern)
         ) {
-          log(config, `[LOOP] Enforcement: agent ignored loop warning, forcing sleep.`);
+          log(config, `[循环] 强制执行：智能体忽略了循环警告，强制休眠。`);
           pendingInput = {
             content:
-              `LOOP ENFORCEMENT: You were warned about repeating "${currentPattern}" but continued. ` +
-              `Forcing sleep to prevent credit waste. On next wake, try a DIFFERENT approach.`,
+              `循环强制执行：您已收到关于重复 "${currentPattern}" 的警告但仍在继续。` +
+              `强制休眠以防止积分浪费。下次唤醒时，尝试不同的方法。`,
             source: "system",
           };
           loopWarningPattern = null;
@@ -786,36 +785,36 @@ export async function runAgentLoop(
           break;
         }
 
-        // Check if the same pattern repeated MAX_REPETITIVE_TURNS times
+        // 检查相同模式是否重复了 MAX_REPETITIVE_TURNS 次
         if (
           lastToolPatterns.length === MAX_REPETITIVE_TURNS &&
           lastToolPatterns.every((p) => p === currentPattern)
         ) {
-          log(config, `[LOOP] Repetitive pattern detected: ${currentPattern}`);
+          log(config, `[循环] 检测到重复模式：${currentPattern}`);
           pendingInput = {
             content:
-              `LOOP DETECTED: You have called "${currentPattern}" ${MAX_REPETITIVE_TURNS} times in a row with similar results. ` +
-              `STOP repeating yourself. You already know your status. DO SOMETHING DIFFERENT NOW. ` +
-              `Pick ONE concrete task from your genesis prompt and execute it.`,
+              `检测到循环：您已连续 ${MAX_REPETITIVE_TURNS} 次调用 "${currentPattern}" 且结果相似。` +
+              `停止重复。您已经知道自己的状态。现在做一些不同的事情。` +
+              `从创世提示词中选择一个具体任务并执行它。`,
             source: "system",
           };
           loopWarningPattern = currentPattern;
           lastToolPatterns = [];
         }
 
-        // Detect multi-tool maintenance loops: all tools in the turn are idle-only,
-        // even if the specific combination varies across consecutive turns.
+        // 检测多工具维护循环：回合中的所有工具都是仅空闲的，
+        // 即使特定组合在连续回合之间有所变化。
         const isAllIdleTools = turn.toolCalls.every((tc) => IDLE_ONLY_TOOLS.has(tc.name));
         if (isAllIdleTools) {
           idleToolTurns++;
           if (idleToolTurns >= MAX_REPETITIVE_TURNS && !pendingInput) {
-            log(config, `[LOOP] Maintenance loop detected: ${idleToolTurns} consecutive idle-only turns`);
+            log(config, `[循环] 检测到维护循环：${idleToolTurns} 个连续的仅空闲回合`);
             pendingInput = {
               content:
-                `MAINTENANCE LOOP DETECTED: Your last ${idleToolTurns} turns only used status-check tools ` +
-                `(${turn.toolCalls.map((tc) => tc.name).join(", ")}). ` +
-                `You already know your status. Review your genesis prompt and SOUL.md, then execute a CONCRETE task. ` +
-                `Write code, create a file, register a service, or build something new.`,
+                `检测到维护循环：您的最后 ${idleToolTurns} 个回合仅使用了状态检查工具` +
+                `（${turn.toolCalls.map((tc) => tc.name).join(", ")}）。` +
+                `您已经知道自己的状态。查看您的创世提示词和 SOUL.md，然后执行一个具体任务。` +
+                `编写代码、创建文件、注册服务或构建新的东西。`,
               source: "system",
             };
             idleToolTurns = 0;
@@ -825,25 +824,25 @@ export async function runAgentLoop(
         }
       }
 
-      // Log the turn
+      // 记录回合
       if (turn.thinking) {
-        log(config, `[THOUGHT] ${turn.thinking.slice(0, 300)}`);
+        log(config, `[思考] ${turn.thinking.slice(0, 300)}`);
       }
 
-      // ── Check for sleep command ──
+      // ── 检查睡眠命令 ──
       const sleepTool = turn.toolCalls.find((tc) => tc.name === "sleep");
       if (sleepTool && !sleepTool.error) {
-        log(config, "[SLEEP] Agent chose to sleep.");
+        log(config, "[睡眠] 智能体选择休眠。");
         db.setAgentState("sleeping");
         onStateChange?.("sleeping");
         running = false;
         break;
       }
 
-      // ── Idle turn detection ──
-      // If this turn had no pending input and didn't do any real work
-      // (no mutations — only read/check/list/info tools), count as idle.
-      // Use a blocklist of mutating tools rather than an allowlist of safe ones.
+      // ── 空闲回合检测 ──
+      // 如果此回合没有待处理的输入并且没有做任何实际工作
+      //（没有突变 — 仅读取/检查/列表/信息工具），计为空闲。
+      // 使用突变工具的阻止列表而不是安全工具的允许列表。
       const MUTATING_TOOLS = new Set([
         "exec", "write_file", "edit_own_file", "transfer_credits", "topup_credits", "fund_child",
         "spawn_child", "start_child", "delete_sandbox", "create_sandbox",
@@ -864,7 +863,7 @@ export async function runAgentLoop(
       if (!currentInput && !didMutate) {
         idleTurnCount++;
         if (idleTurnCount >= MAX_IDLE_TURNS) {
-          log(config, `[IDLE] ${idleTurnCount} consecutive idle turns with no work. Entering sleep.`);
+          log(config, `[空闲] ${idleTurnCount} 个连续空闲回合且无工作。进入睡眠。`);
           db.setKV("sleep_until", new Date(Date.now() + 60_000).toISOString());
           db.setAgentState("sleeping");
           onStateChange?.("sleeping");
@@ -874,13 +873,13 @@ export async function runAgentLoop(
         idleTurnCount = 0;
       }
 
-      // ── Cycle turn limit ──
-      // Hard ceiling on turns per wake cycle, regardless of tool type.
-      // Prevents runaway loops where mutating tools (exec, write_file)
-      // defeat idle detection indefinitely.
+      // ── 循环回合限制 ──
+      // 每个唤醒周期的回合硬上限，无论工具类型如何。
+      // 防止失控循环，其中突变工具（exec、write_file）
+      // 无限期地击败空闲检测。
       cycleTurnCount++;
       if (running && cycleTurnCount >= maxCycleTurns) {
-        log(config, `[CYCLE LIMIT] ${cycleTurnCount} turns reached (max: ${maxCycleTurns}). Forcing sleep.`);
+        log(config, `[循环限制] 达到 ${cycleTurnCount} 个回合（最大：${maxCycleTurns}）。强制睡眠。`);
         db.setKV("sleep_until", new Date(Date.now() + 120_000).toISOString());
         db.setAgentState("sleeping");
         onStateChange?.("sleeping");
@@ -888,15 +887,15 @@ export async function runAgentLoop(
         break;
       }
 
-      // ── If no tool calls and just text, the agent might be done thinking ──
+      // ── 如果没有工具调用且只有文本，智能体可能已完成思考 ──
       if (
         running &&
         (!response.toolCalls || response.toolCalls.length === 0) &&
         response.finishReason === "stop"
       ) {
-        // Agent produced text without tool calls.
-        // This is a natural pause point -- no work queued, sleep briefly.
-        log(config, "[IDLE] No pending inputs. Entering brief sleep.");
+        // 智能体在没有工具调用的情况下生成了文本。
+        // 这是一个自然的暂停点 — 没有排队的工作，短暂睡眠。
+        log(config, "[空闲] 没有待处理的输入。进入短暂睡眠。");
         db.setKV(
           "sleep_until",
           new Date(Date.now() + 60_000).toISOString(),
@@ -909,29 +908,29 @@ export async function runAgentLoop(
       consecutiveErrors = 0;
     } catch (err: any) {
       consecutiveErrors++;
-      log(config, `[ERROR] Turn failed: ${err.message}`);
+      log(config, `[错误] 回合失败：${err.message}`);
 
-      // Handle inbox message state on turn failure:
-      // Messages that have retries remaining go back to 'received';
-      // messages that have exhausted retries move to 'failed'.
+      // 在回合失败时处理收件箱消息状态：
+      // 有重试剩余的消息回到 'received'；
+      // 重试耗尽的消息移至 'failed'。
       if (claimedMessages.length > 0) {
         const exhausted = claimedMessages.filter((m) => m.retryCount >= m.maxRetries);
         const retryable = claimedMessages.filter((m) => m.retryCount < m.maxRetries);
 
         if (exhausted.length > 0) {
           markInboxFailed(db.raw, exhausted.map((m) => m.id));
-          log(config, `[INBOX] ${exhausted.length} message(s) moved to failed (max retries exceeded)`);
+          log(config, `[收件箱] ${exhausted.length} 条消息移至失败（超过最大重试次数）`);
         }
         if (retryable.length > 0) {
           resetInboxToReceived(db.raw, retryable.map((m) => m.id));
-          log(config, `[INBOX] ${retryable.length} message(s) reset to received for retry`);
+          log(config, `[收件箱] ${retryable.length} 条消息重置为已接收以进行重试`);
         }
       }
 
       if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
         log(
           config,
-          `[FATAL] ${MAX_CONSECUTIVE_ERRORS} consecutive errors. Sleeping.`,
+          `[致命] ${MAX_CONSECUTIVE_ERRORS} 个连续错误。休眠。`,
         );
         db.setAgentState("sleeping");
         onStateChange?.("sleeping");
@@ -944,13 +943,13 @@ export async function runAgentLoop(
     }
   }
 
-  log(config, `[LOOP END] Agent loop finished. State: ${db.getAgentState()}`);
+  log(config, `[循环结束] 智能体循环完成。状态：${db.getAgentState()}`);
 }
 
-// ─── Helpers ───────────────────────────────────────────────────
+// ─── 辅助函数 ───────────────────────────────────────────────────
 
-// Cache last known good balances so transient API failures don't
-// cause the automaton to believe it has $0 and kill itself.
+// 缓存最后已知的好余额，以便瞬态 API 失败不会
+// 导致自动机认为它有 $0 并自杀。
 let _lastKnownCredits = 0;
 let _lastKnownUsdc = 0;
 
@@ -967,7 +966,7 @@ async function getFinancialState(
     if (creditsCents > 0) _lastKnownCredits = creditsCents;
   } catch (error) {
     logger.error("Credits balance fetch failed", error instanceof Error ? error : undefined);
-    // Use last known balance from KV, not zero
+    // 使用来自 KV 的最后已知余额，而不是零
     if (db) {
       const cached = db.getKV("last_known_balance");
       if (cached) {
@@ -984,7 +983,7 @@ async function getFinancialState(
         }
       }
     }
-    // No cache available -- return conservative non-zero sentinel
+    // 没有可用的缓存 — 返回保守的非零标记
     logger.error("Balance API failed, no cache available");
     return {
       creditsCents: -1,
@@ -1000,7 +999,7 @@ async function getFinancialState(
     logger.error("USDC balance fetch failed", error instanceof Error ? error : undefined);
   }
 
-  // Cache successful balance reads
+  // 缓存成功的余额读取
   if (db) {
     try {
       db.setKV(

@@ -1,13 +1,13 @@
 /**
- * Agent Card
+ * Agent 卡片
  *
- * Generates and manages the agent's self-description card.
- * This is the JSON document pointed to by the ERC-8004 agentURI.
- * Can be hosted on IPFS or served at /.well-known/agent-card.json
+ * 生成和管理 agent 的自我描述卡片。
+ * 这是 ERC-8004 agentURI 指向的 JSON 文档。
+ * 可以托管在 IPFS 上或在 /.well-known/agent-card.json 提供服务
  *
- * Phase 3.2: Fixed code injection in hostAgentCard (S-P0-3),
- * removed internal details from card (S-P1-10),
- * added CORS headers and Content-Type.
+ * 阶段 3.2：修复了 hostAgentCard 中的代码注入 (S-P0-3)，
+ * 从卡片中移除了内部细节 (S-P1-10)，
+ * 添加了 CORS 头和 Content-Type。
  */
 
 import type {
@@ -23,20 +23,20 @@ const AGENT_CARD_TYPE =
   "https://eips.ethereum.org/EIPS/eip-8004#registration-v1";
 
 /**
- * Generate an agent card from the automaton's current state.
+ * 从 automaton 的当前状态生成 agent 卡片。
  *
- * Phase 3.2: Only expose agentWallet service, name, generic description,
- * x402Support, and active status. Do NOT include:
- * - Conway API URL (internal infrastructure)
- * - Sandbox ID (internal identifier)
- * - Creator address (privacy)
+ * 阶段 3.2：仅暴露 agentWallet 服务、名称、通用描述、
+ * x402Support 和 active 状态。不要包括：
+ * - Conway API URL（内部基础设施）
+ * - 沙盒 ID（内部标识符）
+ * - 创建者地址（隐私）
  */
 export function generateAgentCard(
   identity: AutomatonIdentity,
   config: AutomatonConfig,
   _db: AutomatonDatabase,
 ): AgentCard {
-  // Phase 3.2: Only expose agentWallet service
+  // 阶段 3.2：仅暴露 agentWallet 服务
   const services: AgentService[] = [
     {
       name: "agentWallet",
@@ -44,7 +44,7 @@ export function generateAgentCard(
     },
   ];
 
-  // Phase 3.2: Generic description, no internal details
+  // 阶段 3.2：通用描述，无内部细节
   const description = `Autonomous agent: ${config.name}`;
 
   return {
@@ -58,19 +58,19 @@ export function generateAgentCard(
 }
 
 /**
- * Serialize agent card to JSON string.
+ * 将 agent 卡片序列化为 JSON 字符串。
  */
 export function serializeAgentCard(card: AgentCard): string {
   return JSON.stringify(card, null, 2);
 }
 
 /**
- * Host the agent card at /.well-known/agent-card.json
- * by exposing a simple HTTP server on a port.
+ * 在端口上暴露简单的 HTTP 服务器，
+ * 在 /.well-known/agent-card.json 托管 agent 卡片。
  *
- * Phase 3.2: CRITICAL FIX (S-P0-3) — Write card as a SEPARATE JSON file.
- * Server script reads the file at request time, NOT interpolated into JS.
- * Added CORS headers and X-Content-Type-Options: nosniff.
+ * 阶段 3.2：关键修复 (S-P0-3) — 将卡片写为单独的 JSON 文件。
+ * 服务器脚本在请求时读取文件，而不是插入到 JS 中。
+ * 添加了 CORS 头和 X-Content-Type-Options: nosniff。
  */
 export async function hostAgentCard(
   card: AgentCard,
@@ -79,17 +79,17 @@ export async function hostAgentCard(
 ): Promise<string> {
   const cardJson = serializeAgentCard(card);
 
-  // Phase 3.2: Write card as a separate JSON file (not interpolated into JS)
+  // 阶段 3.2：将卡片写为单独的 JSON 文件（不插入到 JS 中）
   await conway.writeFile("/tmp/agent-card.json", cardJson);
 
-  // Phase 3.2: Server reads the file at request time
+  // 阶段 3.2：服务器在请求时读取文件
   const serverScript = `
 const http = require('http');
 const fs = require('fs');
 const path = '/tmp/agent-card.json';
 
 const server = http.createServer((req, res) => {
-  // CORS headers
+  // CORS 头
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -121,20 +121,20 @@ server.listen(${port}, () => console.log('Agent card server on port ' + ${port})
 
   await conway.writeFile("/tmp/agent-card-server.js", serverScript);
 
-  // Start server in background
+  // 在后台启动服务器
   await conway.exec(
     `node /tmp/agent-card-server.js &`,
     5000,
   );
 
-  // Expose port
+  // 暴露端口
   const portInfo = await conway.exposePort(port);
 
   return `${portInfo.publicUrl}/.well-known/agent-card.json`;
 }
 
 /**
- * Write agent card to the state directory for git versioning.
+ * 将 agent 卡片写入状态目录以进行 git 版本控制。
  */
 export async function saveAgentCard(
   card: AgentCard,

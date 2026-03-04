@@ -1,9 +1,9 @@
 /**
- * Conway API Client
+ * Conway API 客户端
  *
- * Communicates with Conway's control plane for sandbox management,
- * credits, and infrastructure operations.
- * Adapted from @aiws/sdk patterns.
+ * 与 Conway 的控制平面通信，用于沙盒管理、
+ * 积分和基础设施操作。
+ * 改编自 @aiws/sdk 模式。
  */
 
 import { execSync } from "child_process";
@@ -36,8 +36,8 @@ interface ConwayClientOptions {
 
 export function createConwayClient(options: ConwayClientOptions): ConwayClient {
   const { apiUrl, apiKey } = options;
-  // Normalize sandbox ID defensively so values like whitespace/"undefined"/"null"
-  // never produce malformed API paths such as /v1/sandboxes//exec.
+  // 防御性地规范化沙盒 ID，确保空白/"undefined"/"null" 等值
+  // 永远不会产生格式错误的 API 路径，如 /v1/sandboxes//exec。
   const sandboxId = normalizeSandboxId(options.sandboxId);
   const httpClient = new ResilientHttpClient();
 
@@ -47,9 +47,9 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
     body?: unknown,
     requestOptions?: { idempotencyKey?: string; retries404?: number },
   ): Promise<any> {
-    // Conway LB has an intermittent routing bug that returns 404 for valid
-    // sandbox endpoints. Retry 404s here (outside ResilientHttpClient) to
-    // avoid tripping the circuit breaker on transient routing failures.
+    // Conway LB 存在一个间歇性路由错误，会为有效的
+    // 沙盒端点返回 404。在此处重试 404（在 ResilientHttpClient 外部）以
+    // 避免在瞬态路由故障时触发断路器。
     const max404Retries = requestOptions?.retries404 ?? 3;
     for (let attempt = 0; attempt <= max404Retries; attempt++) {
       const resp = await httpClient.request(`${apiUrl}${path}`, {
@@ -70,7 +70,7 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
       if (!resp.ok) {
         const text = await resp.text();
         const err: any = new Error(
-          `Conway API error: ${method} ${path} -> ${resp.status}: ${text}`,
+          `Conway API 错误: ${method} ${path} -> ${resp.status}: ${text}`,
         );
         err.status = resp.status;
         err.responseText = text;
@@ -102,8 +102,8 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
   };
 
 
-  // ─── Sandbox Operations (own sandbox) ────────────────────────
-  // When sandboxId is empty, automatically fall back to local execution.
+  // ─── 沙盒操作（自己的沙盒）────────────────────────
+  // 当 sandboxId 为空时，自动回退到本地执行。
 
   const isLocal = !sandboxId;
 
@@ -131,8 +131,8 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
   ): Promise<ExecResult> => {
     if (isLocal) return execLocal(command, timeout);
 
-    // Remote sandboxes default to / as cwd. Wrap commands to run from /root
-    // (matching local exec behavior) unless the command already sets a directory.
+    // 远程沙盒默认使用 / 作为 cwd。包装命令以从 /root 运行
+    //（匹配本地 exec 行为），除非命令已经设置了目录。
     const wrappedCommand = `cd /root && ${command}`;
 
     try {
@@ -148,14 +148,14 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
         exitCode: result.exit_code ?? result.exitCode ?? -1,
       };
     } catch (err: any) {
-      // SECURITY: Never silently fall back to local execution on auth failure.
-      // A 403 indicates a credentials mismatch — falling back to local exec
-      // would bypass the sandbox security boundary entirely.
+      // 安全性：在身份验证失败时永远不要静默回退到本地执行。
+      // 403 表示凭据不匹配 — 回退到本地 exec
+      // 将完全绕过沙盒安全边界。
       if (err?.status === 403) {
         throw new Error(
-          `Conway API authentication failed (403). Sandbox exec refused. ` +
-            `This may indicate a misconfigured or revoked API key. ` +
-            `Command will NOT be executed locally for security reasons.`,
+          `Conway API 身份验证失败 (403)。沙盒 exec 被拒绝。` +
+            `这可能表示 API 密钥配置错误或已被撤销。` +
+            `出于安全原因，命令不会在本地执行。`,
         );
       }
       throw err;
@@ -186,11 +186,11 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
         content,
       });
     } catch (err: any) {
-      // SECURITY: Never silently fall back to local FS on auth failure.
+      // 安全性：在身份验证失败时永远不要静默回退到本地文件系统。
       if (err?.status === 403) {
         throw new Error(
-          `Conway API authentication failed (403). File write refused. ` +
-            `File will NOT be written locally for security reasons.`,
+          `Conway API 身份验证失败 (403)。文件写入被拒绝。` +
+            `出于安全原因，文件不会在本地写入。`,
         );
       }
       throw err;
@@ -210,11 +210,11 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
       );
       return typeof result === "string" ? result : result.content || "";
     } catch (err: any) {
-      // SECURITY: Never silently fall back to local FS on auth failure.
+      // 安全性：在身份验证失败时永远不要静默回退到本地文件系统。
       if (err?.status === 403) {
         throw new Error(
-          `Conway API authentication failed (403). File read refused. ` +
-            `File will NOT be read locally for security reasons.`,
+          `Conway API 身份验证失败 (403)。文件读取被拒绝。` +
+            `出于安全原因，文件不会在本地读取。`,
         );
       }
       throw err;
@@ -246,7 +246,7 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
     await request("DELETE", `/v1/sandboxes/${sandboxId}/ports/${port}`);
   };
 
-  // ─── Sandbox Management (other sandboxes) ────────────────────
+  // ─── 沙盒管理（其他沙盒）────────────────────────────
 
   const createSandbox = async (
     options: CreateSandboxOptions,
@@ -271,8 +271,8 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
   };
 
   const deleteSandbox = async (_targetId: string): Promise<void> => {
-    // Conway API no longer supports sandbox deletion.
-    // Sandboxes are prepaid and non-refundable — this is a no-op.
+    // Conway API 不再支持沙盒删除。
+    // 沙盒是预付费且不可退款的 — 这是一个空操作。
   };
 
   const listSandboxes = async (): Promise<SandboxInfo[]> => {
@@ -290,7 +290,7 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
     }));
   };
 
-  // ─── Credits ─────────────────────────────────────────────────
+  // ─── 积分───────────────────────────────────────────────────
 
   const getCreditsBalance = async (): Promise<number> => {
     const result = await request("GET", "/v1/credits/balance");
@@ -323,7 +323,7 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
     const idempotencyKey = ulid();
     const paths = ["/v1/credits/transfer", "/v1/credits/transfers"];
 
-    let lastError = "Unknown transfer error";
+    let lastError = "未知的转账错误";
 
     for (const path of paths) {
       const resp = await httpClient.request(`${apiUrl}${path}`, {
@@ -334,15 +334,15 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
         },
         body: JSON.stringify(payload),
         idempotencyKey,
-        retries: 0, // Mutating: do not auto-retry transfers
+        retries: 0, // 变更操作：不自动重试转账
       });
 
       if (!resp.ok) {
         const text = await resp.text();
         lastError = `${resp.status}: ${text}`;
-        // Try next known endpoint shape before failing.
+        // 在失败之前尝试下一个已知的端点格式。
         if (resp.status === 404) continue;
-        throw new Error(`Conway API error: POST ${path} -> ${lastError}`);
+        throw new Error(`Conway API 错误: POST ${path} -> ${lastError}`);
       }
 
       const data = await resp.json().catch(() => ({}) as any);
@@ -357,7 +357,7 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
     }
 
     throw new Error(
-      `Conway API error: POST /v1/credits/transfer -> ${lastError}`,
+      `Conway API 错误: POST /v1/credits/transfer -> ${lastError}`,
     );
   };
 
@@ -435,7 +435,7 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
     return request("POST", "/v1/automatons/register", body);
   };
 
-  // ─── Domains ──────────────────────────────────────────────────
+  // ─── 域名────────────────────────────────────────────────────
 
   const searchDomains = async (
     query: string,
@@ -517,10 +517,10 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
     );
   };
 
-  // ─── Model Discovery ───────────────────────────────────────────
+  // ─── 模型发现─────────────────────────────────────────────────
 
   const listModels = async (): Promise<ModelInfo[]> => {
-    // Try inference.conway.tech first (has availability info), fall back to control plane
+    // 首先尝试 inference.conway.tech（有可用性信息），回退到控制平面
     const urls = [
       "https://inference.conway.tech/v1/models",
       `${apiUrl}/v1/models`,
@@ -582,10 +582,10 @@ export function createConwayClient(options: ConwayClientOptions): ConwayClient {
     createScopedClient,
   };
 
-  // SECURITY: API credentials are NOT exposed on the client object.
-  // If child spawning or other modules need API configuration, pass it
-  // explicitly through a dedicated typed interface — never via dynamic getters
-  // that any code with a client reference could access.
+  // 安全性：API 凭证不会暴露在客户端对象上。
+  // 如果子进程生成或其他模块需要 API 配置，请通过专用的类型化接口
+  // 显式传递它 — 永远不要通过任何可以访问客户端引用的代码
+  // 都可以访问的动态 getter 来传递。
 
   return client;
 }

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Conway Automaton Runtime
+ * Conway Automaton 运行时
  *
- * The entry point for the sovereign AI agent.
- * Handles CLI args, bootstrapping, and orchestrating
- * the heartbeat daemon + agent loop.
+ * 自主 AI 智能体的入口点。
+ * 处理 CLI 参数、初始化以及协调
+ * 心跳守护进程 + 智能体循环。
  */
 
 import { getWallet, getAutomatonDir } from "./identity/wallet.js";
@@ -40,7 +40,7 @@ const VERSION = "0.2.1";
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
 
-  // ─── CLI Commands ────────────────────────────────────────────
+  // ─── CLI 命令 ────────────────────────────────────────────
 
   if (args.includes("--version") || args.includes("-v")) {
     logger.info(`Conway Automaton v${VERSION}`);
@@ -122,17 +122,17 @@ Environment:
     return;
   }
 
-  // Default: show help
-  logger.info('Run "automaton --help" for usage information.');
-  logger.info('Run "automaton --run" to start the automaton.');
+  // 默认：显示帮助
+  logger.info('运行 "automaton --help" 查看使用信息。');
+  logger.info('运行 "automaton --run" 启动 automaton。');
 }
 
-// ─── Status Command ────────────────────────────────────────────
+// ─── 状态命令 ────────────────────────────────────────────
 
 async function showStatus(): Promise<void> {
   const config = loadConfig();
   if (!config) {
-    logger.info("Automaton is not configured. Run the setup script first.");
+    logger.info("Automaton 未配置。请先运行设置脚本。");
     return;
   }
 
@@ -168,38 +168,38 @@ Version:    ${config.version}
   db.close();
 }
 
-// ─── Main Run ──────────────────────────────────────────────────
+// ─── 主运行 ──────────────────────────────────────────────────
 
 async function run(): Promise<void> {
-  logger.info(`[${new Date().toISOString()}] Conway Automaton v${VERSION} starting...`);
+  logger.info(`[${new Date().toISOString()}] Conway Automaton v${VERSION} 正在启动...`);
 
-  // Load config — first run triggers interactive setup wizard
+  // 加载配置 - 首次运行会触发交互式设置向导
   let config = loadConfig();
   if (!config) {
     const { runSetupWizard } = await import("./setup/wizard.js");
     config = await runSetupWizard();
   }
 
-  // Load wallet
+  // 加载钱包
   const { account } = await getWallet();
   const apiKey = config.conwayApiKey || loadApiKeyFromConfig();
   if (!apiKey) {
-    logger.error("No API key found. Run: automaton --provision");
+    logger.error("未找到 API 密钥。运行: automaton --provision");
     process.exit(1);
   }
 
-  // Initialize database
+  // 初始化数据库
   const dbPath = resolvePath(config.dbPath);
   const db = createDatabase(dbPath);
 
-  // Persist createdAt: only set if not already stored (never overwrite)
+  // 持久化 createdAt: 仅在未存储时设置(永不覆盖)
   const existingCreatedAt = db.getIdentity("createdAt");
   const createdAt = existingCreatedAt || new Date().toISOString();
   if (!existingCreatedAt) {
     db.setIdentity("createdAt", createdAt);
   }
 
-  // Build identity
+  // 构建身份
   const identity: AutomatonIdentity = {
     name: config.name,
     address: account.address,
@@ -210,7 +210,7 @@ async function run(): Promise<void> {
     createdAt,
   };
 
-  // Store identity in DB
+  // 在数据库中存储身份
   db.setIdentity("name", config.name);
   db.setIdentity("address", account.address);
   db.setIdentity("creator", config.creatorAddress);
@@ -221,14 +221,14 @@ async function run(): Promise<void> {
     db.setIdentity("automatonId", automatonId);
   }
 
-  // Create Conway client
+  // 创建 Conway 客户端
   const conway = createConwayClient({
     apiUrl: config.conwayApiUrl,
     apiKey,
     sandboxId: config.sandboxId,
   });
 
-  // Register automaton identity (one-time, immutable)
+  // 注册 automaton 身份（一次性，不可变）
   const registrationState = db.getIdentity("conwayRegistrationStatus");
   if (registrationState !== "registered") {
     try {
@@ -258,11 +258,11 @@ async function run(): Promise<void> {
     }
   }
 
-  // Resolve Ollama base URL: env var takes precedence over config
+  // 解析 Ollama 基础 URL：环境变量优先于配置
   const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || config.ollamaBaseUrl;
 
-  // Create inference client — pass a live registry lookup so model names like
-  // "gpt-oss:120b" route to Ollama based on their registered provider, not heuristics.
+  // 创建推理客户端 - 传递实时注册表查找，使模型名称如
+  // "gpt-oss:120b" 根据其注册的提供商路由到 Ollama，而不是启发式方法。
   const modelRegistry = new ModelRegistry(db.raw);
   modelRegistry.initialize();
   const inference = createInferenceClient({
@@ -278,47 +278,47 @@ async function run(): Promise<void> {
   });
 
   if (ollamaBaseUrl) {
-    logger.info(`[${new Date().toISOString()}] Ollama backend: ${ollamaBaseUrl}`);
+    logger.info(`[${new Date().toISOString()}] Ollama 后端: ${ollamaBaseUrl}`);
   }
 
-  // Create social client
+  // 创建社交客户端
   let social: SocialClientInterface | undefined;
   if (config.socialRelayUrl) {
     social = createSocialClient(config.socialRelayUrl, account);
     logger.info(`[${new Date().toISOString()}] Social relay: ${config.socialRelayUrl}`);
   }
 
-  // Initialize PolicyEngine + SpendTracker (Phase 1.4)
+  // 初始化 PolicyEngine + SpendTracker (第 1.4 阶段)
   const treasuryPolicy = config.treasuryPolicy ?? DEFAULT_TREASURY_POLICY;
   const rules = createDefaultRules(treasuryPolicy);
   const policyEngine = new PolicyEngine(db.raw, rules);
   const spendTracker = new SpendTracker(db.raw);
 
-  // Load and sync heartbeat config
+  // 加载并同步心跳配置
   const heartbeatConfigPath = resolvePath(config.heartbeatConfigPath);
   const heartbeatConfig = loadHeartbeatConfig(heartbeatConfigPath);
   syncHeartbeatToDb(heartbeatConfig, db);
 
-  // Load skills
+  // 加载技能
   const skillsDir = config.skillsDir || "~/.automaton/skills";
   let skills: Skill[] = [];
   try {
     skills = loadSkills(skillsDir, db);
-    logger.info(`[${new Date().toISOString()}] Loaded ${skills.length} skills.`);
+    logger.info(`[${new Date().toISOString()}] 已加载 ${skills.length} 个技能。`);
   } catch (err: any) {
-    logger.warn(`[${new Date().toISOString()}] Skills loading failed: ${err.message}`);
+    logger.warn(`[${new Date().toISOString()}] 技能加载失败: ${err.message}`);
   }
 
-  // Initialize state repo (git)
+  // 初始化状态仓库（git）
   try {
     await initStateRepo(conway);
-    logger.info(`[${new Date().toISOString()}] State repo initialized.`);
+    logger.info(`[${new Date().toISOString()}] 状态仓库已初始化。`);
   } catch (err: any) {
-    logger.warn(`[${new Date().toISOString()}] State repo init failed: ${err.message}`);
+    logger.warn(`[${new Date().toISOString()}] 状态仓库初始化失败: ${err.message}`);
   }
 
-  // Bootstrap topup: buy minimum credits ($5) from USDC so the agent can start.
-  // The agent decides larger topups itself via the topup_credits tool.
+  // 引导充值：从 USDC 购买最低额度（$5）的积分，以便智能体可以启动。
+  // 智能体通过 topup_credits 工具自行决定更大的充值。
   try {
     let bootstrapTimer: ReturnType<typeof setTimeout>;
     const bootstrapTimeout = new Promise<null>((_, reject) => {
@@ -348,7 +348,7 @@ async function run(): Promise<void> {
     logger.warn(`[${new Date().toISOString()}] Bootstrap topup skipped: ${err.message}`);
   }
 
-  // Start heartbeat daemon (Phase 1.1: DurableScheduler)
+  // 启动心跳守护进程（第 1.1 阶段：DurableScheduler）
   const heartbeat = createHeartbeatDaemon({
     identity,
     config,
@@ -358,16 +358,16 @@ async function run(): Promise<void> {
     conway,
     social,
     onWakeRequest: (reason) => {
-      logger.info(`[HEARTBEAT] Wake request: ${reason}`);
-      // Phase 1.1: Use wake_events table instead of KV wake_request
+      logger.info(`[HEARTBEAT] 唤醒请求: ${reason}`);
+      // 第 1.1 阶段: 使用 wake_events 表代替 KV wake_request
       insertWakeEvent(db.raw, 'heartbeat', reason);
     },
   });
 
   heartbeat.start();
-  logger.info(`[${new Date().toISOString()}] Heartbeat daemon started.`);
+  logger.info(`[${new Date().toISOString()}] 心跳守护进程已启动。`);
 
-  // Handle graceful shutdown
+  // 处理优雅关闭
   const shutdown = () => {
     logger.info(`[${new Date().toISOString()}] Shutting down...`);
     heartbeat.stop();
@@ -379,20 +379,20 @@ async function run(): Promise<void> {
   process.on("SIGTERM", shutdown);
   process.on("SIGINT", shutdown);
 
-  // ─── Main Run Loop ──────────────────────────────────────────
-  // The automaton alternates between running and sleeping.
-  // The heartbeat can wake it up.
+  // ─── 主运行循环 ──────────────────────────────────────────
+  // Automaton 在运行和休眠之间交替。
+  // 心跳可以唤醒它。
 
   while (true) {
     try {
-      // Reload skills (may have changed since last loop)
+      // 重新加载技能（自上次循环后可能已更改）
       try {
         skills = loadSkills(skillsDir, db);
       } catch (error) {
-        logger.error("Skills reload failed", error instanceof Error ? error : undefined);
+        logger.error("技能重新加载失败", error instanceof Error ? error : undefined);
       }
 
-      // Run the agent loop
+      // 运行智能体循环
       await runAgentLoop({
         identity,
         config,
@@ -414,14 +414,14 @@ async function run(): Promise<void> {
         },
       });
 
-      // Agent loop exited (sleeping or dead)
+      // 智能体循环已退出（休眠或死亡）
       const state = db.getAgentState();
 
       if (state === "dead") {
-        logger.info(`[${new Date().toISOString()}] Automaton is dead. Heartbeat will continue.`);
-        // In dead state, we just wait for funding
-        // The heartbeat will keep checking and broadcasting distress
-        await sleep(300_000); // Check every 5 minutes
+        logger.info(`[${new Date().toISOString()}] Automaton 已死亡。心跳将继续。`);
+        // 在死亡状态下，我们只等待资金
+        // 心跳将继续检查并广播求救信号
+        await sleep(300_000); // 每 5 分钟检查一次
         continue;
       }
 
@@ -432,36 +432,36 @@ async function run(): Promise<void> {
           : Date.now() + 60_000;
         const sleepMs = Math.max(sleepUntil - Date.now(), 10_000);
         logger.info(
-          `[${new Date().toISOString()}] Sleeping for ${Math.round(sleepMs / 1000)}s`,
+          `[${new Date().toISOString()}] 休眠 ${Math.round(sleepMs / 1000)} 秒`,
         );
 
-        // Sleep, but check for wake requests periodically
+        // 休眠，但定期检查唤醒请求
         const checkInterval = Math.min(sleepMs, 30_000);
         let slept = 0;
         while (slept < sleepMs) {
           await sleep(checkInterval);
           slept += checkInterval;
 
-          // Phase 1.1: Check for wake events from wake_events table (atomic consume)
+          // 第 1.1 阶段：从 wake_events 表检查唤醒事件（原子消费）
           const wakeEvent = consumeNextWakeEvent(db.raw);
           if (wakeEvent) {
             logger.info(
-              `[${new Date().toISOString()}] Woken by ${wakeEvent.source}: ${wakeEvent.reason}`,
+              `[${new Date().toISOString()}] 被 ${wakeEvent.source} 唤醒: ${wakeEvent.reason}`,
             );
             db.deleteKV("sleep_until");
             break;
           }
         }
 
-        // Clear sleep state
+        // 清除休眠状态
         db.deleteKV("sleep_until");
         continue;
       }
     } catch (err: any) {
       logger.error(
-        `[${new Date().toISOString()}] Fatal error in run loop: ${err.message}`,
+        `[${new Date().toISOString()}] 运行循环中的致命错误: ${err.message}`,
       );
-      // Wait before retrying
+      // 重试前等待
       await sleep(30_000);
     }
   }
@@ -471,9 +471,9 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// ─── Entry Point ───────────────────────────────────────────────
+// ─── 入口点 ───────────────────────────────────────────────
 
 main().catch((err) => {
-  logger.error(`Fatal: ${err.message}`);
+  logger.error(`致命错误：${err.message}`);
   process.exit(1);
 });

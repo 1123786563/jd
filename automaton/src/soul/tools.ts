@@ -1,10 +1,10 @@
 /**
- * Soul Tools — Tool implementations for soul management.
+ * Soul 工具 — Soul 管理的工具实现
  *
- * Provides updateSoul, reflectOnSoul (trigger), viewSoul, and viewSoulHistory.
- * All operations validate before saving and log to soul_history.
+ * 提供 updateSoul、reflectOnSoul（触发器）、viewSoul 和 viewSoulHistory
+ * 所有操作在保存前进行验证并记录到 soul_history
  *
- * Phase 2.1: Soul System Redesign
+ * 阶段 2.1：Soul 系统重新设计
  */
 
 import fs from "fs";
@@ -18,7 +18,7 @@ import { ulid } from "ulid";
 import { createLogger } from "../observability/logger.js";
 const logger = createLogger("soul");
 
-// ─── Update Soul ────────────────────────────────────────────────
+// ─── 更新 Soul ────────────────────────────────────────────────
 
 export interface UpdateSoulResult {
   success: boolean;
@@ -27,7 +27,8 @@ export interface UpdateSoulResult {
 }
 
 /**
- * Update the soul with new content. Validates, versions, saves to file, and logs.
+ * 使用新内容更新灵魂
+ * 验证、版本控制、保存到文件并记录
  */
 export async function updateSoul(
   db: BetterSqlite3.Database,
@@ -40,18 +41,18 @@ export async function updateSoul(
     const home = process.env.HOME || "/root";
     const resolvedPath = soulPath || path.join(home, ".automaton", "SOUL.md");
 
-    // Load current soul or create default
+    // 加载当前灵魂或创建默认灵魂
     let current = loadCurrentSoul(db, resolvedPath);
     if (!current) {
       current = createDefaultSoul(
-        updates.corePurpose || "No purpose set.",
+        updates.corePurpose || "未设置目的",
         updates.name || "",
         updates.address || "",
         updates.creator || "",
       );
     }
 
-    // Merge updates into current soul
+    // 将更新合并到当前灵魂
     const merged: SoulModel = {
       ...current,
       ...updates,
@@ -59,7 +60,7 @@ export async function updateSoul(
       updatedAt: new Date().toISOString(),
     };
 
-    // Validate
+    // 验证
     const validation = validateSoul(merged);
     if (!validation.valid) {
       return {
@@ -69,7 +70,7 @@ export async function updateSoul(
       };
     }
 
-    // Increment version
+    // 增加版本
     const currentVersion = getCurrentSoulVersion(db);
     const newVersion = Math.max(currentVersion, current.version) + 1;
     const newSoul: SoulModel = {
@@ -78,7 +79,7 @@ export async function updateSoul(
       updatedAt: new Date().toISOString(),
     };
 
-    // Write to file
+    // 写入文件
     const content = writeSoulMd(newSoul);
     const dir = path.dirname(resolvedPath);
     if (!fs.existsSync(dir)) {
@@ -86,11 +87,11 @@ export async function updateSoul(
     }
     fs.writeFileSync(resolvedPath, content, "utf-8");
 
-    // Get previous version ID
+    // 获取上一个版本 ID
     const latestHistory = getLatestSoulHistory(db);
     const previousVersionId = latestHistory?.id || null;
 
-    // Log to soul_history
+    // 记录到 soul_history
     insertSoulHistory(db, {
       id: ulid(),
       version: newVersion,
@@ -105,19 +106,19 @@ export async function updateSoul(
 
     return { success: true, version: newVersion };
   } catch (error) {
-    logger.error("updateSoul failed", error instanceof Error ? error : undefined);
+    logger.error("updateSoul 失败", error instanceof Error ? error : undefined);
     return {
       success: false,
       version: 0,
-      errors: [error instanceof Error ? error.message : "Unknown error"],
+      errors: [error instanceof Error ? error.message : "未知错误"],
     };
   }
 }
 
-// ─── View Soul ──────────────────────────────────────────────────
+// ─── 查看 Soul ──────────────────────────────────────────────────
 
 /**
- * View the current soul model.
+ * 查看当前灵魂模型
  */
 export function viewSoul(
   db: BetterSqlite3.Database,
@@ -126,10 +127,10 @@ export function viewSoul(
   return loadCurrentSoul(db, soulPath);
 }
 
-// ─── View Soul History ──────────────────────────────────────────
+// ─── 查看 Soul 历史 ──────────────────────────────────────────
 
 /**
- * View soul change history.
+ * 查看灵魂变更历史
  */
 export function viewSoulHistory(
   db: BetterSqlite3.Database,

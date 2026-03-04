@@ -1,17 +1,17 @@
 /**
- * Command Safety Policy Rules
+ * 命令安全策略规则
  *
- * Detects shell injection attempts and forbidden command patterns.
- * These rules are the primary defense; isForbiddenCommand() in tools.ts
- * is kept as defense-in-depth.
+ * 检测 shell 注入尝试和禁止的命令模式。
+ * 这些规则是主要的防御；tools.ts 中的 isForbiddenCommand()
+ * 作为深度防御保留。
  */
 
 import type { PolicyRule, PolicyRequest, PolicyRuleResult } from "../../types.js";
 
-// Shell metacharacters that could enable injection when interpolated
+// 可能导致注入的 shell 元字符（当被插值时）
 const SHELL_METACHAR_RE = /[;|&$`\n(){}<>]/;
 
-// Tools whose arguments may be interpolated into shell commands
+// 其参数可能被插值到 shell 命令中的工具
 const SHELL_INTERPOLATED_TOOLS = new Set([
   "exec",
   "pull_upstream",
@@ -22,9 +22,9 @@ const SHELL_INTERPOLATED_TOOLS = new Set([
   "remove_skill",
 ]);
 
-// Fields per tool that get interpolated into shell commands
+// 每个工具中会被插值到 shell 命令的字段
 const SHELL_FIELDS: Record<string, string[]> = {
-  exec: [], // exec is the shell itself, handled by forbidden_patterns
+  exec: [], // exec 本身就是 shell，由 forbidden_patterns 处理
   pull_upstream: ["commit"],
   install_npm_package: ["package"],
   install_mcp_server: ["package", "name"],
@@ -33,40 +33,40 @@ const SHELL_FIELDS: Record<string, string[]> = {
   remove_skill: ["name"],
 };
 
-// Forbidden command patterns (migrated from tools.ts isForbiddenCommand)
+// 禁止的命令模式（从 tools.ts isForbiddenCommand 迁移）
 const FORBIDDEN_COMMAND_PATTERNS: { pattern: RegExp; description: string }[] = [
-  // Self-destruction
-  { pattern: /rm\s+(-rf?\s+)?.*\.automaton/, description: "Delete .automaton directory" },
-  { pattern: /rm\s+(-rf?\s+)?.*state\.db/, description: "Delete state database" },
-  { pattern: /rm\s+(-rf?\s+)?.*wallet\.json/, description: "Delete wallet" },
-  { pattern: /rm\s+(-rf?\s+)?.*automaton\.json/, description: "Delete config" },
-  { pattern: /rm\s+(-rf?\s+)?.*heartbeat\.yml/, description: "Delete heartbeat config" },
-  { pattern: /rm\s+(-rf?\s+)?.*SOUL\.md/, description: "Delete SOUL.md" },
-  // Process killing
-  { pattern: /kill\s+.*automaton/, description: "Kill automaton process" },
-  { pattern: /pkill\s+.*automaton/, description: "Kill automaton process" },
-  { pattern: /systemctl\s+(stop|disable)\s+automaton/, description: "Stop automaton service" },
-  // Database destruction
-  { pattern: /DROP\s+TABLE/i, description: "Drop database table" },
-  { pattern: /DELETE\s+FROM\s+(turns|identity|kv|schema_version|skills|children|registry)/i, description: "Delete from critical table" },
-  { pattern: /TRUNCATE/i, description: "Truncate table" },
-  // Safety infrastructure modification via shell
-  { pattern: /sed\s+.*injection-defense/, description: "Modify injection defense via sed" },
-  { pattern: /sed\s+.*self-mod\/code/, description: "Modify self-mod code via sed" },
-  { pattern: /sed\s+.*audit-log/, description: "Modify audit log via sed" },
-  { pattern: />\s*.*injection-defense/, description: "Overwrite injection defense" },
-  { pattern: />\s*.*self-mod\/code/, description: "Overwrite self-mod code" },
-  { pattern: />\s*.*audit-log/, description: "Overwrite audit log" },
-  // Credential harvesting
-  { pattern: /cat\s+.*\.ssh/, description: "Read SSH keys" },
-  { pattern: /cat\s+.*\.gnupg/, description: "Read GPG keys" },
-  { pattern: /cat\s+.*\.env/, description: "Read environment file" },
-  { pattern: /cat\s+.*wallet\.json/, description: "Read wallet file" },
-  // Policy engine modification via shell
-  { pattern: /sed\s+.*policy-engine/, description: "Modify policy engine via sed" },
-  { pattern: /sed\s+.*policy-rules/, description: "Modify policy rules via sed" },
-  { pattern: />\s*.*policy-engine/, description: "Overwrite policy engine" },
-  { pattern: />\s*.*policy-rules/, description: "Overwrite policy rules" },
+  // 自我毁灭
+  { pattern: /rm\s+(-rf?\s+)?.*\.automaton/, description: "删除 .automaton 目录" },
+  { pattern: /rm\s+(-rf?\s+)?.*state\.db/, description: "删除状态数据库" },
+  { pattern: /rm\s+(-rf?\s+)?.*wallet\.json/, description: "删除钱包" },
+  { pattern: /rm\s+(-rf?\s+)?.*automaton\.json/, description: "删除配置" },
+  { pattern: /rm\s+(-rf?\s+)?.*heartbeat\.yml/, description: "删除心跳配置" },
+  { pattern: /rm\s+(-rf?\s+)?.*SOUL\.md/, description: "删除 SOUL.md" },
+  // 进程终止
+  { pattern: /kill\s+.*automaton/, description: "终止自动机进程" },
+  { pattern: /pkill\s+.*automaton/, description: "终止自动机进程" },
+  { pattern: /systemctl\s+(stop|disable)\s+automaton/, description: "停止自动机服务" },
+  // 数据库销毁
+  { pattern: /DROP\s+TABLE/i, description: "删除数据库表" },
+  { pattern: /DELETE\s+FROM\s+(turns|identity|kv|schema_version|skills|children|registry)/i, description: "从关键表删除" },
+  { pattern: /TRUNCATE/i, description: "截断表" },
+  // 通过 shell 修改安全基础设施
+  { pattern: /sed\s+.*injection-defense/, description: "通过 sed 修改注入防御" },
+  { pattern: /sed\s+.*self-mod\/code/, description: "通过 sed 修改自我修改代码" },
+  { pattern: /sed\s+.*audit-log/, description: "通过 sed 修改审计日志" },
+  { pattern: />\s*.*injection-defense/, description: "覆盖注入防御" },
+  { pattern: />\s*.*self-mod\/code/, description: "覆盖自我修改代码" },
+  { pattern: />\s*.*audit-log/, description: "覆盖审计日志" },
+  // 凭证窃取
+  { pattern: /cat\s+.*\.ssh/, description: "读取 SSH 密钥" },
+  { pattern: /cat\s+.*\.gnupg/, description: "读取 GPG 密钥" },
+  { pattern: /cat\s+.*\.env/, description: "读取环境文件" },
+  { pattern: /cat\s+.*wallet\.json/, description: "读取钱包文件" },
+  // 通过 shell 修改策略引擎
+  { pattern: /sed\s+.*policy-engine/, description: "通过 sed 修改策略引擎" },
+  { pattern: /sed\s+.*policy-rules/, description: "通过 sed 修改策略规则" },
+  { pattern: />\s*.*policy-engine/, description: "覆盖策略引擎" },
+  { pattern: />\s*.*policy-rules/, description: "覆盖策略规则" },
 ];
 
 function deny(rule: string, reasonCode: string, humanMessage: string): PolicyRuleResult {
@@ -74,13 +74,13 @@ function deny(rule: string, reasonCode: string, humanMessage: string): PolicyRul
 }
 
 /**
- * Detect shell metacharacters in tool arguments that will be
- * interpolated into shell commands.
+ * 检测工具参数中的 shell 元字符，这些参数将被
+ * 插值到 shell 命令中。
  */
 function createShellInjectionRule(): PolicyRule {
   return {
     id: "command.shell_injection",
-    description: "Detect shell metacharacters in arguments interpolated into shell commands",
+    description: "检测插值到 shell 命令中的参数里的 shell 元字符",
     priority: 300,
     appliesTo: {
       by: "name",
@@ -98,7 +98,7 @@ function createShellInjectionRule(): PolicyRule {
           return deny(
             "command.shell_injection",
             "SHELL_INJECTION_DETECTED",
-            `Shell metacharacter detected in ${request.tool.name}.${field}: "${value.slice(0, 50)}"`,
+            `在 ${request.tool.name}.${field} 中检测到 shell 元字符："${value.slice(0, 50)}"`,
           );
         }
       }
@@ -109,13 +109,13 @@ function createShellInjectionRule(): PolicyRule {
 }
 
 /**
- * Check exec commands against forbidden patterns.
- * Replaces the isForbiddenCommand() function with a proper policy rule.
+ * 根据禁止模式检查 exec 命令。
+ * 用适当的策略规则替换 isForbiddenCommand() 函数。
  */
 function createForbiddenPatternsRule(): PolicyRule {
   return {
     id: "command.forbidden_patterns",
-    description: "Block self-destructive and credential-harvesting shell commands",
+    description: "阻止自毁和凭证窃取的 shell 命令",
     priority: 300,
     appliesTo: {
       by: "name",
@@ -130,7 +130,7 @@ function createForbiddenPatternsRule(): PolicyRule {
           return deny(
             "command.forbidden_patterns",
             "FORBIDDEN_COMMAND",
-            `Blocked: ${description} (pattern: ${pattern.source})`,
+            `已阻止：${description}（模式：${pattern.source}）`,
           );
         }
       }

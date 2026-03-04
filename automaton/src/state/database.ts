@@ -1,8 +1,8 @@
 /**
- * Automaton Database
+ * Automaton 数据库
  *
- * SQLite-backed persistent state for the automaton.
- * Uses better-sqlite3 for synchronous, single-process access.
+ * Automaton 的 SQLite 持久化状态存储。
+ * 使用 better-sqlite3 进行同步、单进程访问。
  */
 
 import Database from "better-sqlite3";
@@ -75,7 +75,7 @@ import { createLogger } from "../observability/logger.js";
 const logger = createLogger("database");
 
 export function createDatabase(dbPath: string): AutomatonDatabase {
-  // Ensure directory exists
+  // 确保目录存在
   const dir = path.dirname(dbPath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -83,27 +83,27 @@ export function createDatabase(dbPath: string): AutomatonDatabase {
 
   const db = new Database(dbPath);
 
-  // Enable WAL mode for better concurrent read performance
+  // 启用 WAL 模式以获得更好的并发读取性能
   db.pragma("journal_mode = WAL");
   db.pragma("wal_autocheckpoint = 1000");
   db.pragma("foreign_keys = ON");
 
-  // Integrity check on startup
+  // 启动时进行完整性检查
   const integrity = db.pragma("integrity_check") as { integrity_check: string }[];
   if (integrity[0]?.integrity_check !== "ok") {
     throw new Error(`Database integrity check failed: ${JSON.stringify(integrity)}`);
   }
 
-  // Initialize schema in a transaction
+  // 在事务中初始化模式
   const createSchema = db.transaction(() => {
     db.exec(CREATE_TABLES);
   });
   createSchema();
 
-  // Apply migrations
+  // 应用迁移
   applyMigrations(db);
 
-  // Ensure version is recorded
+  // 确保记录版本
   const versionRow = db
     .prepare("SELECT MAX(version) as v FROM schema_version")
     .get() as { v: number | null } | undefined;
@@ -231,7 +231,7 @@ export function createDatabase(dbPath: string): AutomatonDatabase {
     ).run(timestamp, name);
   };
 
-  // ─── Transactions ────────────────────────────────────────────
+  // ─── 交易 ──────────────────────────────────────────────────
 
   const insertTransaction = (txn: Transaction): void => {
     db.prepare(
@@ -284,7 +284,7 @@ export function createDatabase(dbPath: string): AutomatonDatabase {
     ).run(id);
   };
 
-  // ─── Modifications ───────────────────────────────────────────
+  // ─── 修改 ─────────────────────────────────────────────────
 
   const insertModification = (mod: ModificationEntry): void => {
     db.prepare(
@@ -438,7 +438,7 @@ export function createDatabase(dbPath: string): AutomatonDatabase {
     );
   };
 
-  // ─── Reputation ────────────────────────────────────────────
+  // ─── 声誉 ──────────────────────────────────────────────────
 
   const insertReputation = (entry: ReputationEntry): void => {
     db.prepare(
@@ -503,7 +503,7 @@ export function createDatabase(dbPath: string): AutomatonDatabase {
     setKV("agent_state", state);
   };
 
-  // ─── Transaction Helper ──────────────────────────────────────
+  // ─── 交易助手 ──────────────────────────────────────────────
 
   const runTransaction = <T>(fn: () => T): T => {
     const transaction = db.transaction(() => fn());
@@ -1284,7 +1284,7 @@ export function getHeartbeatHistory(db: DatabaseType, taskName: string, limit = 
   return rows.map(deserializeHeartbeatHistoryRow);
 }
 
-// ─── Lease Management Helpers (Phase 1.1) ───────────────────────
+// ─── 租约管理助手（阶段 1.1）───────────────────────────────
 
 export function acquireTaskLease(db: DatabaseType, taskName: string, owner: string, ttlMs: number): boolean {
   const expiresAt = new Date(Date.now() + ttlMs).toISOString();
@@ -1381,8 +1381,8 @@ export function isDeduplicated(db: DatabaseType, key: string): boolean {
 // ─── Inbox State Machine Helpers (Phase 1.2) ─────────────────────
 
 export function claimInboxMessages(db: DatabaseType, limit: number): InboxMessageRow[] {
-  // Atomically claim messages: received → in_progress, increment retry_count
-  // Wrapped in a transaction to prevent race conditions where concurrent callers
+  // 原子地声明消息：received → in_progress，增加 retry_count
+  // 包装在事务中以防止并发调用者出现竞争条件
   // SELECT the same rows before either UPDATE runs.
   const claimTx = db.transaction(() => {
     const rows = db.prepare(
@@ -1474,12 +1474,12 @@ function safeJsonParse<T>(raw: string, fallback: T, context: string): T {
   try {
     return JSON.parse(raw) as T;
   } catch (error) {
-    logger.error(`JSON parse failed in ${context}`, error instanceof Error ? error : undefined);
+    logger.error(`${context} 中 JSON 解析失败`, error instanceof Error ? error : undefined);
     return fallback;
   }
 }
 
-// ─── Agent State Validation ─────────────────────────────────────
+// ─── 代理状态验证 ───────────────────────────────────────────
 
 const VALID_AGENT_STATES: Set<string> = new Set([
   "setup", "waking", "running", "sleeping", "low_compute", "critical", "dead",
@@ -1490,11 +1490,11 @@ function validateAgentState(value: string | undefined): AgentState {
   if (VALID_AGENT_STATES.has(value)) {
     return value as AgentState;
   }
-  logger.error(`Invalid agent_state value: '${value}', defaulting to 'setup'`);
+  logger.error(`无效的 agent_state 值：'${value}'，默认为 'setup'`);
   return "setup";
 }
 
-// ─── Deserializers ─────────────────────────────────────────────
+// ─── 反序列化器 ─────────────────────────────────────────────
 
 function deserializeTurn(row: any): AgentTurn {
   return {
@@ -1631,7 +1631,7 @@ function deserializeReputation(row: any): ReputationEntry {
   };
 }
 
-// ─── Phase 1.1 Deserializers ────────────────────────────────────
+// ─── 阶段 1.1 反序列化器 ────────────────────────────────────
 
 function deserializeHeartbeatScheduleRow(row: any): HeartbeatScheduleRow {
   return {
@@ -1750,7 +1750,7 @@ export function wmInsert(db: DatabaseType, entry: Omit<WorkingMemoryEntry, "id" 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(id, entry.sessionId, entry.content, entry.contentType, entry.priority, entry.tokenCount, entry.expiresAt, entry.sourceTurn);
   } catch (error) {
-    logger.error("wmInsert failed", error instanceof Error ? error : undefined);
+    logger.error("wmInsert 失败", error instanceof Error ? error : undefined);
   }
   return id;
 }
@@ -1760,7 +1760,7 @@ export function wmGetBySession(db: DatabaseType, sessionId: string): WorkingMemo
     const rows = db.prepare("SELECT * FROM working_memory WHERE session_id = ? ORDER BY priority DESC, created_at DESC").all(sessionId) as any[];
     return rows.map(deserializeWorkingMemoryRow);
   } catch (error) {
-    logger.error("wmGetBySession failed", error instanceof Error ? error : undefined);
+    logger.error("wmGetBySession 失败", error instanceof Error ? error : undefined);
     return [];
   }
 }
@@ -1778,13 +1778,13 @@ export function wmUpdate(db: DatabaseType, id: string, updates: Partial<WorkingM
   try {
     db.prepare(`UPDATE working_memory SET ${setClauses.join(", ")} WHERE id = ?`).run(...params);
   } catch (error) {
-    logger.error("wmUpdate failed", error instanceof Error ? error : undefined);
+    logger.error("wmUpdate 失败", error instanceof Error ? error : undefined);
   }
 }
 
 export function wmDelete(db: DatabaseType, id: string): void {
   try { db.prepare("DELETE FROM working_memory WHERE id = ?").run(id); }
-  catch (error) { logger.error("wmDelete failed", error instanceof Error ? error : undefined); }
+  catch (error) { logger.error("wmDelete 失败", error instanceof Error ? error : undefined); }
 }
 
 export function wmPrune(db: DatabaseType, sessionId: string, maxEntries: number): number {
@@ -1796,14 +1796,14 @@ export function wmPrune(db: DatabaseType, sessionId: string, maxEntries: number)
       "DELETE FROM working_memory WHERE id IN (SELECT id FROM working_memory WHERE session_id = ? ORDER BY priority ASC, created_at ASC LIMIT ?)",
     ).run(sessionId, toRemove);
     return result.changes;
-  } catch (error) { logger.error("wmPrune failed", error instanceof Error ? error : undefined); return 0; }
+  } catch (error) { logger.error("wmPrune 失败", error instanceof Error ? error : undefined); return 0; }
 }
 
 export function wmClearExpired(db: DatabaseType): number {
   try {
     const result = db.prepare("DELETE FROM working_memory WHERE expires_at IS NOT NULL AND expires_at < datetime('now')").run();
     return result.changes;
-  } catch (error) { logger.error("wmClearExpired failed", error instanceof Error ? error : undefined); return 0; }
+  } catch (error) { logger.error("wmClearExpired 失败", error instanceof Error ? error : undefined); return 0; }
 }
 
 // Episodic memory
@@ -1814,7 +1814,7 @@ export function episodicInsert(db: DatabaseType, entry: Omit<EpisodicMemoryEntry
       `INSERT INTO episodic_memory (id, session_id, event_type, summary, detail, outcome, importance, embedding_key, token_count, classification)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(id, entry.sessionId, entry.eventType, entry.summary, entry.detail, entry.outcome, entry.importance, entry.embeddingKey, entry.tokenCount, entry.classification);
-  } catch (error) { logger.error("episodicInsert failed", error instanceof Error ? error : undefined); }
+  } catch (error) { logger.error("episodicInsert 失败", error instanceof Error ? error : undefined); }
   return id;
 }
 
@@ -1822,7 +1822,7 @@ export function episodicGetRecent(db: DatabaseType, sessionId: string, limit: nu
   try {
     const rows = db.prepare("SELECT * FROM episodic_memory WHERE session_id = ? ORDER BY created_at DESC LIMIT ?").all(sessionId, limit) as any[];
     return rows.map(deserializeEpisodicRow);
-  } catch (error) { logger.error("episodicGetRecent failed", error instanceof Error ? error : undefined); return []; }
+  } catch (error) { logger.error("episodicGetRecent 失败", error instanceof Error ? error : undefined); return []; }
 }
 
 export function episodicSearch(db: DatabaseType, query: string, limit: number = 10): EpisodicMemoryEntry[] {
@@ -1830,19 +1830,19 @@ export function episodicSearch(db: DatabaseType, query: string, limit: number = 
     const escaped = query.replace(/[%_\\]/g, (ch) => `\\${ch}`);
     const rows = db.prepare("SELECT * FROM episodic_memory WHERE summary LIKE ? ESCAPE '\\' OR detail LIKE ? ESCAPE '\\' ORDER BY importance DESC, created_at DESC LIMIT ?").all(`%${escaped}%`, `%${escaped}%`, limit) as any[];
     return rows.map(deserializeEpisodicRow);
-  } catch (error) { logger.error("episodicSearch failed", error instanceof Error ? error : undefined); return []; }
+  } catch (error) { logger.error("episodicSearch 失败", error instanceof Error ? error : undefined); return []; }
 }
 
 export function episodicMarkAccessed(db: DatabaseType, id: string): void {
   try { db.prepare("UPDATE episodic_memory SET accessed_count = accessed_count + 1, last_accessed_at = datetime('now') WHERE id = ?").run(id); }
-  catch (error) { logger.error("episodicMarkAccessed failed", error instanceof Error ? error : undefined); }
+  catch (error) { logger.error("episodicMarkAccessed 失败", error instanceof Error ? error : undefined); }
 }
 
 export function episodicPrune(db: DatabaseType, retentionDays: number): number {
   try {
     const result = db.prepare("DELETE FROM episodic_memory WHERE created_at < datetime('now', ?)").run(`-${retentionDays} days`);
     return result.changes;
-  } catch (error) { logger.error("episodicPrune failed", error instanceof Error ? error : undefined); return 0; }
+  } catch (error) { logger.error("episodicPrune 失败", error instanceof Error ? error : undefined); return 0; }
 }
 
 // Session summaries
@@ -1853,7 +1853,7 @@ export function sessionSummaryInsert(db: DatabaseType, entry: Omit<SessionSummar
       `INSERT INTO session_summaries (id, session_id, summary, key_decisions, tools_used, outcomes, turn_count, total_tokens, total_cost_cents)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(id, entry.sessionId, entry.summary, JSON.stringify(entry.keyDecisions), JSON.stringify(entry.toolsUsed), JSON.stringify(entry.outcomes), entry.turnCount, entry.totalTokens, entry.totalCostCents);
-  } catch (error) { logger.error("sessionSummaryInsert failed", error instanceof Error ? error : undefined); }
+  } catch (error) { logger.error("sessionSummaryInsert 失败", error instanceof Error ? error : undefined); }
   return id;
 }
 
@@ -1861,14 +1861,14 @@ export function sessionSummaryGet(db: DatabaseType, sessionId: string): SessionS
   try {
     const row = db.prepare("SELECT * FROM session_summaries WHERE session_id = ?").get(sessionId) as any | undefined;
     return row ? deserializeSessionSummaryRow(row) : undefined;
-  } catch (error) { logger.error("sessionSummaryGet failed", error instanceof Error ? error : undefined); return undefined; }
+  } catch (error) { logger.error("sessionSummaryGet 失败", error instanceof Error ? error : undefined); return undefined; }
 }
 
 export function sessionSummaryGetRecent(db: DatabaseType, limit: number = 10): SessionSummaryEntry[] {
   try {
     const rows = db.prepare("SELECT * FROM session_summaries ORDER BY created_at DESC LIMIT ?").all(limit) as any[];
     return rows.map(deserializeSessionSummaryRow);
-  } catch (error) { logger.error("sessionSummaryGetRecent failed", error instanceof Error ? error : undefined); return []; }
+  } catch (error) { logger.error("sessionSummaryGetRecent 失败", error instanceof Error ? error : undefined); return []; }
 }
 
 // Semantic memory
@@ -1882,7 +1882,7 @@ export function semanticUpsert(db: DatabaseType, entry: Omit<SemanticMemoryEntry
          value = excluded.value, confidence = excluded.confidence, source = excluded.source,
          embedding_key = excluded.embedding_key, last_verified_at = excluded.last_verified_at, updated_at = datetime('now')`,
     ).run(id, entry.category, entry.key, entry.value, entry.confidence, entry.source, entry.embeddingKey, entry.lastVerifiedAt);
-  } catch (error) { logger.error("semanticUpsert failed", error instanceof Error ? error : undefined); }
+  } catch (error) { logger.error("semanticUpsert 失败", error instanceof Error ? error : undefined); }
   return id;
 }
 
@@ -1890,7 +1890,7 @@ export function semanticGet(db: DatabaseType, category: SemanticCategory, key: s
   try {
     const row = db.prepare("SELECT * FROM semantic_memory WHERE category = ? AND key = ?").get(category, key) as any | undefined;
     return row ? deserializeSemanticRow(row) : undefined;
-  } catch (error) { logger.error("semanticGet failed", error instanceof Error ? error : undefined); return undefined; }
+  } catch (error) { logger.error("semanticGet 失败", error instanceof Error ? error : undefined); return undefined; }
 }
 
 export function semanticSearch(db: DatabaseType, query: string, category?: SemanticCategory): SemanticMemoryEntry[] {
@@ -1902,19 +1902,19 @@ export function semanticSearch(db: DatabaseType, query: string, category?: Seman
     }
     const rows = db.prepare("SELECT * FROM semantic_memory WHERE key LIKE ? ESCAPE '\\' OR value LIKE ? ESCAPE '\\' ORDER BY confidence DESC, updated_at DESC").all(`%${escaped}%`, `%${escaped}%`) as any[];
     return rows.map(deserializeSemanticRow);
-  } catch (error) { logger.error("semanticSearch failed", error instanceof Error ? error : undefined); return []; }
+  } catch (error) { logger.error("semanticSearch 失败", error instanceof Error ? error : undefined); return []; }
 }
 
 export function semanticGetByCategory(db: DatabaseType, category: SemanticCategory): SemanticMemoryEntry[] {
   try {
     const rows = db.prepare("SELECT * FROM semantic_memory WHERE category = ? ORDER BY confidence DESC, updated_at DESC").all(category) as any[];
     return rows.map(deserializeSemanticRow);
-  } catch (error) { logger.error("semanticGetByCategory failed", error instanceof Error ? error : undefined); return []; }
+  } catch (error) { logger.error("semanticGetByCategory 失败", error instanceof Error ? error : undefined); return []; }
 }
 
 export function semanticDelete(db: DatabaseType, id: string): void {
   try { db.prepare("DELETE FROM semantic_memory WHERE id = ?").run(id); }
-  catch (error) { logger.error("semanticDelete failed", error instanceof Error ? error : undefined); }
+  catch (error) { logger.error("semanticDelete 失败", error instanceof Error ? error : undefined); }
 }
 
 export function semanticPrune(db: DatabaseType, maxEntries: number): number {
@@ -1924,10 +1924,10 @@ export function semanticPrune(db: DatabaseType, maxEntries: number): number {
     const toRemove = count.cnt - maxEntries;
     const result = db.prepare("DELETE FROM semantic_memory WHERE id IN (SELECT id FROM semantic_memory ORDER BY confidence ASC, updated_at ASC LIMIT ?)").run(toRemove);
     return result.changes;
-  } catch (error) { logger.error("semanticPrune failed", error instanceof Error ? error : undefined); return 0; }
+  } catch (error) { logger.error("semanticPrune 失败", error instanceof Error ? error : undefined); return 0; }
 }
 
-// Procedural memory
+// 程序性记忆
 export function proceduralUpsert(db: DatabaseType, entry: Omit<ProceduralMemoryEntry, "id" | "createdAt" | "updatedAt" | "successCount" | "failureCount" | "lastUsedAt">): string {
   const id = ulid();
   try {
@@ -1935,7 +1935,7 @@ export function proceduralUpsert(db: DatabaseType, entry: Omit<ProceduralMemoryE
       `INSERT INTO procedural_memory (id, name, description, steps) VALUES (?, ?, ?, ?)
        ON CONFLICT(name) DO UPDATE SET description = excluded.description, steps = excluded.steps, updated_at = datetime('now')`,
     ).run(id, entry.name, entry.description, JSON.stringify(entry.steps));
-  } catch (error) { logger.error("proceduralUpsert failed", error instanceof Error ? error : undefined); }
+  } catch (error) { logger.error("proceduralUpsert 失败", error instanceof Error ? error : undefined); }
   return id;
 }
 
@@ -1943,14 +1943,14 @@ export function proceduralGet(db: DatabaseType, name: string): ProceduralMemoryE
   try {
     const row = db.prepare("SELECT * FROM procedural_memory WHERE name = ?").get(name) as any | undefined;
     return row ? deserializeProceduralRow(row) : undefined;
-  } catch (error) { logger.error("proceduralGet failed", error instanceof Error ? error : undefined); return undefined; }
+  } catch (error) { logger.error("proceduralGet 失败", error instanceof Error ? error : undefined); return undefined; }
 }
 
 export function proceduralRecordOutcome(db: DatabaseType, name: string, success: boolean): void {
   try {
     const col = success ? "success_count" : "failure_count";
     db.prepare(`UPDATE procedural_memory SET ${col} = ${col} + 1, last_used_at = datetime('now'), updated_at = datetime('now') WHERE name = ?`).run(name);
-  } catch (error) { logger.error("proceduralRecordOutcome failed", error instanceof Error ? error : undefined); }
+  } catch (error) { logger.error("proceduralRecordOutcome 失败", error instanceof Error ? error : undefined); }
 }
 
 export function proceduralSearch(db: DatabaseType, query: string): ProceduralMemoryEntry[] {
@@ -1958,15 +1958,15 @@ export function proceduralSearch(db: DatabaseType, query: string): ProceduralMem
     const escaped = query.replace(/[%_\\]/g, (ch) => `\\${ch}`);
     const rows = db.prepare("SELECT * FROM procedural_memory WHERE name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' ORDER BY success_count DESC, updated_at DESC").all(`%${escaped}%`, `%${escaped}%`) as any[];
     return rows.map(deserializeProceduralRow);
-  } catch (error) { logger.error("proceduralSearch failed", error instanceof Error ? error : undefined); return []; }
+  } catch (error) { logger.error("proceduralSearch 失败", error instanceof Error ? error : undefined); return []; }
 }
 
 export function proceduralDelete(db: DatabaseType, name: string): void {
   try { db.prepare("DELETE FROM procedural_memory WHERE name = ?").run(name); }
-  catch (error) { logger.error("proceduralDelete failed", error instanceof Error ? error : undefined); }
+  catch (error) { logger.error("proceduralDelete 失败", error instanceof Error ? error : undefined); }
 }
 
-// Relationship memory
+// 关系记忆
 export function relationshipUpsert(db: DatabaseType, entry: Omit<RelationshipMemoryEntry, "id" | "createdAt" | "updatedAt" | "interactionCount" | "lastInteractionAt">): string {
   const id = ulid();
   try {
@@ -1978,7 +1978,7 @@ export function relationshipUpsert(db: DatabaseType, entry: Omit<RelationshipMem
          relationship_type = excluded.relationship_type, trust_score = excluded.trust_score,
          notes = COALESCE(excluded.notes, relationship_memory.notes), updated_at = datetime('now')`,
     ).run(id, entry.entityAddress, entry.entityName, entry.relationshipType, entry.trustScore, entry.notes);
-  } catch (error) { logger.error("relationshipUpsert failed", error instanceof Error ? error : undefined); }
+  } catch (error) { logger.error("relationshipUpsert 失败", error instanceof Error ? error : undefined); }
   return id;
 }
 
@@ -1986,34 +1986,34 @@ export function relationshipGet(db: DatabaseType, entityAddress: string): Relati
   try {
     const row = db.prepare("SELECT * FROM relationship_memory WHERE entity_address = ?").get(entityAddress) as any | undefined;
     return row ? deserializeRelationshipRow(row) : undefined;
-  } catch (error) { logger.error("relationshipGet failed", error instanceof Error ? error : undefined); return undefined; }
+  } catch (error) { logger.error("relationshipGet 失败", error instanceof Error ? error : undefined); return undefined; }
 }
 
 export function relationshipRecordInteraction(db: DatabaseType, entityAddress: string): void {
   try {
     db.prepare("UPDATE relationship_memory SET interaction_count = interaction_count + 1, last_interaction_at = datetime('now'), updated_at = datetime('now') WHERE entity_address = ?").run(entityAddress);
-  } catch (error) { logger.error("relationshipRecordInteraction failed", error instanceof Error ? error : undefined); }
+  } catch (error) { logger.error("relationshipRecordInteraction 失败", error instanceof Error ? error : undefined); }
 }
 
 export function relationshipUpdateTrust(db: DatabaseType, entityAddress: string, trustDelta: number): void {
   try {
     db.prepare("UPDATE relationship_memory SET trust_score = MAX(0.0, MIN(1.0, trust_score + ?)), updated_at = datetime('now') WHERE entity_address = ?").run(trustDelta, entityAddress);
-  } catch (error) { logger.error("relationshipUpdateTrust failed", error instanceof Error ? error : undefined); }
+  } catch (error) { logger.error("relationshipUpdateTrust 失败", error instanceof Error ? error : undefined); }
 }
 
 export function relationshipGetTrusted(db: DatabaseType, minTrust: number = 0.5): RelationshipMemoryEntry[] {
   try {
     const rows = db.prepare("SELECT * FROM relationship_memory WHERE trust_score >= ? ORDER BY trust_score DESC, interaction_count DESC").all(minTrust) as any[];
     return rows.map(deserializeRelationshipRow);
-  } catch (error) { logger.error("relationshipGetTrusted failed", error instanceof Error ? error : undefined); return []; }
+  } catch (error) { logger.error("relationshipGetTrusted 失败", error instanceof Error ? error : undefined); return []; }
 }
 
 export function relationshipDelete(db: DatabaseType, entityAddress: string): void {
   try { db.prepare("DELETE FROM relationship_memory WHERE entity_address = ?").run(entityAddress); }
-  catch (error) { logger.error("relationshipDelete failed", error instanceof Error ? error : undefined); }
+  catch (error) { logger.error("relationshipDelete 失败", error instanceof Error ? error : undefined); }
 }
 
-// ─── Phase 2.2: Memory Deserializers ─────────────────────────────
+// ─── 阶段 2.2：记忆反序列化器 ─────────────────────────────
 
 function deserializeWorkingMemoryRow(row: any): WorkingMemoryEntry {
   return { id: row.id, sessionId: row.session_id, content: row.content, contentType: row.content_type,
@@ -2092,7 +2092,7 @@ export function inferenceGetSessionCosts(db: DatabaseType, sessionId: string): I
 export function inferenceGetDailyCost(db: DatabaseType, date?: string): number {
   const targetDate = date || new Date().toISOString().slice(0, 10);
   // Compute the next day to use as exclusive upper bound, avoiding the off-by-one
-  // that missed records created at exactly 23:59:59 or fractional seconds after it.
+  // 那些错过了在 23:59:59 或之后的小数秒创建的记录。
   const d = new Date(targetDate + "T00:00:00Z");
   d.setUTCDate(d.getUTCDate() + 1);
   const nextDate = d.toISOString().slice(0, 10);
@@ -2425,7 +2425,7 @@ function deserializeAgentCacheRow(row: any): DiscoveredAgentCacheRow {
   };
 }
 
-// ─── Phase 3.2: Onchain Transaction DB Helpers ──────────────────
+// ─── 阶段 3.2：链上交易数据库助手 ──────────────────────────
 
 export function onchainTxInsert(db: DatabaseType, row: OnchainTransactionRow): void {
   db.prepare(

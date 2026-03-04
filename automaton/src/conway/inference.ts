@@ -1,8 +1,8 @@
 /**
- * Conway Inference Client
+ * Conway 推理客户端
  *
- * Wraps Conway's /v1/chat/completions endpoint (OpenAI-compatible).
- * The automaton pays for its own thinking through Conway credits.
+ * 封装 Conway 的 /v1/chat/completions 端点（OpenAI 兼容）。
+ * Automaton 通过 Conway 积分支付自己的思考费用。
  */
 
 import type {
@@ -27,7 +27,7 @@ interface InferenceClientOptions {
   openaiApiKey?: string;
   anthropicApiKey?: string;
   ollamaBaseUrl?: string;
-  /** Optional registry lookup — if provided, used before name heuristics */
+  /** 可选的注册表查找 — 如果提供，会在名称启发式之前使用 */
   getModelProvider?: (modelId: string) => string | undefined;
 }
 
@@ -58,8 +58,8 @@ export function createInferenceClient(
       getModelProvider,
     });
 
-    // Newer models (o-series, gpt-5.x, gpt-4.1) require max_completion_tokens.
-    // Ollama always uses max_tokens.
+    // 较新的模型（o 系列、gpt-5.x、gpt-4.1）需要 max_completion_tokens。
+    // Ollama 始终使用 max_tokens。
     const usesCompletionTokens =
       backend !== "ollama" && /^(o[1-9]|gpt-5|gpt-4\.1)/.test(model);
     const tokenLimit = opts?.maxTokens || maxTokens;
@@ -117,8 +117,8 @@ export function createInferenceClient(
   };
 
   /**
-   * @deprecated Use InferenceRouter for tier-based model selection.
-   * Still functional as a fallback; router takes priority when available.
+   * @deprecated 已弃用：请使用 InferenceRouter 进行基于层级的模型选择。
+   * 仍然作为后备方案功能正常；当路由器可用时优先使用路由器。
    */
   const setLowComputeMode = (enabled: boolean): void => {
     if (enabled) {
@@ -157,9 +157,9 @@ function formatMessage(
 }
 
 /**
- * Resolve which backend to use for a model.
- * When InferenceRouter is available, it uses the model registry's provider field.
- * This function is kept for backward compatibility with direct inference calls.
+ * 解析模型使用的后端。
+ * 当 InferenceRouter 可用时，它使用模型注册表的 provider 字段。
+ * 此函数保留用于直接推理调用的向后兼容。
  */
 function resolveInferenceBackend(
   model: string,
@@ -170,17 +170,17 @@ function resolveInferenceBackend(
     getModelProvider?: (modelId: string) => string | undefined;
   },
 ): InferenceBackend {
-  // Registry-based routing: most accurate, no name guessing
+  // 基于注册表的路由：最准确，无需猜测名称
   if (keys.getModelProvider) {
     const provider = keys.getModelProvider(model);
     if (provider === "ollama" && keys.ollamaBaseUrl) return "ollama";
     if (provider === "anthropic" && keys.anthropicApiKey) return "anthropic";
     if (provider === "openai" && keys.openaiApiKey) return "openai";
     if (provider === "conway") return "conway";
-    // provider unknown or key not configured — fall through to heuristics
+    // provider 未知或未配置密钥 — 降级到启发式方法
   }
 
-  // Heuristic fallback (model not in registry yet)
+  // 启发式后备（模型尚未在注册表中）
   if (keys.anthropicApiKey && /^claude/i.test(model)) return "anthropic";
   if (keys.openaiApiKey && /^(gpt-[3-9]|gpt-4|gpt-5|o[1-9][-\s.]|o[1-9]$|chatgpt)/i.test(model)) return "openai";
   return "conway";
@@ -211,7 +211,7 @@ async function chatViaOpenAiCompatible(params: {
   if (!resp.ok) {
     const text = await resp.text();
     throw new Error(
-      `Inference error (${params.backend}): ${resp.status}: ${text}`,
+      `推理错误 (${params.backend}): ${resp.status}: ${text}`,
     );
   }
 
@@ -219,7 +219,7 @@ async function chatViaOpenAiCompatible(params: {
   const choice = data.choices?.[0];
 
   if (!choice) {
-    throw new Error("No completion choice returned from inference");
+    throw new Error("推理未返回任何完成选项");
   }
 
   const message = choice.message;
@@ -269,7 +269,7 @@ async function chatViaAnthropic(params: {
     messages:
       transformed.messages.length > 0
         ? transformed.messages
-        : (() => { throw new Error("Cannot send empty message array to Anthropic API"); })(),
+        : (() => { throw new Error("无法向 Anthropic API 发送空消息数组"); })(),
   };
 
   if (transformed.system) {
@@ -302,7 +302,7 @@ async function chatViaAnthropic(params: {
 
   if (!resp.ok) {
     const text = await resp.text();
-    throw new Error(`Inference error (anthropic): ${resp.status}: ${text}`);
+    throw new Error(`推理错误 (anthropic): ${resp.status}: ${text}`);
   }
 
   const data = await resp.json() as any;
@@ -328,7 +328,7 @@ async function chatViaAnthropic(params: {
     .trim();
 
   if (!textContent && !toolCalls?.length) {
-    throw new Error("No completion content returned from anthropic inference");
+    throw new Error("Anthropic 推理未返回任何完成内容");
   }
 
   const promptTokens = data.usage?.input_tokens || 0;
@@ -366,7 +366,7 @@ function transformMessagesForAnthropic(
     }
 
     if (msg.role === "user") {
-      // Merge consecutive user messages
+      // 合并连续的用户消息
       const last = transformed[transformed.length - 1];
       if (last && last.role === "user" && typeof last.content === "string") {
         last.content = last.content + "\n" + msg.content;
@@ -395,7 +395,7 @@ function transformMessagesForAnthropic(
       if (content.length === 0) {
         content.push({ type: "text", text: "" });
       }
-      // Merge consecutive assistant messages
+      // 合并连续的助手消息
       const last = transformed[transformed.length - 1];
       if (last && last.role === "assistant" && Array.isArray(last.content)) {
         (last.content as Array<Record<string, unknown>>).push(...content);
@@ -409,8 +409,8 @@ function transformMessagesForAnthropic(
     }
 
     if (msg.role === "tool") {
-      // Merge consecutive tool messages into a single user message
-      // with multiple tool_result content blocks
+      // 将连续的工具消息合并为单个用户消息
+      // 包含多个 tool_result 内容块
       const toolResultBlock = {
         type: "tool_result",
         tool_use_id: msg.tool_call_id || "unknown_tool_call",
@@ -419,7 +419,7 @@ function transformMessagesForAnthropic(
 
       const last = transformed[transformed.length - 1];
       if (last && last.role === "user" && Array.isArray(last.content)) {
-        // Append tool_result to existing user message with content blocks
+        // 将 tool_result 附加到现有用户消息的内容块中
         (last.content as Array<Record<string, unknown>>).push(toolResultBlock);
         continue;
       }

@@ -17,13 +17,13 @@ import { createInMemoryDb } from "./test-db.js";
 
 function makePlan(overrides: Partial<PlannerOutput> = {}): PlannerOutput {
   return {
-    analysis: "Analyze constraints",
-    strategy: "Ship incrementally",
+    analysis: "分析约束",
+    strategy: "逐步交付",
     customRoles: [],
     tasks: [
       {
-        title: "Implement core",
-        description: "Implement the core feature and validate behavior.",
+        title: "实现核心",
+        description: "实现核心功能并验证行为。",
         agentRole: "engineer",
         dependencies: [],
         estimatedCostCents: 1200,
@@ -31,7 +31,7 @@ function makePlan(overrides: Partial<PlannerOutput> = {}): PlannerOutput {
         timeoutMs: 60_000,
       },
     ],
-    risks: ["Risk: unknown dependency"],
+    risks: ["风险：未知依赖"],
     estimatedTotalCostCents: 1200,
     estimatedTimeMinutes: 30,
     ...overrides,
@@ -74,8 +74,8 @@ describe("orchestration/plan-mode", () => {
     return dir;
   }
 
-  describe("PlanModeController transitions", () => {
-    it("returns default state when KV is empty", () => {
+  describe("PlanModeController 转换", () => {
+    it("KV 为空时返回默认状态", () => {
       const state = controller.getState();
       expect(state.phase).toBe("idle");
       expect(state.goalId).toBe("");
@@ -84,44 +84,44 @@ describe("orchestration/plan-mode", () => {
       expect(state.phaseEnteredAt.length).toBeGreaterThan(0);
     });
 
-    it("allows idle -> classifying", () => {
+    it("允许 idle -> classifying", () => {
       controller.transition("idle", "classifying", "start");
       expect(controller.getState().phase).toBe("classifying");
     });
 
-    it("allows classifying -> planning", () => {
+    it("允许 classifying -> planning", () => {
       controller.setState({ phase: "classifying" });
-      controller.transition("classifying", "planning", "needs plan");
+      controller.transition("classifying", "planning", "需要计划");
       expect(controller.getState().phase).toBe("planning");
     });
 
-    it("allows classifying -> executing", () => {
+    it("允许 classifying -> executing", () => {
       controller.setState({ phase: "classifying" });
-      controller.transition("classifying", "executing", "simple task");
+      controller.transition("classifying", "executing", "简单任务");
       expect(controller.getState().phase).toBe("executing");
     });
 
-    it("allows planning -> plan_review", () => {
+    it("允许 planning -> plan_review", () => {
       controller.setState({ phase: "planning" });
-      controller.transition("planning", "plan_review", "draft complete");
+      controller.transition("planning", "plan_review", "草稿完成");
       expect(controller.getState().phase).toBe("plan_review");
     });
 
-    it("allows plan_review -> executing", () => {
+    it("允许 plan_review -> executing", () => {
       controller.setState({ phase: "plan_review" });
-      controller.transition("plan_review", "executing", "approved");
+      controller.transition("plan_review", "executing", "已批准");
       expect(controller.getState().phase).toBe("executing");
     });
 
-    it("allows plan_review -> planning", () => {
+    it("允许 plan_review -> planning", () => {
       controller.setState({ phase: "plan_review" });
-      controller.transition("plan_review", "planning", "needs revision");
+      controller.transition("plan_review", "planning", "需要修订");
       expect(controller.getState().phase).toBe("planning");
     });
 
-    it("allows executing -> replanning and updates counters", () => {
+    it("允许 executing -> replanning 并更新计数器", () => {
       controller.setState({ phase: "executing", replansRemaining: 2, planVersion: 4 });
-      controller.transition("executing", "replanning", "failure");
+      controller.transition("executing", "replanning", "失败");
 
       const state = controller.getState();
       expect(state.phase).toBe("replanning");
@@ -129,62 +129,62 @@ describe("orchestration/plan-mode", () => {
       expect(state.planVersion).toBe(5);
     });
 
-    it("allows replanning -> plan_review", () => {
+    it("允许 replanning -> plan_review", () => {
       controller.setState({ phase: "replanning" });
-      controller.transition("replanning", "plan_review", "new plan drafted");
+      controller.transition("replanning", "plan_review", "新计划已起草");
       expect(controller.getState().phase).toBe("plan_review");
     });
 
-    it("allows transition to failed from any phase", () => {
+    it("允许从任何阶段转换到 failed", () => {
       controller.setState({ phase: "planning" });
-      controller.transition("planning", "failed", "fatal");
+      controller.transition("planning", "failed", "致命错误");
       expect(controller.getState().phase).toBe("failed");
     });
 
-    it("throws when from phase does not match current phase", () => {
+    it("当 from 阶段与当前阶段不匹配时抛出异常", () => {
       controller.setState({ phase: "planning" });
-      expect(() => controller.transition("idle", "classifying", "bad precondition")).toThrow(
+      expect(() => controller.transition("idle", "classifying", "前置条件错误")).toThrow(
         /Invalid transition precondition/,
       );
     });
 
-    it("throws for invalid transition edge", () => {
+    it("对无效的转换边抛出异常", () => {
       controller.setState({ phase: "idle" });
-      expect(() => controller.transition("idle", "executing", "skip")).toThrow(
-        "Invalid transition 'idle' -> 'executing' (reason: skip)",
+      expect(() => controller.transition("idle", "executing", "跳过")).toThrow(
+        "Invalid transition 'idle' -> 'executing' (reason: 跳过)",
       );
     });
 
-    it("throws for transitions out of complete", () => {
+    it("对从 complete 转换出的操作抛出异常", () => {
       controller.setState({ phase: "complete" });
-      expect(() => controller.transition("complete", "planning", "reopen")).toThrow(/Invalid transition/);
+      expect(() => controller.transition("complete", "planning", "重新打开")).toThrow(/Invalid transition/);
     });
   });
 
   describe("canSpawnAgents", () => {
-    it("returns false while idle", () => {
+    it("idle 时返回 false", () => {
       controller.setState({ phase: "idle", planId: "plan-1" });
       expect(controller.canSpawnAgents()).toBe(false);
     });
 
-    it("returns false in executing when planId is null", () => {
+    it("executing 时 planId 为 null 返回 false", () => {
       controller.setState({ phase: "executing", planId: null });
       expect(controller.canSpawnAgents()).toBe(false);
     });
 
-    it("returns true only in executing with planId", () => {
+    it("仅在 executing 且有 planId 时返回 true", () => {
       controller.setState({ phase: "executing", planId: "plan-1" });
       expect(controller.canSpawnAgents()).toBe(true);
     });
 
-    it("returns false in non-executing phase even with planId", () => {
+    it("即使有 planId，在非 executing 阶段也返回 false", () => {
       controller.setState({ phase: "planning", planId: "plan-1" });
       expect(controller.canSpawnAgents()).toBe(false);
     });
   });
 
-  describe("state persistence", () => {
-    it("setState persists to KV and getState reads it", () => {
+  describe("状态持久化", () => {
+    it("setState 持久化到 KV 且 getState 读取它", () => {
       controller.setState({ phase: "executing", goalId: "g-1", planId: "p-1", replansRemaining: 2 });
 
       const row = db.prepare("SELECT value FROM kv WHERE key = 'plan_mode.state'").get() as
@@ -200,7 +200,7 @@ describe("orchestration/plan-mode", () => {
       });
     });
 
-    it("setState merges partial state", () => {
+    it("setState 合并部分状态", () => {
       controller.setState({ phase: "executing", goalId: "g-1", planId: "p-1", planVersion: 2 });
       controller.setState({ replansRemaining: 1 });
 
@@ -213,26 +213,26 @@ describe("orchestration/plan-mode", () => {
       });
     });
 
-    it("phase changes update phaseEnteredAt automatically", () => {
+    it("阶段更改时自动更新 phaseEnteredAt", () => {
       controller.setState({ phase: "idle", phaseEnteredAt: "2026-01-01T00:00:00.000Z" });
       controller.setState({ phase: "classifying" });
 
       expect(controller.getState().phaseEnteredAt).not.toBe("2026-01-01T00:00:00.000Z");
     });
 
-    it("explicit phaseEnteredAt is preserved", () => {
+    it("显式的 phaseEnteredAt 被保留", () => {
       controller.setState({ phase: "planning", phaseEnteredAt: "2026-02-01T00:00:00.000Z" });
       expect(controller.getState().phaseEnteredAt).toBe("2026-02-01T00:00:00.000Z");
     });
 
-    it("getState falls back on malformed JSON", () => {
+    it("getState 在格式错误的 JSON 时回退", () => {
       db.prepare("INSERT OR REPLACE INTO kv (key, value, updated_at) VALUES (?, ?, datetime('now'))")
         .run("plan_mode.state", "{bad json");
 
       expect(controller.getState().phase).toBe("idle");
     });
 
-    it("getState sanitizes invalid values", () => {
+    it("getState 清理无效值", () => {
       db.prepare("INSERT OR REPLACE INTO kv (key, value, updated_at) VALUES (?, ?, datetime('now'))")
         .run("plan_mode.state", JSON.stringify({
           phase: "not-a-phase",
@@ -258,7 +258,7 @@ describe("orchestration/plan-mode", () => {
   });
 
   describe("persistPlan / loadPlan", () => {
-    it("persistPlan writes plan.json and plan.md", async () => {
+    it("persistPlan 写入 plan.json 和 plan.md", async () => {
       const dir = await newTempDir();
       const result = await persistPlan({
         goalId: "goal-1",
@@ -277,7 +277,7 @@ describe("orchestration/plan-mode", () => {
       expect(md).toContain("## Tasks");
     });
 
-    it("persistPlan archives previous json version", async () => {
+    it("persistPlan 归档之前的 json 版本", async () => {
       const dir = await newTempDir();
 
       await persistPlan({
@@ -301,7 +301,7 @@ describe("orchestration/plan-mode", () => {
       expect(latest).toContain("second");
     });
 
-    it("persistPlan validates planner output", async () => {
+    it("persistPlan 验证规划器输出", async () => {
       const dir = await newTempDir();
       await expect(persistPlan({
         goalId: "goal-1",
@@ -323,21 +323,21 @@ describe("orchestration/plan-mode", () => {
       })).rejects.toThrow(/tasks\[0\]\.description must be a string/);
     });
 
-    it("loadPlan reads and validates a plan json", async () => {
+    it("loadPlan 读取并验证计划 json", async () => {
       const dir = await newTempDir();
       const { jsonPath } = await persistPlan({
         goalId: "goal-1",
         version: 1,
-        plan: makePlan({ strategy: "Validated strategy" }),
+        plan: makePlan({ strategy: "验证策略" }),
         workspacePath: dir,
       });
 
       const plan = await loadPlan(jsonPath);
-      expect(plan.strategy).toBe("Validated strategy");
+      expect(plan.strategy).toBe("验证策略");
       expect(plan.tasks).toHaveLength(1);
     });
 
-    it("loadPlan throws on invalid JSON", async () => {
+    it("loadPlan 在无效 JSON 时抛出异常", async () => {
       const dir = await newTempDir();
       const filePath = path.join(dir, "bad-plan.json");
       await rm(filePath, { force: true }).catch(() => undefined);
@@ -346,7 +346,7 @@ describe("orchestration/plan-mode", () => {
       await expect(loadPlan(filePath)).rejects.toThrow("Invalid plan JSON");
     });
 
-    it("loadPlan throws on invalid plan shape", async () => {
+    it("loadPlan 在无效计划形状时抛出异常", async () => {
       const dir = await newTempDir();
       const filePath = path.join(dir, "bad-shape.json");
       await writeFile(filePath, JSON.stringify({ analysis: "x", strategy: "y", tasks: [] }));
@@ -363,23 +363,23 @@ describe("orchestration/plan-mode", () => {
       reviewTimeoutMs: 10_000,
     };
 
-    it("auto mode approves immediately under threshold", async () => {
+    it("自动模式在阈值以下立即批准", async () => {
       const result = await reviewPlan(makePlan({ estimatedTotalCostCents: 1200 }), autoConfig);
       expect(result).toEqual({ approved: true });
     });
 
-    it("auto mode approves above threshold with feedback", async () => {
+    it("自动模式在阈值以上带反馈批准", async () => {
       const result = await reviewPlan(makePlan({ estimatedTotalCostCents: 9000 }), autoConfig);
       expect(result.approved).toBe(true);
       expect(result.feedback).toContain("Auto-approved above threshold");
     });
 
-    it("supervised mode throws awaiting approval", async () => {
+    it("监督模式抛出等待批准", async () => {
       const supervised: PlanApprovalConfig = { ...autoConfig, mode: "supervised" };
       await expect(reviewPlan(makePlan(), supervised)).rejects.toThrow("awaiting human approval");
     });
 
-    it("consensus mode returns approval feedback", async () => {
+    it("共识模式返回批准反馈", async () => {
       const consensus: PlanApprovalConfig = {
         ...autoConfig,
         mode: "consensus",
@@ -391,7 +391,7 @@ describe("orchestration/plan-mode", () => {
       expect(result.feedback).toContain("critic role 'critic'");
     });
 
-    it("normalizes invalid config values", async () => {
+    it("归一化无效配置值", async () => {
       const result = await reviewPlan(makePlan({ estimatedTotalCostCents: 99999 }), {
         mode: "unknown" as unknown as "auto",
         autoBudgetThreshold: Number.NaN,
@@ -405,44 +405,44 @@ describe("orchestration/plan-mode", () => {
   });
 
   describe("shouldReplan", () => {
-    it("returns false when no replans remain", () => {
+    it("当没有重计划剩余时返回 false", () => {
       const state = baseState({ replansRemaining: 0 });
       expect(shouldReplan(state, { type: "task_failure", taskId: "t1", error: "boom" })).toBe(false);
     });
 
-    it("task_failure requires taskId and error", () => {
+    it("task_failure 需要 taskId 和 error", () => {
       const state = baseState();
       expect(shouldReplan(state, { type: "task_failure", taskId: "t1", error: "boom" })).toBe(true);
       expect(shouldReplan(state, { type: "task_failure", taskId: "", error: "boom" })).toBe(false);
       expect(shouldReplan(state, { type: "task_failure", taskId: "t1", error: "  " })).toBe(false);
     });
 
-    it("budget_breach uses 1.5x threshold", () => {
+    it("budget_breach 使用 1.5x 阈值", () => {
       const state = baseState();
       expect(shouldReplan(state, { type: "budget_breach", estimatedCents: 100, actualCents: 151 })).toBe(true);
       expect(shouldReplan(state, { type: "budget_breach", estimatedCents: 100, actualCents: 150 })).toBe(false);
     });
 
-    it("budget_breach with non-positive estimate checks actual > 0", () => {
+    it("budget_breach 非正估计值检查 actual > 0", () => {
       const state = baseState();
       expect(shouldReplan(state, { type: "budget_breach", estimatedCents: 0, actualCents: 1 })).toBe(true);
       expect(shouldReplan(state, { type: "budget_breach", estimatedCents: -100, actualCents: 0 })).toBe(false);
     });
 
-    it("requirement_change needs conflictScore >= 0.55", () => {
+    it("requirement_change 需要 conflictScore >= 0.55", () => {
       const state = baseState();
       expect(shouldReplan(state, { type: "requirement_change", newInput: "x", conflictScore: 0.55 })).toBe(true);
       expect(shouldReplan(state, { type: "requirement_change", newInput: "x", conflictScore: 0.54 })).toBe(false);
     });
 
-    it("environment_change requires non-empty fields", () => {
+    it("environment_change 需要非空字段", () => {
       const state = baseState();
       expect(shouldReplan(state, { type: "environment_change", resource: "db", error: "down" })).toBe(true);
       expect(shouldReplan(state, { type: "environment_change", resource: "", error: "down" })).toBe(false);
       expect(shouldReplan(state, { type: "environment_change", resource: "db", error: " " })).toBe(false);
     });
 
-    it("opportunity requires enough replans and long suggestion", () => {
+    it("opportunity 需要足够的重计划和长建议", () => {
       expect(shouldReplan(
         baseState({ replansRemaining: 2 }),
         { type: "opportunity", suggestion: "This opportunity is long enough to justify a replan", agentAddress: "0x1" },

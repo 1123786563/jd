@@ -1,9 +1,9 @@
 /**
- * Metrics Collector
+ * 指标收集器
  *
- * In-process metrics collection with counters, gauges, and histograms.
- * Uses Map with JSON-serialized labels as composite keys.
- * Never throws — silently drops on error.
+ * 进程内指标收集，支持计数器、仪表盘和直方图。
+ * 使用 Map 和 JSON 序列化的标签作为复合键。
+ * 永不抛出异常 — 错误时静默丢弃。
  */
 
 import type { MetricEntry, MetricSnapshot, MetricType } from "../types.js";
@@ -14,7 +14,7 @@ function labelKey(name: string, labels?: Record<string, string>): string {
   return `${name}{${sorted}}`;
 }
 
-// Maximum number of values to retain per histogram key
+// 每个直方图键保留的最大值数量
 const HISTOGRAM_MAX_VALUES = 1000;
 
 export class MetricsCollector {
@@ -47,7 +47,7 @@ export class MetricsCollector {
       const key = labelKey(name, labels);
       const existing = this.histogramValues.get(key) ?? [];
       existing.push(value);
-      // Prevent unbounded memory growth by keeping only the most recent values
+      // 防止内存无限增长，只保留最近的值
       if (existing.length > HISTOGRAM_MAX_VALUES) {
         existing.splice(0, existing.length - HISTOGRAM_MAX_VALUES);
       }

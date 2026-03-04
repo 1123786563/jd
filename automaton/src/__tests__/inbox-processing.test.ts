@@ -1,10 +1,10 @@
 /**
- * Inbox Processing Tests (Sub-phase 1.2)
+ * 收件箱处理测试 (子阶段 1.2)
  *
- * Tests the inbox message state machine:
- *   received → in_progress → processed (success)
- *   received → in_progress → received (retry on failure)
- *   received → in_progress → failed (max retries exceeded)
+ * 测试收件箱消息状态机:
+ *   received → in_progress → processed (成功)
+ *   received → in_progress → received (重试失败)
+ *   received → in_progress → failed (超过最大重试次数)
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -47,10 +47,10 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
   });
 
   afterEach(() => {
-    try { db.close(); } catch { /* already closed */ }
+    try { db.close(); } catch { /* 已关闭 */ }
   });
 
-  // ─── Schema: inbox_messages has new columns ────────────────────
+  // ─── Schema: inbox_messages 有新列 ────────────────────
 
   describe("schema", () => {
     it("inbox_messages has status, retry_count, max_retries columns", () => {
@@ -63,7 +63,7 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(names).toContain("max_retries");
     });
 
-    it("new messages default to status=received, retry_count=0, max_retries=3", () => {
+    it("新消息默认为 status=received, retry_count=0, max_retries=3", () => {
       insertTestMessage(db, "msg-defaults");
       const row = db.raw
         .prepare("SELECT status, retry_count, max_retries FROM inbox_messages WHERE id = ?")
@@ -77,7 +77,7 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
   // ─── claimInboxMessages ────────────────────────────────────────
 
   describe("claimInboxMessages", () => {
-    it("claims received messages and transitions to in_progress", () => {
+    it("认领已接收消息并转换为 in_progress", () => {
       insertTestMessage(db, "msg-1");
       insertTestMessage(db, "msg-2");
 
@@ -86,21 +86,21 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(claimed[0].status).toBe("in_progress");
       expect(claimed[1].status).toBe("in_progress");
 
-      // Verify in the database
+      // 在数据库中验证
       const row = db.raw
         .prepare("SELECT status FROM inbox_messages WHERE id = ?")
         .get("msg-1") as { status: string };
       expect(row.status).toBe("in_progress");
     });
 
-    it("increments retry_count on each claim", () => {
+    it("每次认领时增加 retry_count", () => {
       insertTestMessage(db, "msg-retry");
 
       const claimed1 = claimInboxMessages(db.raw, 10);
       expect(claimed1).toHaveLength(1);
       expect(claimed1[0].retryCount).toBe(1);
 
-      // Reset to received for another claim
+      // 重置为 received 以再次认领
       resetInboxToReceived(db.raw, ["msg-retry"]);
 
       const claimed2 = claimInboxMessages(db.raw, 10);
@@ -108,7 +108,7 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(claimed2[0].retryCount).toBe(2);
     });
 
-    it("respects the limit parameter", () => {
+    it("遵守 limit 参数", () => {
       insertTestMessage(db, "msg-a");
       insertTestMessage(db, "msg-b");
       insertTestMessage(db, "msg-c");
@@ -117,32 +117,32 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(claimed).toHaveLength(2);
     });
 
-    it("does not claim messages already in_progress", () => {
+    it("不认领已处于 in_progress 的消息", () => {
       insertTestMessage(db, "msg-ip");
 
-      // First claim
+      // 首次认领
       claimInboxMessages(db.raw, 10);
 
-      // Second claim should return nothing (msg-ip is in_progress)
+      // 第二次认领应返回空 (msg-ip 是 in_progress)
       const claimed = claimInboxMessages(db.raw, 10);
       expect(claimed).toHaveLength(0);
     });
 
-    it("does not claim messages that have exhausted retries", () => {
+    it("不认领已用尽重试次数的消息", () => {
       insertTestMessage(db, "msg-exhausted");
 
-      // Simulate exhausting retries (3 claims + resets)
+      // 模拟用尽重试次数 (3 次认领 + 重置)
       for (let i = 0; i < 3; i++) {
         claimInboxMessages(db.raw, 10);
         resetInboxToReceived(db.raw, ["msg-exhausted"]);
       }
 
-      // Now retry_count is 3 (equal to max_retries), should not be claimed
+      // 现在不应被认领 (retry_count = 3 = max_retries)
       const claimed = claimInboxMessages(db.raw, 10);
       expect(claimed).toHaveLength(0);
     });
 
-    it("returns empty array when no messages available", () => {
+    it("没有可用消息时返回空数组", () => {
       const claimed = claimInboxMessages(db.raw, 10);
       expect(claimed).toHaveLength(0);
     });
@@ -151,7 +151,7 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
   // ─── markInboxProcessed ────────────────────────────────────────
 
   describe("markInboxProcessed", () => {
-    it("transitions messages to processed status", () => {
+    it("转换消息状态为 processed", () => {
       insertTestMessage(db, "msg-p1");
       claimInboxMessages(db.raw, 10);
 
@@ -164,11 +164,11 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(row.processed_at).not.toBeNull();
     });
 
-    it("handles empty ids array gracefully", () => {
+    it("优雅地处理空 ids 数组", () => {
       expect(() => markInboxProcessed(db.raw, [])).not.toThrow();
     });
 
-    it("processes multiple messages at once", () => {
+    it("一次处理多个消息", () => {
       insertTestMessage(db, "msg-batch-1");
       insertTestMessage(db, "msg-batch-2");
       claimInboxMessages(db.raw, 10);
@@ -185,7 +185,7 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
   // ─── markInboxFailed ──────────────────────────────────────────
 
   describe("markInboxFailed", () => {
-    it("transitions messages to failed status", () => {
+    it("转换消息状态为 failed", () => {
       insertTestMessage(db, "msg-f1");
       claimInboxMessages(db.raw, 10);
 
@@ -197,7 +197,7 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(row.status).toBe("failed");
     });
 
-    it("failed messages are not claimable", () => {
+    it("失败的消息无法被认领", () => {
       insertTestMessage(db, "msg-f2");
       claimInboxMessages(db.raw, 10);
       markInboxFailed(db.raw, ["msg-f2"]);
@@ -210,7 +210,7 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
   // ─── resetInboxToReceived ─────────────────────────────────────
 
   describe("resetInboxToReceived", () => {
-    it("transitions messages back to received for retry", () => {
+    it("将消息转换回 received 状态以重试", () => {
       insertTestMessage(db, "msg-r1");
       claimInboxMessages(db.raw, 10);
 
@@ -222,7 +222,7 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(row.status).toBe("received");
     });
 
-    it("reset messages can be claimed again", () => {
+    it("重置后的消息可再次被认领", () => {
       insertTestMessage(db, "msg-r2");
       claimInboxMessages(db.raw, 10);
       resetInboxToReceived(db.raw, ["msg-r2"]);
@@ -236,19 +236,19 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
   // ─── getUnprocessedInboxCount ─────────────────────────────────
 
   describe("getUnprocessedInboxCount", () => {
-    it("counts received and in_progress messages", () => {
+    it("计算 received 和 in_progress 消息", () => {
       insertTestMessage(db, "msg-c1");
       insertTestMessage(db, "msg-c2");
       insertTestMessage(db, "msg-c3");
 
-      // One claimed (in_progress), two received
+      // 一个已认领 (in_progress)，两个 received
       claimInboxMessages(db.raw, 1);
 
       const count = getUnprocessedInboxCount(db.raw);
       expect(count).toBe(3);
     });
 
-    it("does not count processed messages", () => {
+    it("不计算已处理的消息", () => {
       insertTestMessage(db, "msg-c4");
       claimInboxMessages(db.raw, 10);
       markInboxProcessed(db.raw, ["msg-c4"]);
@@ -257,7 +257,7 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(count).toBe(0);
     });
 
-    it("does not count failed messages", () => {
+    it("不计算失败的消息", () => {
       insertTestMessage(db, "msg-c5");
       claimInboxMessages(db.raw, 10);
       markInboxFailed(db.raw, ["msg-c5"]);
@@ -266,25 +266,25 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(count).toBe(0);
     });
 
-    it("returns 0 when no messages exist", () => {
+    it("没有消息时返回 0", () => {
       const count = getUnprocessedInboxCount(db.raw);
       expect(count).toBe(0);
     });
   });
 
-  // ─── Full state machine flow ──────────────────────────────────
+  // ─── 完整状态机流程 ──────────────────────────────────
 
   describe("full state machine flow", () => {
-    it("success path: received → in_progress → processed", () => {
+    it("成功路径: received → in_progress → processed", () => {
       insertTestMessage(db, "msg-flow-1");
 
-      // Verify initial state
+      // 验证初始状态
       let row = db.raw.prepare("SELECT status, retry_count FROM inbox_messages WHERE id = ?")
         .get("msg-flow-1") as { status: string; retry_count: number };
       expect(row.status).toBe("received");
       expect(row.retry_count).toBe(0);
 
-      // Claim
+      // 认领
       const claimed = claimInboxMessages(db.raw, 10);
       expect(claimed).toHaveLength(1);
       row = db.raw.prepare("SELECT status, retry_count FROM inbox_messages WHERE id = ?")
@@ -292,7 +292,7 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(row.status).toBe("in_progress");
       expect(row.retry_count).toBe(1);
 
-      // Process
+      // 处理
       markInboxProcessed(db.raw, ["msg-flow-1"]);
       row = db.raw.prepare("SELECT status, retry_count FROM inbox_messages WHERE id = ?")
         .get("msg-flow-1") as { status: string; retry_count: number };
@@ -300,18 +300,18 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(row.retry_count).toBe(1);
     });
 
-    it("retry path: received → in_progress → received (×N) → in_progress → processed", () => {
+    it("重试路径: received → in_progress → received (×N) → in_progress → processed", () => {
       insertTestMessage(db, "msg-flow-2");
 
-      // First attempt: claim then fail
+      // 第一次尝试: 认领然后失败
       claimInboxMessages(db.raw, 10);
       resetInboxToReceived(db.raw, ["msg-flow-2"]);
 
-      // Second attempt: claim then fail
+      // 第二次尝试: 认领然后失败
       claimInboxMessages(db.raw, 10);
       resetInboxToReceived(db.raw, ["msg-flow-2"]);
 
-      // Third attempt: claim then succeed
+      // 第三次尝试: 认领然后成功
       const claimed = claimInboxMessages(db.raw, 10);
       expect(claimed).toHaveLength(1);
       expect(claimed[0].retryCount).toBe(3);
@@ -323,21 +323,21 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(row.retry_count).toBe(3);
     });
 
-    it("exhaustion path: received → in_progress → received (×3) → failed", () => {
+    it("耗尽路径: received → in_progress → received (×3) → failed", () => {
       insertTestMessage(db, "msg-flow-3");
 
-      // Exhaust all 3 retries
+      // 耗尽所有 3 次重试
       for (let i = 0; i < 3; i++) {
         const claimed = claimInboxMessages(db.raw, 10);
         expect(claimed).toHaveLength(1);
         resetInboxToReceived(db.raw, ["msg-flow-3"]);
       }
 
-      // Should not be claimable anymore (retry_count = 3 = max_retries)
+      // 不应再被认领 (retry_count = 3 = max_retries)
       const claimed = claimInboxMessages(db.raw, 10);
       expect(claimed).toHaveLength(0);
 
-      // Manually mark as failed (as the loop would do)
+      // 手动标记为失败 (循环会这样做)
       markInboxFailed(db.raw, ["msg-flow-3"]);
       const row = db.raw.prepare("SELECT status, retry_count FROM inbox_messages WHERE id = ?")
         .get("msg-flow-3") as { status: string; retry_count: number };
@@ -345,17 +345,17 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(row.retry_count).toBe(3);
     });
 
-    it("atomic ack: markInboxProcessed inside transaction", () => {
+    it("原子确认: 在事务中标记 markInboxProcessed", () => {
       insertTestMessage(db, "msg-txn-1");
       const claimed = claimInboxMessages(db.raw, 10);
       expect(claimed).toHaveLength(1);
 
-      // Simulate what the loop does: atomic turn + inbox ack
+      // 模拟循环的操作: 原子 turn + inbox 确认
       const turn = {
         id: "turn-inbox-test",
         timestamp: new Date().toISOString(),
         state: "running" as const,
-        thinking: "Processing inbox message",
+        thinking: "处理收件箱消息",
         toolCalls: [],
         tokenUsage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
         costCents: 1,
@@ -366,7 +366,7 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
         markInboxProcessed(db.raw, ["msg-txn-1"]);
       });
 
-      // Both should have succeeded
+      // 两者都应成功
       const savedTurn = db.getTurnById("turn-inbox-test");
       expect(savedTurn).toBeDefined();
 
@@ -375,10 +375,10 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(row.status).toBe("processed");
     });
 
-    it("atomic ack rollback: turn failure leaves messages in_progress", () => {
+    it("原子确认回滚: turn 失败使消息保持 in_progress", () => {
       insertTestMessage(db, "msg-txn-2");
 
-      // First insert a turn to create a duplicate
+      // 首先插入一个 turn 来创建重复
       db.insertTurn({
         id: "turn-dup",
         timestamp: new Date().toISOString(),
@@ -392,11 +392,11 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       const claimed = claimInboxMessages(db.raw, 10);
       expect(claimed).toHaveLength(1);
 
-      // Transaction that fails (duplicate turn ID)
+      // 失败的事务 (重复的 turn ID)
       expect(() => {
         db.runTransaction(() => {
           db.insertTurn({
-            id: "turn-dup", // duplicate!
+            id: "turn-dup", // 重复!
             timestamp: new Date().toISOString(),
             state: "running",
             thinking: "Should fail",
@@ -408,28 +408,28 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
         });
       }).toThrow();
 
-      // Message should still be in_progress (markInboxProcessed was rolled back)
+      // 消息应仍为 in_progress (markInboxProcessed 已回滚)
       const row = db.raw.prepare("SELECT status FROM inbox_messages WHERE id = ?")
         .get("msg-txn-2") as { status: string };
       expect(row.status).toBe("in_progress");
     });
 
-    it("duplicate message insertion is ignored via INSERT OR IGNORE", () => {
+    it("通过 INSERT OR IGNORE 忽略重复消息插入", () => {
       insertTestMessage(db, "msg-dup-1");
 
-      // Try to insert same message again
+      // 尝试再次插入相同消息
       expect(() => {
         insertTestMessage(db, "msg-dup-1");
       }).not.toThrow();
 
-      // Should still only have one message
+      // 应仍只有一个消息
       const count = db.raw
         .prepare("SELECT COUNT(*) as c FROM inbox_messages WHERE id = 'msg-dup-1'")
         .get() as { c: number };
       expect(count.c).toBe(1);
     });
 
-    it("mixed success/failure: some messages processed, others retried", () => {
+    it("混合成功/失败: 部分消息已处理，其他重试", () => {
       insertTestMessage(db, "msg-mix-1");
       insertTestMessage(db, "msg-mix-2");
       insertTestMessage(db, "msg-mix-3");
@@ -437,7 +437,7 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       const claimed = claimInboxMessages(db.raw, 10);
       expect(claimed).toHaveLength(3);
 
-      // Simulate: msg-mix-1 succeeds, msg-mix-2 retries, msg-mix-3 fails (already at max)
+      // 模拟: msg-mix-1 成功，msg-mix-2 重试，msg-mix-3 失败 (已达最大值)
       markInboxProcessed(db.raw, ["msg-mix-1"]);
       resetInboxToReceived(db.raw, ["msg-mix-2"]);
       markInboxFailed(db.raw, ["msg-mix-3"]);
@@ -453,7 +453,7 @@ describe("Inbox Processing State Machine (Phase 1.2)", () => {
       expect(s2.status).toBe("received");
       expect(s3.status).toBe("failed");
 
-      // Only msg-mix-2 should be unprocessed
+      // 只有 msg-mix-2 应该是未处理的
       const unprocessed = getUnprocessedInboxCount(db.raw);
       expect(unprocessed).toBe(1);
     });

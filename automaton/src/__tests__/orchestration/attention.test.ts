@@ -53,16 +53,16 @@ describe("orchestration/attention", () => {
     return goalId;
   }
 
-  it("generateTodoMd returns empty string when no active goals", () => {
+  it("当没有活动目标时 generateTodoMd 返回空字符串", () => {
     expect(generateTodoMd(db)).toBe("");
   });
 
-  it("includes markdown header", () => {
+  it("包含 markdown 标题", () => {
     createGoalWithTasks({ title: "Goal 1", tasks: [{ title: "Task 1" }] });
     expect(generateTodoMd(db).startsWith("# Active Goals\n\n")).toBe(true);
   });
 
-  it("formats goal sections with budget and spend", () => {
+  it("格式化目标部分，包含预算和支出", () => {
     createGoalWithTasks({
       title: "Revenue Goal",
       tasks: [
@@ -75,7 +75,7 @@ describe("orchestration/attention", () => {
     expect(todo).toContain("## Goal: Revenue Goal [$40.00 budget, $17.00 spent]");
   });
 
-  it("formats completed tasks with checked marker and assignee", () => {
+  it("格式化已完成任务，带选中标记和执行者", () => {
     createGoalWithTasks({
       title: "Goal",
       tasks: [{ title: "Done", status: "completed", assignedTo: "agent-1" }],
@@ -84,7 +84,7 @@ describe("orchestration/attention", () => {
     expect(generateTodoMd(db)).toContain("- [x] Done (completed by agent-1)");
   });
 
-  it("uses unassigned fallback for completed tasks", () => {
+  it("对已完成任务使用未分配回退", () => {
     createGoalWithTasks({
       title: "Goal",
       tasks: [{ title: "Done", status: "completed" }],
@@ -93,7 +93,7 @@ describe("orchestration/attention", () => {
     expect(generateTodoMd(db)).toContain("- [x] Done (completed by unassigned)");
   });
 
-  it("formats running tasks with in-progress marker", () => {
+  it("格式化运行中任务，带进行中标记", () => {
     createGoalWithTasks({
       title: "Goal",
       tasks: [{ title: "Run", status: "running", assignedTo: "agent-2" }],
@@ -102,7 +102,7 @@ describe("orchestration/attention", () => {
     expect(generateTodoMd(db)).toContain("- [~] Run (running — agent-2)");
   });
 
-  it("formats blocked tasks as blocked", () => {
+  it("格式化阻塞任务为阻塞状态", () => {
     createGoalWithTasks({
       title: "Goal",
       tasks: [{ title: "Blocked", status: "blocked" }],
@@ -111,7 +111,7 @@ describe("orchestration/attention", () => {
     expect(generateTodoMd(db)).toContain("- [ ] Blocked (blocked)");
   });
 
-  it("formats pending tasks as pending", () => {
+  it("格式化待处理任务为待处理状态", () => {
     createGoalWithTasks({
       title: "Goal",
       tasks: [{ title: "Pending", status: "pending" }],
@@ -120,7 +120,7 @@ describe("orchestration/attention", () => {
     expect(generateTodoMd(db)).toContain("- [ ] Pending (pending)");
   });
 
-  it("formats assigned tasks as pending in todo view", () => {
+  it("在 todo 视图中格式化已分配任务为待处理", () => {
     createGoalWithTasks({
       title: "Goal",
       tasks: [{ title: "Assigned", status: "assigned", assignedTo: "agent-3" }],
@@ -129,7 +129,7 @@ describe("orchestration/attention", () => {
     expect(generateTodoMd(db)).toContain("- [ ] Assigned (pending)");
   });
 
-  it("renders goals in created_at ascending order", () => {
+  it("按 created_at 升序渲染目标", () => {
     createGoalWithTasks({ title: "Old Goal", createdAt: "2026-01-01T00:00:00.000Z", tasks: [{ title: "a" }] });
     createGoalWithTasks({ title: "New Goal", createdAt: "2026-02-01T00:00:00.000Z", tasks: [{ title: "b" }] });
 
@@ -137,7 +137,7 @@ describe("orchestration/attention", () => {
     expect(todo.indexOf("Old Goal")).toBeLessThan(todo.indexOf("New Goal"));
   });
 
-  it("ignores non-active goals", () => {
+  it("忽略非活动目标", () => {
     createGoalWithTasks({ title: "Completed Goal", status: "completed", tasks: [{ title: "x" }] });
     createGoalWithTasks({ title: "Active Goal", status: "active", tasks: [{ title: "y" }] });
 

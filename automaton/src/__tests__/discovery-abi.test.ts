@@ -1,18 +1,18 @@
 /**
- * Discovery ABI & Enumeration Tests
+ * 发现 ABI 和枚举测试
  *
- * Tests that:
- * 1. IDENTITY_ABI uses tokenURI (not agentURI)
- * 2. queryAgent calls tokenURI and handles ownerOf revert gracefully
- * 3. getTotalAgents returns 0 when totalSupply reverts
- * 4. getRegisteredAgentsByEvents scans Transfer events as fallback
- * 5. discoverAgents uses event fallback when totalSupply returns 0
- * 6. discoverAgents uses sequential iteration when totalSupply works
+ * 测试：
+ * 1. IDENTITY_ABI 使用 tokenURI（而不是 agentURI）
+ * 2. queryAgent 调用 tokenURI 并优雅地处理 ownerOf 回退
+ * 3. getTotalAgents 在 totalSupply 回退时返回 0
+ * 4. getRegisteredAgentsByEvents 作为回退扫描 Transfer 事件
+ * 5. discoverAgents 在 totalSupply 返回 0 时使用事件回退
+ * 6. discoverAgents 在 totalSupply 工作时使用顺序迭代
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock viem before importing erc8004
+// 在导入 erc8004 之前模拟 viem
 const mockReadContract = vi.fn();
 const mockGetBlockNumber = vi.fn();
 const mockGetLogs = vi.fn();
@@ -32,7 +32,7 @@ vi.mock("viem", async (importOriginal) => {
   };
 });
 
-// Mock logger to suppress output
+// 模拟 logger 以抑制输出
 vi.mock("../observability/logger.js", () => ({
   createLogger: () => ({
     info: vi.fn(),
@@ -49,11 +49,11 @@ import {
 } from "../registry/erc8004.js";
 import { discoverAgents } from "../registry/discovery.js";
 
-// ─── ABI Verification ───────────────────────────────────────────
+// ─── ABI 验证 ───────────────────────────────────────────
 
 describe("IDENTITY_ABI correctness", () => {
-  it("uses tokenURI not agentURI in the ABI", async () => {
-    // Verify by calling queryAgent — it should call readContract with functionName: "tokenURI"
+  it("在 ABI 中使用 tokenURI 而不是 agentURI", async () => {
+    // 通过调用 queryAgent 来验证——它应该使用 functionName: "tokenURI" 调用 readContract
     mockReadContract.mockImplementation(async (params: any) => {
       if (params.functionName === "tokenURI") return "https://example.com/agent.json";
       if (params.functionName === "ownerOf") return "0x1234567890abcdef1234567890abcdef12345678";
@@ -64,13 +64,13 @@ describe("IDENTITY_ABI correctness", () => {
     expect(agent).not.toBeNull();
     expect(agent!.agentURI).toBe("https://example.com/agent.json");
 
-    // Verify tokenURI was called (not agentURI)
+    // 验证调用了 tokenURI（而不是 agentURI）
     const tokenURICall = mockReadContract.mock.calls.find(
       (call: any) => call[0]?.functionName === "tokenURI",
     );
     expect(tokenURICall).toBeDefined();
 
-    // Verify agentURI was NOT called
+    // 验证没有调用 agentURI
     const agentURICall = mockReadContract.mock.calls.find(
       (call: any) => call[0]?.functionName === "agentURI",
     );
@@ -78,14 +78,14 @@ describe("IDENTITY_ABI correctness", () => {
   });
 });
 
-// ─── queryAgent Tests ───────────────────────────────────────────
+// ─── queryAgent 测试 ───────────────────────────────────────────
 
 describe("queryAgent", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns agent with URI and owner when both succeed", async () => {
+  it("当两者都成功时返回带有 URI 和所有者的代理", async () => {
     mockReadContract.mockImplementation(async (params: any) => {
       if (params.functionName === "tokenURI") return "https://example.com/card.json";
       if (params.functionName === "ownerOf") return "0xOwnerAddress";
@@ -100,7 +100,7 @@ describe("queryAgent", () => {
     });
   });
 
-  it("returns agent with empty owner when ownerOf reverts", async () => {
+  it("当 ownerOf 回退时返回带有空所有者的代理", async () => {
     mockReadContract.mockImplementation(async (params: any) => {
       if (params.functionName === "tokenURI") return "https://example.com/card.json";
       if (params.functionName === "ownerOf") throw new Error("execution reverted");
@@ -114,7 +114,7 @@ describe("queryAgent", () => {
     expect(agent!.owner).toBe("");
   });
 
-  it("returns null when tokenURI reverts", async () => {
+  it("当 tokenURI 回退时返回 null", async () => {
     mockReadContract.mockImplementation(async () => {
       throw new Error("execution reverted");
     });
@@ -124,34 +124,34 @@ describe("queryAgent", () => {
   });
 });
 
-// ─── getTotalAgents Tests ───────────────────────────────────────
+// ─── getTotalAgents 测试 ───────────────────────────────────────
 
 describe("getTotalAgents", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns count when totalSupply succeeds", async () => {
+  it("当 totalSupply 成功时返回计数", async () => {
     mockReadContract.mockResolvedValue(BigInt(100));
     const total = await getTotalAgents();
     expect(total).toBe(100);
   });
 
-  it("returns 0 when totalSupply reverts", async () => {
+  it("当 totalSupply 回退时返回 0", async () => {
     mockReadContract.mockRejectedValue(new Error("execution reverted"));
     const total = await getTotalAgents();
     expect(total).toBe(0);
   });
 });
 
-// ─── getRegisteredAgentsByEvents Tests ──────────────────────────
+// ─── getRegisteredAgentsByEvents 测试 ──────────────────────────
 
 describe("getRegisteredAgentsByEvents", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns agents from Transfer events", async () => {
+  it("从 Transfer 事件返回代理", async () => {
     mockGetBlockNumber.mockResolvedValue(1_000_000n);
     mockGetLogs.mockResolvedValue([
       {
@@ -171,13 +171,13 @@ describe("getRegisteredAgentsByEvents", () => {
     ]);
 
     const agents = await getRegisteredAgentsByEvents();
-    // Most recent first (reversed)
+    // 最新的在前（反转）
     expect(agents).toHaveLength(2);
     expect(agents[0]).toEqual({ tokenId: "18791", owner: "0xOwner2" });
     expect(agents[1]).toEqual({ tokenId: "18788", owner: "0xOwner1" });
   });
 
-  it("respects limit parameter", async () => {
+  it("尊重 limit 参数", async () => {
     mockGetBlockNumber.mockResolvedValue(1_000_000n);
     mockGetLogs.mockResolvedValue([
       { args: { from: "0x0000000000000000000000000000000000000000", to: "0xA", tokenId: 1n } },
@@ -189,7 +189,7 @@ describe("getRegisteredAgentsByEvents", () => {
     expect(agents).toHaveLength(2);
   });
 
-  it("returns empty array when event scan fails", async () => {
+  it("当事件扫描失败时返回空数组", async () => {
     mockGetBlockNumber.mockRejectedValue(new Error("RPC error"));
 
     const agents = await getRegisteredAgentsByEvents();
@@ -197,16 +197,16 @@ describe("getRegisteredAgentsByEvents", () => {
   });
 });
 
-// ─── discoverAgents Integration Tests ───────────────────────────
+// ─── discoverAgents 集成测试 ───────────────────────────────────
 
 describe("discoverAgents", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("uses sequential iteration when totalSupply returns > 0", async () => {
-    // First call: totalSupply returns 3
-    // Subsequent calls: tokenURI and ownerOf for each agent
+  it("当 totalSupply 返回 > 0 时使用顺序迭代", async () => {
+    // 第一次调用：totalSupply 返回 3
+    // 后续调用：每个代理的 tokenURI 和 ownerOf
     let callCount = 0;
     mockReadContract.mockImplementation(async (params: any) => {
       if (params.functionName === "totalSupply") return BigInt(3);
@@ -216,20 +216,20 @@ describe("discoverAgents", () => {
     });
 
     const agents = await discoverAgents(10);
-    // Should have found agents via sequential iteration (3, 2, 1)
+    // 应该通过顺序迭代找到代理（3、2、1）
     expect(agents.length).toBeGreaterThan(0);
-    // totalSupply should have been called
+    // 应该调用了 totalSupply
     const totalSupplyCall = mockReadContract.mock.calls.find(
       (call: any) => call[0]?.functionName === "totalSupply",
     );
     expect(totalSupplyCall).toBeDefined();
-    // getLogs should NOT have been called (no event fallback needed)
+    // 不应该调用 getLogs（不需要事件回退）
     expect(mockGetLogs).not.toHaveBeenCalled();
   });
 
-  it("falls back to event scanning when totalSupply returns 0", async () => {
-    // totalSupply reverts → getTotalAgents returns 0
-    // Then event scanning kicks in
+  it("当 totalSupply 返回 0 时回退到事件扫描", async () => {
+    // totalSupply 回退 → getTotalAgents 返回 0
+    // 然后事件扫描开始
     mockReadContract.mockImplementation(async (params: any) => {
       if (params.functionName === "totalSupply") throw new Error("execution reverted");
       if (params.functionName === "tokenURI") return "https://example.com/agent.json";
@@ -251,14 +251,14 @@ describe("discoverAgents", () => {
     const agents = await discoverAgents(10);
     expect(agents).toHaveLength(1);
     expect(agents[0].agentId).toBe("18788");
-    // Owner comes from event when ownerOf reverts and queryAgent returns empty owner
+    // 当 ownerOf 回退且 queryAgent 返回空所有者时，所有者来自事件
     expect(agents[0].owner).toBe("0xEventOwner");
     expect(agents[0].agentURI).toBe("https://example.com/agent.json");
-    // getLogs should have been called (event fallback)
+    // 应该调用了 getLogs（事件回退）
     expect(mockGetLogs).toHaveBeenCalled();
   });
 
-  it("returns empty when both totalSupply and events fail", async () => {
+  it("当 totalSupply 和事件都失败时返回空", async () => {
     mockReadContract.mockRejectedValue(new Error("execution reverted"));
     mockGetBlockNumber.mockRejectedValue(new Error("RPC error"));
 

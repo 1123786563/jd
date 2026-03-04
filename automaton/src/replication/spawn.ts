@@ -1,9 +1,9 @@
 /**
- * Spawn
+ * 生成
  *
- * Spawn child automatons in new Conway sandboxes.
- * Uses the lifecycle state machine for tracked transitions.
- * Cleans up sandbox on ANY failure after creation.
+ * 在新的 Conway 沙盒中生成子自动机。
+ * 使用生命周期状态机进行跟踪转换。
+ * 创建后任何失败都会清理沙盒。
  */
 
 import type {
@@ -18,7 +18,7 @@ import type { ChildLifecycle } from "./lifecycle.js";
 import { ulid } from "ulid";
 import { propagateConstitution } from "./constitution.js";
 
-/** Valid Conway sandbox pricing tiers. */
+/** 有效的 Conway 沙盒定价层级。 */
 const SANDBOX_TIERS = [
   { memoryMb: 512,  vcpu: 1, diskGb: 5 },
   { memoryMb: 1024, vcpu: 1, diskGb: 10 },
@@ -27,13 +27,13 @@ const SANDBOX_TIERS = [
   { memoryMb: 8192, vcpu: 4, diskGb: 80 },
 ];
 
-/** Find the smallest valid tier that has at least the requested memory. */
+/** 查找具有至少请求内存的最小有效层级。 */
 function selectSandboxTier(requestedMemoryMb: number) {
   return SANDBOX_TIERS.find((t) => t.memoryMb >= requestedMemoryMb) ?? SANDBOX_TIERS[SANDBOX_TIERS.length - 1];
 }
 
 /**
- * Validate that an address is a well-formed, non-zero Ethereum wallet address.
+ * 验证地址是否为格式正确且非零的以太坊钱包地址。
  */
 export function isValidWalletAddress(address: string): boolean {
   return (
@@ -42,7 +42,7 @@ export function isValidWalletAddress(address: string): boolean {
 }
 
 /**
- * Spawn a child automaton in a new Conway sandbox using lifecycle state machine.
+ * 使用生命周期状态机在新的 Conway 沙盒中生成子自动机。
  */
 export async function spawnChild(
   conway: ConwayClient,
@@ -51,7 +51,7 @@ export async function spawnChild(
   genesis: GenesisConfig,
   lifecycle?: ChildLifecycle,
 ): Promise<ChildAutomaton> {
-  // Check child limit from config
+  // 从配置检查子自动机限制
   const existing = db
     .getChildren()
     .filter(
@@ -63,7 +63,7 @@ export async function spawnChild(
   const maxChildren = (db as any).config?.maxChildren ?? 3;
   if (existing.length >= maxChildren) {
     throw new Error(
-      `Cannot spawn: already at max children (${maxChildren}). Kill or wait for existing children to die.`,
+      `无法生成：已达到最大子自动机数（${maxChildren}）。请终止或等待现有子自动机死亡。`,
     );
   }
 
@@ -71,20 +71,20 @@ export async function spawnChild(
   let sandboxId: string | undefined;
   let reusedSandbox: { id: string } | null = null;
 
-  // If no lifecycle provided, use legacy path
+  // 如果没有提供生命周期，使用传统路径
   if (!lifecycle) {
     return spawnChildLegacy(conway, identity, db, genesis, childId);
   }
 
   try {
-    // State: requested
+    // 状态：已请求
     lifecycle.initChild(childId, genesis.name, "", genesis.genesisPrompt);
 
-    // Get child sandbox memory from config (default 1024MB)
+    // 从配置获取子沙盒内存（默认 1024MB）
     const childMemoryMb = (db as any).config?.childSandboxMemoryMb ?? 1024;
 
-    // Try to reuse an existing sandbox whose DB record is 'failed' but
-    // is still running remotely, before creating a new one.
+    // 尝试重用现有沙盒，其数据库记录为 'failed' 但
+    // 仍在远程运行，然后再创建新的。
     reusedSandbox = await findReusableSandbox(conway, db);
 
     const tier = selectSandboxTier(childMemoryMb);
@@ -102,29 +102,29 @@ export async function spawnChild(
     }
     sandboxId = sandbox.id;
 
-    // Create a scoped client so all exec/writeFile calls target the CHILD sandbox
+    // 创建作用域客户端，使所有 exec/writeFile 调用都针对子沙盒
     const childConway = conway.createScopedClient(sandbox.id);
 
-    // Update sandbox ID in children table
+    // 在子表中更新沙盒 ID
     db.raw
       .prepare("UPDATE children SET sandbox_id = ? WHERE id = ?")
       .run(sandbox.id, childId);
 
-    // State: sandbox_created
+    // 状态：沙盒已创建
     lifecycle.transition(
       childId,
       "sandbox_created",
-      `sandbox ${sandbox.id} created`,
+      `沙盒 ${sandbox.id} 已创建`,
     );
 
-    // Install runtime (on the CHILD sandbox)
+    // 安装运行时（在子沙盒上）
     await childConway.exec("apt-get update -qq && apt-get install -y -qq nodejs npm git curl", 120_000);
     await childConway.exec(
       "git clone https://github.com/Conway-Research/automaton.git /root/automaton && cd /root/automaton && npm install && npm run build",
       180_000,
     );
 
-    // Write genesis configuration (on the CHILD sandbox)
+    // 写入创世配置（在子沙盒上）
     await childConway.exec("mkdir -p /root/.automaton", 10_000);
     const genesisJson = JSON.stringify(
       {
@@ -139,48 +139,48 @@ export async function spawnChild(
     );
     await childConway.writeFile("/root/.automaton/genesis.json", genesisJson);
 
-    // Propagate constitution with hash verification
+    // 传播宪法并进行哈希验证
     try {
       await propagateConstitution(childConway, sandbox.id, db.raw);
     } catch {
-      // Constitution file not found locally
+      // 本地未找到宪法文件
     }
 
-    // State: runtime_ready
-    lifecycle.transition(childId, "runtime_ready", "runtime installed");
+    // 状态：运行时已就绪
+    lifecycle.transition(childId, "runtime_ready", "运行时已安装");
 
-    // Initialize child wallet (on the CHILD sandbox)
+    // 初始化子钱包（在子沙盒上）
     const initResult = await childConway.exec("node /root/automaton/dist/index.js --init 2>&1", 60_000);
     const walletMatch = (initResult.stdout || "").match(/0x[a-fA-F0-9]{40}/);
     const childWallet = walletMatch ? walletMatch[0] : "";
 
     if (!isValidWalletAddress(childWallet)) {
-      throw new Error(`Child wallet address invalid: ${childWallet}`);
+      throw new Error(`子钱包地址无效：${childWallet}`);
     }
 
-    // Update address in children table
+    // 在子表中更新地址
     db.raw
       .prepare("UPDATE children SET address = ? WHERE id = ?")
       .run(childWallet, childId);
 
-    // State: wallet_verified
+    // 状态：钱包已验证
     lifecycle.transition(
       childId,
       "wallet_verified",
-      `wallet ${childWallet} verified`,
+      `钱包 ${childWallet} 已验证`,
     );
 
-    // Record spawn modification
+    // 记录生成修改
     db.insertModification({
       id: ulid(),
       timestamp: new Date().toISOString(),
       type: "child_spawn",
-      description: `Spawned child: ${genesis.name} in sandbox ${sandbox.id}${reusedSandbox ? " (reused)" : ""}`,
+      description: `已生成子自动机：${genesis.name} 在沙盒 ${sandbox.id}${reusedSandbox ? " 中（重用）" : ""}`,
       reversible: false,
     });
 
-    // If we reused a sandbox, update the old children record to 'cleaned_up'
-    // so it doesn't get reused again.
+    // 如果我们重用了沙盒，将旧的子记录更新为 'cleaned_up'
+    // 这样它就不会再次被重用。
     if (reusedSandbox) {
       db.raw.prepare(
         "UPDATE children SET status = 'cleaned_up' WHERE sandbox_id = ? AND status = 'failed'",
@@ -201,10 +201,10 @@ export async function spawnChild(
 
     return child;
   } catch (error) {
-    // Note: sandbox deletion is disabled by the Conway API (prepaid, non-refundable).
-    // Failed sandboxes are left running and may be reused by findReusableSandbox().
+    // 注意：Conway API 禁用沙盒删除（预付费，不可退款）。
+    // 失败的沙盒保留运行状态，可能会被 findReusableSandbox() 重用。
 
-    // Transition to failed if lifecycle has been initialized
+    // 如果生命周期已初始化，则转换到失败状态
     try {
       lifecycle.transition(
         childId,
@@ -212,7 +212,7 @@ export async function spawnChild(
         error instanceof Error ? error.message : String(error),
       );
     } catch {
-      // May fail if child doesn't exist yet
+      // 如果子自动机尚不存在，可能会失败
     }
 
     throw error;
@@ -220,7 +220,7 @@ export async function spawnChild(
 }
 
 /**
- * Legacy spawn path for backward compatibility when no lifecycle is provided.
+ * 传统生成路径，用于在未提供生命周期时的向后兼容。
  */
 async function spawnChildLegacy(
   conway: ConwayClient,
@@ -231,7 +231,7 @@ async function spawnChildLegacy(
 ): Promise<ChildAutomaton> {
   let sandboxId: string | undefined;
 
-  // Get child sandbox memory from config (default 1024MB)
+  // 从配置获取子沙盒内存（默认 1024MB）
   const childMemoryMb = (db as any).config?.childSandboxMemoryMb ?? 1024;
 
   const legacyTier = selectSandboxTier(childMemoryMb);
@@ -245,7 +245,7 @@ async function spawnChildLegacy(
     });
     sandboxId = sandbox.id;
 
-    // Create a scoped client so all exec/writeFile calls target the CHILD sandbox
+    // 创建作用域客户端，使所有 exec/writeFile 调用都针对子沙盒
     const childConway = conway.createScopedClient(sandbox.id);
 
     await childConway.exec(
@@ -274,7 +274,7 @@ async function spawnChildLegacy(
     try {
       await propagateConstitution(childConway, sandbox.id, db.raw);
     } catch {
-      // Constitution file not found
+      // 未找到宪法文件
     }
 
     const initResult = await childConway.exec("node /root/automaton/dist/index.js --init 2>&1", 60_000);
@@ -282,7 +282,7 @@ async function spawnChildLegacy(
     const childWallet = walletMatch ? walletMatch[0] : "";
 
     if (!isValidWalletAddress(childWallet)) {
-      throw new Error(`Child wallet address invalid: ${childWallet}`);
+      throw new Error(`子钱包地址无效：${childWallet}`);
     }
 
     const child: ChildAutomaton = {
@@ -303,20 +303,20 @@ async function spawnChildLegacy(
       id: ulid(),
       timestamp: new Date().toISOString(),
       type: "child_spawn",
-      description: `Spawned child: ${genesis.name} in sandbox ${sandbox.id}`,
+      description: `已生成子自动机：${genesis.name} 在沙盒 ${sandbox.id}`,
       reversible: false,
     });
 
     return child;
   } catch (error) {
-    // Sandbox deletion disabled — failed sandboxes left for potential reuse.
+    // 沙盒删除已禁用 — 失败的沙盒保留以供潜在重用。
     throw error;
   }
 }
 
 /**
- * Find a reusable sandbox: one that is marked 'failed' in the local DB
- * but is still running remotely. Returns the first match or null.
+ * 查找可重用的沙盒：在本地数据库中标记为 'failed'
+ * 但仍在远程运行的沙盒。返回第一个匹配项或 null。
  */
 async function findReusableSandbox(
   conway: ConwayClient,
@@ -339,7 +339,7 @@ async function findReusableSandbox(
       }
     }
   } catch {
-    // If listing fails, just create a new sandbox
+    // 如果列表失败，只需创建一个新沙盒
   }
   return null;
 }

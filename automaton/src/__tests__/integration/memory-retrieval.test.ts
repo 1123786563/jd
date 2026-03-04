@@ -69,14 +69,14 @@ describe("integration/memory-retrieval", () => {
 
   describe("scored retrieval", () => {
     it("returns entries sorted descending by relevance score", () => {
-      // High confidence, recently verified
+      // 高置信度，最近验证
       addKnowledge(knowledgeStore, "technical", "api-gateway", "api gateway configuration for routing requests", {
         confidence: 0.95,
         lastVerified: NOW,
         tokenCount: 20,
       });
 
-      // Lower confidence, same topic
+      // 较低置信度，相同主题
       addKnowledge(knowledgeStore, "technical", "api-fallback", "api fallback strategy configuration", {
         confidence: 0.5,
         lastVerified: NOW,
@@ -255,7 +255,7 @@ describe("integration/memory-retrieval", () => {
         rollingPrecision: 1.0,
       });
 
-      // After recording feedback the rolling precision propagates to the next result
+      // 记录反馈后，滚动精度传播到下一个结果
       const second = retriever.retrieveScored({
         sessionId: "sess-8",
         currentInput: "auth service token",
@@ -319,9 +319,9 @@ describe("integration/memory-retrieval", () => {
 
     it("expands abbreviations in query terms", () => {
       const query = enhanceQuery({ currentInput: "api and llm integration" });
-      // "api" should expand to "application programming interface"
+      // "api" 应该展开为 "application programming interface"
       expect(query.terms).toContain("application programming interface");
-      // "llm" should expand to "large language model"
+      // "llm" 应该展开为 "large language model"
       expect(query.terms).toContain("large language model");
     });
 
@@ -332,7 +332,7 @@ describe("integration/memory-retrieval", () => {
         taskSpec: "architecture review",
       });
 
-      // engineer role should bias toward technical/operational categories
+      // 工程师角色应该偏向技术/运营类别
       expect(query.categories).toContain("technical");
     });
 
@@ -374,7 +374,7 @@ describe("integration/memory-retrieval", () => {
     });
 
     it("clamps result to the maximum budget of 20000 tokens", () => {
-      // Huge available tokens with low utilization
+      // 大量可用令牌，低利用率
       const utilization = { utilizationPercent: 10, totalTokens: 1_000_000, usedTokens: 100_000 };
       const budget = calculateMemoryBudget(utilization, 1_000_000);
       expect(budget).toBeLessThanOrEqual(20000);

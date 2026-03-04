@@ -1,7 +1,7 @@
 /**
- * Automaton Configuration
+ * Automaton 配置管理
  *
- * Loads and saves the automaton's configuration from ~/.automaton/automaton.json
+ * 从 ~/.automaton/automaton.json 加载和保存 Automaton 配置
  */
 
 import fs from "fs";
@@ -16,13 +16,16 @@ import { createLogger } from "./observability/logger.js";
 const logger = createLogger("config");
 const CONFIG_FILENAME = "automaton.json";
 
+/**
+ * 获取配置文件路径
+ */
 export function getConfigPath(): string {
   return path.join(getAutomatonDir(), CONFIG_FILENAME);
 }
 
 /**
- * Load the automaton config from disk.
- * Merges with defaults for any missing fields.
+ * 从磁盘加载 Automaton 配置
+ * 与默认值合并以填充缺失的字段
  */
 export function loadConfig(): AutomatonConfig | null {
   const configPath = getConfigPath();
@@ -34,34 +37,34 @@ export function loadConfig(): AutomatonConfig | null {
     const raw = JSON.parse(fs.readFileSync(configPath, "utf-8"));
     const apiKey = raw.conwayApiKey || loadApiKeyFromConfig();
 
-    // Override mode from environment variable
+    // 从环境变量覆盖模式
     const modeFromEnv = process.env.AUTOMATON_RUN_MODE;
     const modeConfig = modeFromEnv
       ? { ...DEFAULT_RUN_MODE_CONFIG, mode: modeFromEnv as any }
       : raw.runModeConfig ?? DEFAULT_RUN_MODE_CONFIG;
 
-    // Deep-merge treasury policy with defaults
+    // 将国库策略与默认值深度合并
     const treasuryPolicy: TreasuryPolicy = {
       ...DEFAULT_TREASURY_POLICY,
       ...(raw.treasuryPolicy ?? {}),
     };
 
-    // Validate all treasury values are positive numbers
+    // 验证所有国库值为正数
     for (const [key, value] of Object.entries(treasuryPolicy)) {
-      if (key === "x402AllowedDomains") continue; // array, not number
+      if (key === "x402AllowedDomains") continue; // 数组，不是数字
       if (typeof value === "number" && (value < 0 || !Number.isFinite(value))) {
-        logger.warn(`Invalid treasury value for ${key}: ${value}, using default`);
+        logger.warn(`无效的国库值 ${key}: ${value}，使用默认值`);
         (treasuryPolicy as any)[key] = (DEFAULT_TREASURY_POLICY as any)[key];
       }
     }
 
-    // Deep-merge model strategy config with defaults
+    // 将模型策略配置与默认值深度合并
     const modelStrategy: ModelStrategyConfig = {
       ...DEFAULT_MODEL_STRATEGY_CONFIG,
       ...(raw.modelStrategy ?? {}),
     };
 
-    // Deep-merge soul config with defaults
+    // 将灵魂配置与默认值深度合并
     const soulConfig: SoulConfig = {
       ...DEFAULT_SOUL_CONFIG,
       ...(raw.soulConfig ?? {}),
@@ -82,8 +85,8 @@ export function loadConfig(): AutomatonConfig | null {
 }
 
 /**
- * Save the automaton config to disk.
- * Includes treasuryPolicy in the persisted config.
+ * 将 Automaton 配置保存到磁盘
+ * 包括持久化配置中的 treasuryPolicy
  */
 export function saveConfig(config: AutomatonConfig): void {
   const dir = getAutomatonDir();
@@ -105,7 +108,7 @@ export function saveConfig(config: AutomatonConfig): void {
 }
 
 /**
- * Resolve ~ paths to absolute paths.
+ * 将 ~ 路径解析为绝对路径
  */
 export function resolvePath(p: string): string {
   if (p.startsWith("~")) {
@@ -115,7 +118,7 @@ export function resolvePath(p: string): string {
 }
 
 /**
- * Create a fresh config from setup wizard inputs.
+ * 从设置向导输入创建新配置
  */
 export function createConfig(params: {
   name: string;

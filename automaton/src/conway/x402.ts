@@ -1,8 +1,8 @@
 /**
- * x402 Payment Protocol
+ * x402 支付协议
  *
- * Enables the automaton to make USDC micropayments via HTTP 402.
- * Adapted from conway-mcp/src/x402/index.ts
+ * 使 automaton 能够通过 HTTP 402 进行 USDC 微支付。
+ * 改编自 conway-mcp/src/x402/index.ts
  */
 
 import {
@@ -17,10 +17,10 @@ import { ResilientHttpClient } from "./http-client.js";
 
 const x402HttpClient = new ResilientHttpClient();
 
-// USDC contract addresses
+// USDC 合约地址
 const USDC_ADDRESSES: Record<string, Address> = {
-  "eip155:8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // Base mainnet
-  "eip155:84532": "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // Base Sepolia
+  "eip155:8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // Base 主网
+  "eip155:84532": "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // Base Sepolia 测试网
 };
 
 const CHAINS: Record<string, any> = {
@@ -163,7 +163,7 @@ function normalizePaymentRequired(raw: unknown): PaymentRequiredResponse | null 
 function parseMaxAmountRequired(maxAmountRequired: string, x402Version: number): bigint {
   const amount = maxAmountRequired.trim();
   if (!/^\d+(\.\d+)?$/.test(amount)) {
-    throw new Error(`Invalid maxAmountRequired: ${maxAmountRequired}`);
+    throw new Error(`无效的 maxAmountRequired: ${maxAmountRequired}`);
   }
 
   if (amount.includes(".")) {
@@ -184,7 +184,7 @@ function selectRequirement(parsed: PaymentRequiredResponse): PaymentRequirement 
 }
 
 /**
- * Get the USDC balance for the automaton's wallet on a given network.
+ * 获取 automaton 钱包在给定网络上的 USDC 余额。
  */
 export async function getUsdcBalance(
   address: Address,
@@ -195,7 +195,7 @@ export async function getUsdcBalance(
 }
 
 /**
- * Get the USDC balance and read status details for diagnostics.
+ * 获取 USDC 余额和读取状态详情用于诊断。
  */
 export async function getUsdcBalanceDetailed(
   address: Address,
@@ -208,7 +208,7 @@ export async function getUsdcBalanceDetailed(
       balance: 0,
       network,
       ok: false,
-      error: `Unsupported USDC network: ${network}`,
+      error: `不支持的 USDC 网络: ${network}`,
     };
   }
 
@@ -225,7 +225,7 @@ export async function getUsdcBalanceDetailed(
       args: [address],
     });
 
-    // USDC has 6 decimals
+    // USDC 有 6 位小数
     return {
       balance: Number(balance) / 1_000_000,
       network,
@@ -242,7 +242,7 @@ export async function getUsdcBalanceDetailed(
 }
 
 /**
- * Check if a URL requires x402 payment.
+ * 检查 URL 是否需要 x402 支付。
  */
 export async function checkX402(
   url: string,
@@ -260,8 +260,8 @@ export async function checkX402(
 }
 
 /**
- * Fetch a URL with automatic x402 payment.
- * If the endpoint returns 402, sign and pay, then retry.
+ * 使用自动 x402 支付获取 URL。
+ * 如果端点返回 402，则签名并支付，然后重试。
  */
 export async function x402Fetch(
   url: string,
@@ -272,7 +272,7 @@ export async function x402Fetch(
   maxPaymentCents?: number,
 ): Promise<X402PaymentResult> {
   try {
-    // Initial request (non-mutating probe, uses resilient client)
+    // 初始请求（非变更探测，使用弹性客户端）
     const initialResp = await x402HttpClient.request(url, {
       method,
       headers: { ...headers, "Content-Type": "application/json" },
@@ -286,34 +286,34 @@ export async function x402Fetch(
       return { success: initialResp.ok, response: data, status: initialResp.status };
     }
 
-    // Parse payment requirements
+    // 解析支付要求
     const parsed = await parsePaymentRequired(initialResp);
     if (!parsed) {
       return {
         success: false,
-        error: "Could not parse payment requirements",
+        error: "无法解析支付要求",
         status: initialResp.status,
       };
     }
 
-    // Check amount against maxPaymentCents BEFORE signing
+    // 在签名之前检查金额是否超过 maxPaymentCents
     if (maxPaymentCents !== undefined) {
       const amountAtomic = parseMaxAmountRequired(
         parsed.requirement.maxAmountRequired,
         parsed.x402Version,
       );
-      // Convert atomic units (6 decimals) to cents (2 decimals)
+      // 将原子单位（6 位小数）转换为美分（2 位小数）
       const amountCents = Number(amountAtomic) / 10_000;
       if (amountCents > maxPaymentCents) {
         return {
           success: false,
-          error: `Payment of ${amountCents.toFixed(2)} cents exceeds max allowed ${maxPaymentCents} cents`,
+          error: `支付金额 ${amountCents.toFixed(2)} 美分超过最大允许值 ${maxPaymentCents} 美分`,
           status: 402,
         };
       }
     }
 
-    // Sign payment
+    // 签名支付
     let payment: any;
     try {
       payment = await signPayment(
@@ -324,12 +324,12 @@ export async function x402Fetch(
     } catch (err: any) {
       return {
         success: false,
-        error: `Failed to sign payment: ${err?.message || String(err)}`,
+        error: `签名支付失败: ${err?.message || String(err)}`,
         status: initialResp.status,
       };
     }
 
-    // Retry with payment
+    // 使用支付重试
     const paymentHeader = Buffer.from(
       JSON.stringify(payment),
     ).toString("base64");
@@ -342,7 +342,7 @@ export async function x402Fetch(
         "X-Payment": paymentHeader,
       },
       body,
-      retries: 0, // Paid request: do not auto-retry (payment already signed)
+      retries: 0, // 已支付请求：不自动重试（支付已签名）
     });
 
     const data = await paidResp.json().catch(() => paidResp.text());
@@ -376,7 +376,7 @@ async function parsePaymentRequired(
         };
       }
     } catch {
-      // Ignore header decode errors and continue with body parsing.
+      // 忽略头部解码错误并继续解析正文。
     }
   }
 
@@ -400,7 +400,7 @@ async function signPayment(
 ): Promise<any> {
   const chain = CHAINS[requirement.network];
   if (!chain) {
-    throw new Error(`Unsupported network: ${requirement.network}`);
+    throw new Error(`不支持的网络: ${requirement.network}`);
   }
 
   const nonce = `0x${Buffer.from(
@@ -415,7 +415,7 @@ async function signPayment(
     x402Version,
   );
 
-  // EIP-712 typed data for TransferWithAuthorization
+  // EIP-712 TransferWithAuthorization 的类型化数据
   const domain = {
     name: "USD Coin",
     version: "2",

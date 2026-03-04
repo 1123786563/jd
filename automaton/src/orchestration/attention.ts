@@ -19,29 +19,29 @@ function formatDollars(cents: number): string {
 }
 
 function assignee(assignedTo: string | null): string {
-  return assignedTo ?? "unassigned";
+  return assignedTo ?? "未分配";
 }
 
 function formatTaskLine(task: TaskGraphRow): string {
   if (task.status === "completed") {
-    return `- [x] ${task.title} (completed by ${assignee(task.assignedTo)})`;
+    return `- [x] ${task.title} (由 ${assignee(task.assignedTo)} 完成)`;
   }
 
   if (task.status === "running") {
-    return `- [~] ${task.title} (running — ${assignee(task.assignedTo)})`;
+    return `- [~] ${task.title} (运行中 — ${assignee(task.assignedTo)})`;
   }
 
-  const status = task.status === "blocked" ? "blocked" : "pending";
+  const status = task.status === "blocked" ? "阻塞" : "待处理";
   return `- [ ] ${task.title} (${status})`;
 }
 
 function formatGoalSection(goal: GoalRow, tasks: TaskGraphRow[]): string {
   const estimatedBudgetCents = tasks.reduce((sum, task) => sum + task.estimatedCostCents, 0);
   const actualSpentCents = tasks.reduce((sum, task) => sum + task.actualCostCents, 0);
-  const budget = `${formatDollars(estimatedBudgetCents)} budget, ${formatDollars(actualSpentCents)} spent`;
+  const budget = `${formatDollars(estimatedBudgetCents)} 预算，${formatDollars(actualSpentCents)} 已花费`;
 
   const lines = tasks.map(formatTaskLine);
-  return [`## Goal: ${goal.title} [${budget}]`, ...lines].join("\n");
+  return [`## 目标：${goal.title} [${budget}]`, ...lines].join("\n");
 }
 
 export function generateTodoMd(db: Database.Database): string {
@@ -50,7 +50,7 @@ export function generateTodoMd(db: Database.Database): string {
     return "";
   }
 
-  const header = "# Active Goals";
+  const header = "# 活跃目标";
   const sections = activeGoals.map((goal) => {
     const tasks = getTasksByGoal(db, goal.id);
     return formatGoalSection(goal, tasks);
@@ -59,7 +59,7 @@ export function generateTodoMd(db: Database.Database): string {
   let keptSections = sections;
   let todoMd = `${header}\n\n${keptSections.join("\n\n")}`;
 
-  // Remove oldest goals first, preserving the most recent goal(s).
+  // 首先移除最旧的目标，保留最新的目标。
   while (estimateTokens(todoMd) > MAX_TODO_TOKENS && keptSections.length > 1) {
     keptSections = keptSections.slice(1);
     todoMd = `${header}\n\n${keptSections.join("\n\n")}`;
@@ -75,7 +75,7 @@ export function injectTodoContext(messages: ChatMessage[], todoMd: string): Chat
 
   const todoMessage: ChatMessage = {
     role: "system",
-    content: `## Current Goals & Tasks\n\n${todoMd}`,
+    content: `## 当前目标与任务\n\n${todoMd}`,
   };
 
   return [...messages, todoMessage];

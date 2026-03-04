@@ -1,12 +1,12 @@
 /**
- * Memory Ingestion Pipeline
+ * 记忆摄取管道
  *
- * Post-turn pipeline that automatically extracts and stores memories.
- * Classifies turns, generates summaries, extracts facts,
- * updates relationships, and manages working memory.
+ * 轮次后管道，自动提取和存储记忆。
+ * 对轮次进行分类、生成摘要、提取事实、
+ * 更新关系并管理工作记忆。
  *
- * All operations are wrapped in try/catch: ingestion failures
- * must never block the agent loop.
+ * 所有操作都包装在 try/catch 中：摄取失败
+ * 绝不能阻塞 Agent 循环。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -27,7 +27,7 @@ const logger = createLogger("memory.ingestion");
 
 type Database = BetterSqlite3.Database;
 
-// ─── Error Normalization ────────────────────────────────────────
+// ─── 错误归一化 ────────────────────────────────────────
 
 const ERROR_PATTERNS: [RegExp, string][] = [
   [/path.traversal/i, "PATH_TRAVERSAL"],
@@ -43,14 +43,14 @@ const ERROR_PATTERNS: [RegExp, string][] = [
 ];
 
 /**
- * Normalize a tool error string into a short, consistent type label.
- * Matches known patterns first, then falls back to a sanitized prefix.
+ * 将工具错误字符串归一化为简短一致的类型标签。
+ * 首先匹配已知模式，然后回退到清理后的前缀。
  */
 export function normalizeErrorType(error: string): string {
   for (const [pattern, label] of ERROR_PATTERNS) {
     if (pattern.test(error)) return label;
   }
-  // Fallback: first 50 chars, alphanumeric + underscores only
+  // 回退：前 50 个字符，仅字母数字和下划线
   return error
     .slice(0, 50)
     .replace(/[^a-zA-Z0-9_]/g, "_")
@@ -102,33 +102,33 @@ export class MemoryIngestionPipeline {
   }
 
   /**
-   * Ingest a completed turn into the memory system.
-   * Never throws -- all errors are caught and logged.
+   * 将已完成的轮次摄取到记忆系统中。
+   * 永不抛出异常——所有错误都被捕获并记录。
    */
   ingest(sessionId: string, turn: AgentTurn, toolCallResults: ToolCallResult[]): void {
     try {
       const classification = classifyTurn(toolCallResults, turn.thinking);
 
-      // 1. Record episodic memory for the turn
+      // 1. 为轮次记录情景记忆
       this.recordEpisodic(sessionId, turn, toolCallResults, classification);
 
-      // 2. Extract semantic facts from tool results
+      // 2. 从工具结果中提取语义事实
       this.extractSemanticFacts(sessionId, turn, toolCallResults);
 
-      // 3. Update relationship memory from inbox interactions
+      // 3. 从收件箱交互更新关系记忆
       this.updateRelationships(sessionId, turn, toolCallResults);
 
-      // 4. Update working memory (goals, tasks)
+      // 4. 更新工作记忆（目标、任务）
       this.updateWorkingMemory(sessionId, turn, toolCallResults);
 
-      // 5. Prune working memory if over limit
+      // 5. 如果超过限制，修剪工作记忆
       this.working.prune(sessionId, 20);
 
-      // 6. Enhanced ingestion: market signals + knowledge updates
+      // 6. 增强摄取：市场信号 + 知识更新
       this.ingestKnowledgeEnhancements(sessionId, toolCallResults);
     } catch (error) {
-      logger.error("Ingestion failed", error instanceof Error ? error : undefined);
-      // Never throw -- memory failure must not block the agent loop
+      logger.error("摄取失败", error instanceof Error ? error : undefined);
+      // 永不抛出——记忆失败绝不能阻塞 Agent 循环
     }
   }
 
@@ -298,7 +298,7 @@ export class MemoryIngestionPipeline {
       this.emitMarketSignals(sessionId, marketSignals);
       this.safePruneKnowledgeStore();
     } catch (error) {
-      logger.error("Enhanced ingestion failed", error instanceof Error ? error : undefined);
+      logger.error("增强摄取失败", error instanceof Error ? error : undefined);
     }
   }
 
@@ -344,7 +344,7 @@ export class MemoryIngestionPipeline {
           compactedTo: null,
         });
       } catch (error) {
-        logger.error("Market signal event append failed", error instanceof Error ? error : undefined);
+        logger.error("市场信号事件追加失败", error instanceof Error ? error : undefined);
       }
     }
   }
@@ -364,7 +364,7 @@ export class MemoryIngestionPipeline {
           compactedTo: null,
         });
       } catch (error) {
-        logger.error("Contradiction event append failed", error instanceof Error ? error : undefined);
+        logger.error("矛盾事件追加失败", error instanceof Error ? error : undefined);
       }
     }
   }
@@ -375,7 +375,7 @@ export class MemoryIngestionPipeline {
     try {
       this.knowledgeStore.prune();
     } catch (error) {
-      logger.error("Knowledge prune failed", error instanceof Error ? error : undefined);
+      logger.error("知识修剪失败", error instanceof Error ? error : undefined);
     }
   }
 
@@ -570,7 +570,7 @@ export class MemoryIngestionPipeline {
           ? "success" as const
           : "neutral" as const;
 
-      // Importance based on classification
+      // 基于分类的重要性
       const importanceMap: Record<string, number> = {
         strategic: 0.9,
         productive: 0.7,
@@ -590,7 +590,7 @@ export class MemoryIngestionPipeline {
         classification: classification as any,
       });
     } catch (error) {
-      logger.error("Episodic recording failed", error instanceof Error ? error : undefined);
+      logger.error("情景记录失败", error instanceof Error ? error : undefined);
     }
   }
 
@@ -619,13 +619,13 @@ export class MemoryIngestionPipeline {
   ): void {
     try {
       for (const tc of toolCallResults) {
-        // Learn from errors instead of ignoring them
+        // 从错误中学习而不是忽略它们
         if (tc.error) {
           try {
             const errorType = normalizeErrorType(tc.error);
             const key = `tool_error:${tc.name}:${errorType}`;
 
-            // Check for existing entry to track repetition count
+            // 检查现有条目以跟踪重复次数
             const existing = this.semantic.get("environment", key);
             let count = 1;
             if (existing) {
@@ -642,12 +642,12 @@ export class MemoryIngestionPipeline {
               source: sessionId,
             });
           } catch (errLearn) {
-            logger.error("Error learning failed", errLearn instanceof Error ? errLearn : undefined);
+            logger.error("错误学习失败", errLearn instanceof Error ? errLearn : undefined);
           }
           continue;
         }
 
-        // Extract facts from specific tool results
+        // 从特定工具结果中提取事实
         if (tc.name === "check_credits" && tc.result) {
           this.semantic.store({
             category: "financial",
@@ -689,7 +689,7 @@ export class MemoryIngestionPipeline {
         }
       }
     } catch (error) {
-      logger.error("Semantic extraction failed", error instanceof Error ? error : undefined);
+      logger.error("语义提取失败", error instanceof Error ? error : undefined);
     }
   }
 
@@ -699,7 +699,7 @@ export class MemoryIngestionPipeline {
     toolCallResults: ToolCallResult[],
   ): void {
     try {
-      // Track outbound message interactions
+      // 跟踪出站消息交互
       for (const tc of toolCallResults) {
         if (tc.error) continue;
 
@@ -720,7 +720,7 @@ export class MemoryIngestionPipeline {
         }
       }
 
-      // Track inbox message sources (once per turn, not per tool call)
+      // 跟踪收件箱消息源（每轮次一次，而非每次工具调用）
       if (turn.inputSource === "agent" && turn.input) {
         const fromMatch = turn.input.match(/\[Message from (0x[a-fA-F0-9]+)\]/);
         if (fromMatch) {
@@ -738,7 +738,7 @@ export class MemoryIngestionPipeline {
         }
       }
     } catch (error) {
-      logger.error("Relationship update failed", error instanceof Error ? error : undefined);
+      logger.error("关系更新失败", error instanceof Error ? error : undefined);
     }
   }
 
@@ -751,7 +751,7 @@ export class MemoryIngestionPipeline {
       for (const tc of toolCallResults) {
         if (tc.error) continue;
 
-        // Track sleep as an observation
+        // 将睡眠跟踪为观察
         if (tc.name === "sleep") {
           this.working.add({
             sessionId,
@@ -762,7 +762,7 @@ export class MemoryIngestionPipeline {
           });
         }
 
-        // Track strategic decisions
+        // 跟踪战略决策
         if (tc.name === "edit_own_file" || tc.name === "update_genesis_prompt") {
           this.working.add({
             sessionId,
@@ -774,7 +774,7 @@ export class MemoryIngestionPipeline {
         }
       }
     } catch (error) {
-      logger.error("Working memory update failed", error instanceof Error ? error : undefined);
+      logger.error("工作记忆更新失败", error instanceof Error ? error : undefined);
     }
   }
 }

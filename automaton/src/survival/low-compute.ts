@@ -1,8 +1,8 @@
 /**
- * Low Compute Mode
+ * 低计算模式
  *
- * Manages transitions between survival tiers.
- * When credits run low, the automaton enters increasingly restricted modes.
+ * 管理生存层级之间的转换
+ * 当积分不足时，automaton 进入越来越受限的模式
  */
 
 import type {
@@ -20,7 +20,7 @@ export interface ModeTransition {
 }
 
 /**
- * Apply survival tier restrictions to the automaton.
+ * 对 automaton 应用生存层级限制
  */
 export function applyTierRestrictions(
   tier: SurvivalTier,
@@ -37,17 +37,17 @@ export function applyTierRestrictions(
       break;
 
     case "low_compute":
-      // Switch to cheaper model, slower heartbeat
+      // 切换到更便宜的模型，更慢的心跳
       inference.setLowComputeMode(true);
       break;
 
     case "critical":
-      // Cheapest model, minimal operations
+      // 最便宜的模型，最少的操作
       inference.setLowComputeMode(true);
       break;
 
     case "dead":
-      // No inference at all. Heartbeat only.
+      // 完全没有推理。仅心跳
       inference.setLowComputeMode(true);
       break;
   }
@@ -56,7 +56,7 @@ export function applyTierRestrictions(
 }
 
 /**
- * Record a tier transition.
+ * 记录层级转换
  */
 export function recordTransition(
   db: AutomatonDatabase,
@@ -71,12 +71,12 @@ export function recordTransition(
     creditsCents,
   };
 
-  // Store transition history
+  // 存储转换历史
   const historyStr = db.getKV("tier_transitions") || "[]";
   const history: ModeTransition[] = JSON.parse(historyStr);
   history.push(transition);
 
-  // Keep last 50 transitions
+  // 保留最近 50 次转换
   if (history.length > 50) {
     history.splice(0, history.length - 50);
   }
@@ -87,14 +87,14 @@ export function recordTransition(
 }
 
 /**
- * Check if the agent should be allowed to run inference in current tier.
+ * 检查是否应允许代理在当前层级运行推理
  */
 export function canRunInference(tier: SurvivalTier): boolean {
   return tier === "high" || tier === "normal" || tier === "low_compute" || tier === "critical";
 }
 
 /**
- * Get the model to use for the current tier.
+ * 获取当前层级使用的模型
  */
 export function getModelForTier(
   tier: SurvivalTier,
@@ -110,6 +110,6 @@ export function getModelForTier(
     case "critical":
       return "gpt-5-mini";
     case "dead":
-      return "gpt-5-mini"; // Won't be used, but just in case
+      return "gpt-5-mini"; // 不会使用，但以防万一
   }
 }

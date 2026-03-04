@@ -1,8 +1,8 @@
 /**
- * Tests for ResilientHttpClient — Phase 1.3 Network Resilience
+ * ResilientHttpClient 测试 - 阶段 1.3 网络弹性
  *
- * Covers: timeouts, retries, backoff, circuit breaker, idempotency keys,
- * cached balance fallback, api_unreachable state handling.
+ * 涵盖：超时、重试、退避、断路器、幂等性键、
+ * 缓存余额回退、api_unreachable 状态处理。
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -11,7 +11,7 @@ import {
   CircuitOpenError,
 } from "../conway/http-client.js";
 
-// ─── Mock fetch ────────────────────────────────────────────────
+// ─── 模拟 fetch ────────────────────────────────────────────────
 
 const originalFetch = globalThis.fetch;
 
@@ -39,11 +39,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// ─── Tests ─────────────────────────────────────────────────────
+// ─── 测试 ─────────────────────────────────────────────────────
 
 describe("ResilientHttpClient", () => {
-  describe("timeout behavior", () => {
-    it("aborts request after configured timeout", async () => {
+  describe("超时行为", () => {
+    it("在配置的超时后中止请求", async () => {
       const client = new ResilientHttpClient({
         baseTimeout: 100,
         maxRetries: 0,
@@ -69,8 +69,8 @@ describe("ResilientHttpClient", () => {
     });
   });
 
-  describe("retry on 5xx/429", () => {
-    it("retries on 500 and succeeds on second attempt", async () => {
+  describe("在 5xx/429 时重试", () => {
+    it("在 500 时重试并在第二次尝试成功", async () => {
       const client = new ResilientHttpClient({
         maxRetries: 2,
         backoffBase: 1,
@@ -93,7 +93,7 @@ describe("ResilientHttpClient", () => {
       expect(callCount).toBe(2);
     });
 
-    it("retries on 429 with backoff", async () => {
+    it("在 429 时使用退避重试", async () => {
       const client = new ResilientHttpClient({
         maxRetries: 2,
         backoffBase: 1,
@@ -144,8 +144,8 @@ describe("ResilientHttpClient", () => {
     });
   });
 
-  describe("no retry on 4xx", () => {
-    it("does not retry on 400", async () => {
+  describe("在 4xx 时不重试", () => {
+    it("在 400 时不重试", async () => {
       const client = new ResilientHttpClient({
         maxRetries: 3,
         backoffBase: 1,
@@ -197,8 +197,8 @@ describe("ResilientHttpClient", () => {
     });
   });
 
-  describe("retry exhaustion", () => {
-    it("throws after max retries on network error", async () => {
+  describe("重试耗尽", () => {
+    it("在网络错误上达到最大重试次数后抛出错误", async () => {
       const client = new ResilientHttpClient({
         maxRetries: 2,
         backoffBase: 1,
@@ -215,10 +215,10 @@ describe("ResilientHttpClient", () => {
       const assertion = expect(pending).rejects.toThrow("Network failure");
       await vi.runAllTimersAsync();
       await assertion;
-      expect(callCount).toBe(3); // 1 initial + 2 retries
+      expect(callCount).toBe(3); // 1 次初始 + 2 次重试
     });
 
-    it("returns last retryable status if all retries exhausted", async () => {
+    it("如果所有重试耗尽，返回最后一个可重试状态", async () => {
       const client = new ResilientHttpClient({
         maxRetries: 2,
         backoffBase: 1,
@@ -234,14 +234,14 @@ describe("ResilientHttpClient", () => {
       const pending = client.request("https://api.example.com/test");
       await vi.runAllTimersAsync();
       const resp = await pending;
-      // After maxRetries exhausted, returns the last 503 response
+      // 在 maxRetries 耗尽后，返回最后一个 503 响应
       expect(resp.status).toBe(503);
-      expect(callCount).toBe(3); // 1 initial + 2 retries
+      expect(callCount).toBe(3); // 1 次初始 + 2 次重试
     });
   });
 
-  describe("circuit breaker", () => {
-    it("opens after threshold consecutive failures", async () => {
+  describe("断路器", () => {
+    it("在阈值连续失败后打开", async () => {
       const client = new ResilientHttpClient({
         maxRetries: 0,
         circuitBreakerThreshold: 3,
@@ -250,7 +250,7 @@ describe("ResilientHttpClient", () => {
 
       globalThis.fetch = vi.fn().mockRejectedValue(new Error("fail"));
 
-      // Trigger 3 consecutive failures
+      // 触发 3 次连续失败
       for (let i = 0; i < 3; i++) {
         await expect(
           client.request("https://api.example.com/test"),
@@ -260,13 +260,13 @@ describe("ResilientHttpClient", () => {
       expect(client.isCircuitOpen()).toBe(true);
       expect(client.getConsecutiveFailures()).toBe(3);
 
-      // Next call should throw CircuitOpenError immediately
+      // 下一次调用应立即抛出 CircuitOpenError
       await expect(
         client.request("https://api.example.com/test"),
       ).rejects.toThrow(CircuitOpenError);
     });
 
-    it("auto-resets after cooldown period", async () => {
+    it("在冷却期后自动重置", async () => {
       const client = new ResilientHttpClient({
         maxRetries: 0,
         circuitBreakerThreshold: 2,
@@ -275,7 +275,7 @@ describe("ResilientHttpClient", () => {
 
       globalThis.fetch = vi.fn().mockRejectedValue(new Error("fail"));
 
-      // Open the circuit
+      // 打开断路器
       for (let i = 0; i < 2; i++) {
         await expect(
           client.request("https://api.example.com/test"),
@@ -283,25 +283,25 @@ describe("ResilientHttpClient", () => {
       }
       expect(client.isCircuitOpen()).toBe(true);
 
-      // Advance time past reset period
+      // 推进时间超过重置期
       vi.advanceTimersByTime(1100);
 
-      // Circuit should be closed now
+      // 断路器现在应该已关闭
       expect(client.isCircuitOpen()).toBe(false);
 
-      // Should be able to make requests again
+      // 应该能够再次发出请求
       globalThis.fetch = vi.fn().mockResolvedValue(mockResponse(200));
       const resp = await client.request("https://api.example.com/test");
       expect(resp.status).toBe(200);
     });
 
-    it("resets consecutive failures on success", async () => {
+    it("在成功时重置连续失败", async () => {
       const client = new ResilientHttpClient({
         maxRetries: 0,
         circuitBreakerThreshold: 5,
       });
 
-      // Fail 3 times
+      // 失败 3 次
       globalThis.fetch = vi.fn().mockRejectedValue(new Error("fail"));
       for (let i = 0; i < 3; i++) {
         await expect(
@@ -310,13 +310,13 @@ describe("ResilientHttpClient", () => {
       }
       expect(client.getConsecutiveFailures()).toBe(3);
 
-      // Succeed once
+      // 成功一次
       globalThis.fetch = vi.fn().mockResolvedValue(mockResponse(200));
       await client.request("https://api.example.com/test");
       expect(client.getConsecutiveFailures()).toBe(0);
     });
 
-    it("CircuitOpenError includes resetAt timestamp", async () => {
+    it("CircuitOpenError 包含 resetAt 时间戳", async () => {
       const client = new ResilientHttpClient({
         maxRetries: 0,
         circuitBreakerThreshold: 1,
@@ -336,7 +336,7 @@ describe("ResilientHttpClient", () => {
       }
     });
 
-    it("resetCircuit() clears state", async () => {
+    it("resetCircuit() 清除状态", async () => {
       const client = new ResilientHttpClient({
         maxRetries: 0,
         circuitBreakerThreshold: 1,
@@ -354,46 +354,46 @@ describe("ResilientHttpClient", () => {
       expect(client.getConsecutiveFailures()).toBe(0);
     });
 
-    it("counts retryable HTTP statuses toward circuit breaker threshold", async () => {
+    it("将可重试的 HTTP 状态计入断路器阈值", async () => {
       const client = new ResilientHttpClient({
         maxRetries: 0,
         circuitBreakerThreshold: 3,
         circuitBreakerResetMs: 5000,
       });
 
-      // Return 502 three times (retryable status, no retries)
+      // 返回 502 三次（可重试状态，无重试）
       globalThis.fetch = vi.fn().mockResolvedValue(mockResponse(502));
 
       for (let i = 0; i < 3; i++) {
         await client.request("https://api.example.com/test");
       }
 
-      // Circuit should be open because retryable statuses count as failures
+      // 断路器应该已打开，因为可重试状态计为失败
       expect(client.getConsecutiveFailures()).toBe(3);
       expect(client.isCircuitOpen()).toBe(true);
     });
 
-    it("resets failure counter only on non-retryable success", async () => {
+    it("仅在非可重试成功时重置失败计数器", async () => {
       const client = new ResilientHttpClient({
         maxRetries: 0,
         circuitBreakerThreshold: 5,
       });
 
-      // Two 502 failures
+      // 两次 502 失败
       globalThis.fetch = vi.fn().mockResolvedValue(mockResponse(502));
       await client.request("https://api.example.com/test");
       await client.request("https://api.example.com/test");
       expect(client.getConsecutiveFailures()).toBe(2);
 
-      // One 200 success should reset
+      // 一次 200 成功应该重置
       globalThis.fetch = vi.fn().mockResolvedValue(mockResponse(200));
       await client.request("https://api.example.com/test");
       expect(client.getConsecutiveFailures()).toBe(0);
     });
   });
 
-  describe("idempotency key", () => {
-    it("includes Idempotency-Key header when provided", async () => {
+  describe("幂等性键", () => {
+    it("在提供时包含 Idempotency-Key 头", async () => {
       const client = new ResilientHttpClient({ maxRetries: 0 });
 
       let capturedHeaders: HeadersInit | undefined;
@@ -414,7 +414,7 @@ describe("ResilientHttpClient", () => {
       expect(headers["Idempotency-Key"]).toBe("test-key-123");
     });
 
-    it("does not include Idempotency-Key header when not provided", async () => {
+    it("在未提供时不包含 Idempotency-Key 头", async () => {
       const client = new ResilientHttpClient({ maxRetries: 0 });
 
       let capturedHeaders: HeadersInit | undefined;
@@ -434,22 +434,22 @@ describe("ResilientHttpClient", () => {
     });
   });
 
-  describe("default configuration", () => {
-    it("uses default config when none provided", () => {
+  describe("默认配置", () => {
+    it("在未提供配置时使用默认配置", () => {
       const client = new ResilientHttpClient();
       expect(client.isCircuitOpen()).toBe(false);
       expect(client.getConsecutiveFailures()).toBe(0);
     });
 
-    it("merges partial config with defaults", () => {
+    it("将部分配置与默认值合并", () => {
       const client = new ResilientHttpClient({ maxRetries: 5 });
-      // Should still have defaults for other fields
+      // 其他字段应仍具有默认值
       expect(client.isCircuitOpen()).toBe(false);
     });
   });
 
-  describe("request options override", () => {
-    it("allows per-request retry override", async () => {
+  describe("请求选项覆盖", () => {
+    it("允许每个请求覆盖重试", async () => {
       const client = new ResilientHttpClient({
         maxRetries: 3,
         backoffBase: 1,
@@ -465,10 +465,10 @@ describe("ResilientHttpClient", () => {
       await expect(
         client.request("https://api.example.com/test", { retries: 0 }),
       ).rejects.toThrow("fail");
-      expect(callCount).toBe(1); // No retries
+      expect(callCount).toBe(1); // 无重试
     });
 
-    it("allows per-request timeout override", async () => {
+    it("允许每个请求覆盖超时", async () => {
       const client = new ResilientHttpClient({
         baseTimeout: 30_000,
         maxRetries: 0,
@@ -494,8 +494,8 @@ describe("ResilientHttpClient", () => {
     });
   });
 
-  describe("timer cleanup on error", () => {
-    it("clears timeout timer when fetch throws", async () => {
+  describe("错误时清理定时器", () => {
+    it("当 fetch 抛出错误时清理超时定时器", async () => {
       const client = new ResilientHttpClient({
         baseTimeout: 5000,
         maxRetries: 0,
@@ -509,7 +509,7 @@ describe("ResilientHttpClient", () => {
         client.request("https://api.example.com/test"),
       ).rejects.toThrow("Network failure");
 
-      // clearTimeout should have been called in the catch block
+      // clearTimeout 应该在 catch 块中被调用
       expect(clearTimeoutSpy).toHaveBeenCalled();
       clearTimeoutSpy.mockRestore();
     });

@@ -1,5 +1,7 @@
 /**
- * Append-only event stream for agent memory.
+ * 用于 Agent 记忆的仅追加事件流。
+ *
+ * 提供事件的持久化存储、检索和压缩功能。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -14,23 +16,23 @@ import {
 type Database = BetterSqlite3.Database;
 
 export type EventType =
-  | "user_input"
-  | "plan_created"
-  | "plan_updated"
-  | "task_assigned"
-  | "task_completed"
-  | "task_failed"
-  | "action"
-  | "observation"
-  | "inference"
-  | "financial"
-  | "agent_spawned"
-  | "agent_died"
-  | "knowledge"
-  | "market_signal"
-  | "revenue"
-  | "error"
-  | "reflection";
+  | "user_input"           // 用户输入
+  | "plan_created"         // 计划创建
+  | "plan_updated"         // 计划更新
+  | "task_assigned"        // 任务分配
+  | "task_completed"       // 任务完成
+  | "task_failed"          // 任务失败
+  | "action"               // 动作
+  | "observation"          // 观察
+  | "inference"            // 推理
+  | "financial"            // 财务
+  | "agent_spawned"        // Agent 生成
+  | "agent_died"           // Agent 终止
+  | "knowledge"            // 知识
+  | "market_signal"        // 市场信号
+  | "revenue"              // 收入
+  | "error"                // 错误
+  | "reflection";          // 反思
 
 export interface StreamEvent {
   id: string;
@@ -40,16 +42,17 @@ export interface StreamEvent {
   taskId: string | null;
   content: string;
   tokenCount: number;
-  compactedTo: string | null;
+  compactedTo: string | null;  // 压缩后的引用，若未压缩则为 null
   createdAt: string;
 }
 
 export interface CompactionResult {
-  compactedCount: number;
-  tokensSaved: number;
-  strategy: string;
+  compactedCount: number;     // 已压缩的事件数量
+  tokensSaved: number;        // 节省的 token 数量
+  strategy: string;           // 使用的压缩策略
 }
 
+// 估算文本的 token 数量（粗略估计：每 3.5 个字符约为 1 个 token）
 export function estimateTokens(text: string): number {
   return Math.ceil((text ?? "").length / 3.5);
 }
@@ -57,6 +60,7 @@ export function estimateTokens(text: string): number {
 export class EventStream {
   constructor(private readonly db: Database) {}
 
+  // 追加新事件到流中
   append(event: Omit<StreamEvent, "id" | "createdAt">): string {
     const id = ulid();
     const createdAt = new Date().toISOString();
@@ -82,21 +86,26 @@ export class EventStream {
     return id;
   }
 
+  // 获取指定 agent 最近的N个事件
   getRecent(agentAddress: string, limit: number = 50): StreamEvent[] {
     return getRecentEvents(this.db, agentAddress, limit).map(toStreamEvent);
   }
 
+  // 获取指定目标的所有事件
   getByGoal(goalId: string): StreamEvent[] {
     return getEventsByGoal(this.db, goalId).map(toStreamEvent);
   }
 
+  // 获取指定类型的事件，可指定时间范围
   getByType(type: EventType, since?: string): StreamEvent[] {
     return getEventsByType(this.db, type, since).map(toStreamEvent);
   }
 
+  // 压缩早于指定时间的事件以节省空间
+  // 使用引用或摘要策略来减少 token 使用
   compact(
     olderThan: string,
-    strategy: "reference" | "summarize",
+    strategy: "reference" | "summarize",  // 引用或摘要
   ): CompactionResult {
     const rows = this.db.prepare(
       `SELECT id, type, content, token_count as tokenCount, created_at as createdAt
@@ -145,6 +154,7 @@ export class EventStream {
     };
   }
 
+  // 获取指定 agent 的 token 总数，可指定时间范围
   getTokenCount(agentAddress: string, since?: string): number {
     if (since) {
       const row = this.db.prepare(
@@ -163,6 +173,7 @@ export class EventStream {
     return row.total ?? 0;
   }
 
+  // 删除早于指定时间的事件（永久删除，谨慎使用）
   prune(olderThan: string): number {
     const result = this.db.prepare(
       "DELETE FROM event_stream WHERE created_at < ?",
@@ -185,6 +196,7 @@ function toStreamEvent(row: EventStreamRow): StreamEvent {
   };
 }
 
+// 构建事件引用字符串（压缩策略：仅保留元数据）
 function buildReference(row: {
   id: string;
   type: string;
@@ -193,6 +205,7 @@ function buildReference(row: {
   return `ref:${row.id.slice(0, 10)}:${row.type}:${row.createdAt}`;
 }
 
+// 构建事件摘要字符串（压缩策略：截断内容）
 function buildSummary(row: {
   type: string;
   content: string;

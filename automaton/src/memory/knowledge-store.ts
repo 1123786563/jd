@@ -1,7 +1,8 @@
 /**
- * Knowledge Store
+ * 知识存储
  *
- * Shared cross-agent knowledge base backed by the knowledge_store table.
+ * 由 knowledge_store 表支持的跨 Agent 共享知识库。
+ * 提供知识的增删改查、搜索、分类统计和过期清理功能。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -17,30 +18,30 @@ import {
 type Database = BetterSqlite3.Database;
 
 export type KnowledgeCategory =
-  | "market"
-  | "technical"
-  | "social"
-  | "financial"
-  | "operational";
+  | "market"        // 市场
+  | "technical"     // 技术
+  | "social"        // 社交
+  | "financial"     // 财务
+  | "operational";  // 运营
 
 export interface KnowledgeEntry {
   id: string;
   category: KnowledgeCategory;
-  key: string;
-  content: string;
-  source: string;
-  confidence: number;
-  lastVerified: string;
-  accessCount: number;
-  tokenCount: number;
-  createdAt: string;
-  expiresAt: string | null;
+  key: string;                // 知识键，用于索引知识条目
+  content: string;            // 知识内容，存储实际知识
+  source: string;             // 来源，标识知识的来源
+  confidence: number;         // 置信度，0-1 之间的值
+  lastVerified: string;       // 最后验证时间
+  accessCount: number;        // 访问次数，记录被访问的次数
+  tokenCount: number;         // Token 数量，估算的 token 使用量
+  createdAt: string;          // 创建时间
+  expiresAt: string | null;   // 过期时间，null 表示不过期
 }
 
 export interface KnowledgeStats {
-  total: number;
-  byCategory: Record<KnowledgeCategory, number>;
-  totalTokens: number;
+  total: number;              // 总条目数
+  byCategory: Record<KnowledgeCategory, number>;  // 各分类数量统计
+  totalTokens: number;        // 总 token 数统计
 }
 
 const KNOWLEDGE_CATEGORIES: KnowledgeCategory[] = [
@@ -116,6 +117,7 @@ function toKnowledgeUpdate(
 export class KnowledgeStore {
   constructor(private readonly db: Database) {}
 
+  // 添加知识条目到存储
   add(entry: Omit<KnowledgeEntry, "id" | "accessCount" | "createdAt">): string {
     return insertKnowledge(this.db, {
       category: entry.category,
@@ -129,6 +131,7 @@ export class KnowledgeStore {
     });
   }
 
+  // 获取知识条目（自动增加访问计数，过滤已过期的条目）
   get(id: string): KnowledgeEntry | null {
     const now = new Date().toISOString();
     const row = this.db
@@ -163,6 +166,7 @@ export class KnowledgeStore {
     });
   }
 
+  // 搜索知识条目（支持按类别过滤和限制结果数量）
   search(
     query: string,
     category?: KnowledgeCategory,
@@ -172,14 +176,17 @@ export class KnowledgeStore {
     return rows.map(toKnowledgeEntry);
   }
 
+  // 更新知识条目（支持部分字段更新）
   update(id: string, updates: Partial<KnowledgeEntry>): void {
     updateKnowledge(this.db, id, toKnowledgeUpdate(updates));
   }
 
+  // 删除知识条目（根据 ID 删除）
   remove(id: string): void {
     deleteKnowledge(this.db, id);
   }
 
+  // 清理过期和低置信度的知识（删除已过期或低置信度且长时间未验证的条目）
   prune(): number {
     const now = new Date().toISOString();
     const sevenDaysAgo = new Date(
@@ -195,11 +202,13 @@ export class KnowledgeStore {
     return result.changes;
   }
 
+  // 按分类获取知识（返回指定类别的所有知识条目）
   getByCategory(category: KnowledgeCategory): KnowledgeEntry[] {
     const rows = getKnowledgeByCategory(this.db, category);
     return rows.map(toKnowledgeEntry);
   }
 
+  // 获取统计信息（包括总数、分类统计和 token 统计）
   getStats(): KnowledgeStats {
     const byCategory: Record<KnowledgeCategory, number> = {
       market: 0,

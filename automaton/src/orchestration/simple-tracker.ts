@@ -70,7 +70,7 @@ export class SimpleAgentTracker implements AgentTracker {
       address: agent.address as `0x${string}`,
       sandboxId: agent.sandboxId,
       genesisPrompt: `Role: ${agent.role}`,
-      creatorMessage: "registered by orchestrator",
+      creatorMessage: "Registered by orchestrator",
       fundedAmountCents: 0,
       status: "running",
       createdAt: new Date().toISOString(),
@@ -123,7 +123,7 @@ export class SimpleFundingProtocol implements FundingProtocol {
       const result = await this.conway.transferCredits(
         this.identity.address,
         amountCents,
-        `Recall credits from ${childAddress}`,
+        `从 ${childAddress} 召回积分`,
       );
 
       const success = isTransferSuccessful(result.status);
@@ -140,13 +140,12 @@ export class SimpleFundingProtocol implements FundingProtocol {
     }
   }
 
-  // TODO: The Conway API only exposes getCreditsBalance() for the calling agent's own
-  // balance. There is no API to query a child agent's balance remotely. This method
-  // returns the locally tracked funded_amount_cents as an upper-bound estimate.
-  // This is an approximation — the child may have spent credits on inference since
-  // funding. When the Conway API adds per-agent balance queries, replace this with
-  // a direct API call. Alternatively, child agents could report their balance via
-  // messaging (status_report with credit_balance field).
+  // TODO: Conway API 仅暴露了 getCreditsBalance() 用于调用代理自己的余额查询。
+  // 没有可用的 API 来远程查询子代理的余额。此方法返回本地跟踪的
+  // funded_amount_cents 作为上限估计值。这是一个近似值 — 子代理可能
+  // 在资金分配后在推理上花费了积分。当 Conway API 添加每个代理的余额查询时，
+  // 请将其替换为直接的 API 调用。或者，子代理可以通过消息报告其余额
+  // （带有 credit_balance 字段的 status_report）。
   async getBalance(childAddress: string): Promise<number> {
     const row = this.db.raw
       .prepare("SELECT funded_amount_cents FROM children WHERE address = ?")

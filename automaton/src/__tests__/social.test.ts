@@ -1,22 +1,22 @@
 /**
- * Social & Registry Hardening Tests (Phase 3.2)
+ * 社交与注册表加固测试（阶段 3.2）
  *
- * Tests for signing, validation, social client, agent card,
- * ERC-8004 fixes, discovery caching, and schema migration.
+ * 测试签名、验证、社交客户端、代理卡片、
+ * ERC-8004 修复、发现缓存和模式迁移。
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import Database from "better-sqlite3";
 import { MIGRATION_V7 } from "../state/schema.js";
 
-// ─── Test helpers ───────────────────────────────────────────────
+// ─── 测试辅助函数 ───────────────────────────────────────────────
 
 function createTestDb(): import("better-sqlite3").Database {
   const db = new Database(":memory:");
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
 
-  // Create base tables needed for tests
+  // 创建测试所需的基础表
   db.exec(`
     CREATE TABLE IF NOT EXISTS schema_version (
       version INTEGER PRIMARY KEY,
@@ -33,17 +33,17 @@ function createTestDb(): import("better-sqlite3").Database {
     CREATE INDEX IF NOT EXISTS idx_dedup_expires ON heartbeat_dedup(expires_at);
   `);
 
-  // Apply V7 migration (Phase 3 tables)
+  // 应用 V7 迁移（阶段 3 表）
   db.exec(MIGRATION_V7);
   db.prepare("INSERT INTO schema_version (version) VALUES (?)").run(7);
 
   return db;
 }
 
-// ─── 1. Signing Tests ───────────────────────────────────────────
+// ─── 1. 签名测试 ───────────────────────────────────────────
 
 describe("Signing", () => {
-  it("signSendPayload produces valid payload with signature", async () => {
+  it("signSendPayload 生成带有有效签名的载荷", async () => {
     const { privateKeyToAccount } = await import("viem/accounts");
     const { signSendPayload } = await import("../social/signing.js");
 
@@ -65,7 +65,7 @@ describe("Signing", () => {
     expect(payload.signed_at).toBeTruthy();
   });
 
-  it("signSendPayload enforces content size limit", async () => {
+  it("signSendPayload 强制执行内容大小限制", async () => {
     const { privateKeyToAccount } = await import("viem/accounts");
     const { signSendPayload } = await import("../social/signing.js");
 
@@ -79,7 +79,7 @@ describe("Signing", () => {
     ).rejects.toThrow("Message content too long");
   });
 
-  it("signPollPayload produces valid payload", async () => {
+  it("signPollPayload 生成有效载荷", async () => {
     const { privateKeyToAccount } = await import("viem/accounts");
     const { signPollPayload } = await import("../social/signing.js");
 
@@ -94,7 +94,7 @@ describe("Signing", () => {
     expect(result.timestamp).toBeTruthy();
   });
 
-  it("signSendPayload canonical format matches runtime and CLI expectation", async () => {
+  it("signSendPayload 规范格式匹配运行时和 CLI 期望", async () => {
     const { privateKeyToAccount } = await import("viem/accounts");
     const { keccak256, toBytes, verifyMessage } = await import("viem");
     const { signSendPayload } = await import("../social/signing.js");
@@ -107,7 +107,7 @@ describe("Signing", () => {
     const content = "Test message";
     const payload = await signSendPayload(account, to, content);
 
-    // Reconstruct canonical and verify
+    // 重建规范格式并验证
     const contentHash = keccak256(toBytes(content));
     const canonical = `Conway:send:${to.toLowerCase()}:${contentHash}:${payload.signed_at}`;
 
@@ -121,10 +121,10 @@ describe("Signing", () => {
   });
 });
 
-// ─── 2. Message Validation Tests ────────────────────────────────
+// ─── 2. 消息验证测试 ────────────────────────────────
 
 describe("Message Validation", () => {
-  it("valid message passes validation", async () => {
+  it("有效消息通过验证", async () => {
     const { validateMessage } = await import("../social/validation.js");
 
     const result = validateMessage({
@@ -138,7 +138,7 @@ describe("Message Validation", () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it("message exceeding total size limit fails", async () => {
+  it("超出总大小限制的消息失败", async () => {
     const { validateMessage } = await import("../social/validation.js");
 
     const result = validateMessage({
@@ -151,7 +151,7 @@ describe("Message Validation", () => {
     expect(result.errors.some((e) => e.includes("total size limit"))).toBe(true);
   });
 
-  it("content exceeding content size limit fails", async () => {
+  it("超出内容大小限制的内容失败", async () => {
     const { validateMessage } = await import("../social/validation.js");
 
     const result = validateMessage({
@@ -164,7 +164,7 @@ describe("Message Validation", () => {
     expect(result.errors.some((e) => e.includes("Content exceeds size limit"))).toBe(true);
   });
 
-  it("message too old (>5 min) fails replay check", async () => {
+  it("过旧的消息（>5 分钟）未通过重放检查", async () => {
     const { validateMessage } = await import("../social/validation.js");
 
     const oldTimestamp = new Date(Date.now() - 6 * 60_000).toISOString();
@@ -179,7 +179,7 @@ describe("Message Validation", () => {
     expect(result.errors.some((e) => e.includes("too old"))).toBe(true);
   });
 
-  it("message from future fails", async () => {
+  it("来自未来的消息失败", async () => {
     const { validateMessage } = await import("../social/validation.js");
 
     const futureTimestamp = new Date(Date.now() + 2 * 60_000).toISOString();
@@ -194,7 +194,7 @@ describe("Message Validation", () => {
     expect(result.errors.some((e) => e.includes("future"))).toBe(true);
   });
 
-  it("invalid timestamp string is rejected", async () => {
+  it("无效的时间戳字符串被拒绝", async () => {
     const { validateMessage } = await import("../social/validation.js");
 
     const result = validateMessage({
@@ -208,7 +208,7 @@ describe("Message Validation", () => {
     expect(result.errors.some((e) => e.includes("Invalid timestamp"))).toBe(true);
   });
 
-  it("invalid from address fails", async () => {
+  it("无效的发送地址失败", async () => {
     const { validateMessage } = await import("../social/validation.js");
 
     const result = validateMessage({
@@ -221,7 +221,7 @@ describe("Message Validation", () => {
     expect(result.errors.some((e) => e.includes("Invalid sender address"))).toBe(true);
   });
 
-  it("invalid to address fails", async () => {
+  it("无效的接收地址失败", async () => {
     const { validateMessage } = await import("../social/validation.js");
 
     const result = validateMessage({
@@ -235,31 +235,31 @@ describe("Message Validation", () => {
   });
 });
 
-// ─── 3. Relay URL Validation Tests ──────────────────────────────
+// ─── 3. 中继 URL 验证测试 ──────────────────────────────
 
 describe("Relay URL Validation", () => {
-  it("HTTPS URL accepted", async () => {
+  it("接受 HTTPS URL", async () => {
     const { validateRelayUrl } = await import("../social/validation.js");
     expect(() => validateRelayUrl("https://social.conway.tech")).not.toThrow();
   });
 
-  it("HTTP URL rejected", async () => {
+  it("拒绝 HTTP URL", async () => {
     const { validateRelayUrl } = await import("../social/validation.js");
     expect(() => validateRelayUrl("http://social.conway.tech")).toThrow(
       "Relay URL must use HTTPS",
     );
   });
 
-  it("Non-URL rejected", async () => {
+  it("拒绝非 URL", async () => {
     const { validateRelayUrl } = await import("../social/validation.js");
     expect(() => validateRelayUrl("not a url")).toThrow("Invalid relay URL");
   });
 });
 
-// ─── 4. Social Client Tests ────────────────────────────────────
+// ─── 4. 社交客户端测试 ────────────────────────────────────
 
 describe("Social Client", () => {
-  it("createSocialClient throws on HTTP relay URL", async () => {
+  it("createSocialClient 在 HTTP 中继 URL 时抛出异常", async () => {
     const { createSocialClient } = await import("../social/client.js");
     const { privateKeyToAccount } = await import("viem/accounts");
     const account = privateKeyToAccount(
@@ -271,14 +271,14 @@ describe("Social Client", () => {
     );
   });
 
-  it("send() calls signing module and validates message", async () => {
+  it("send() 调用签名模块并验证消息", async () => {
     const { createSocialClient } = await import("../social/client.js");
     const { privateKeyToAccount } = await import("viem/accounts");
     const account = privateKeyToAccount(
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
     );
 
-    // Mock fetch to capture the request body
+    // 模拟 fetch 以捕获请求体
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ id: "msg-123" }),
@@ -292,7 +292,7 @@ describe("Social Client", () => {
     );
 
     expect(result.id).toBe("msg-123");
-    // Verify the request was made with a signature
+    // 验证请求是否带有签名
     const callArgs = mockFetch.mock.calls[0];
     const body = JSON.parse(callArgs?.[1]?.body as string);
     expect(body.signature).toBeTruthy();
@@ -301,7 +301,7 @@ describe("Social Client", () => {
     vi.unstubAllGlobals();
   });
 
-  it("unreadCount() throws on HTTP error (not returns 0)", async () => {
+  it("unreadCount() 在 HTTP 错误时抛出异常（而非返回 0）", async () => {
     const { createSocialClient } = await import("../social/client.js");
     const { privateKeyToAccount } = await import("viem/accounts");
     const account = privateKeyToAccount(
@@ -322,7 +322,7 @@ describe("Social Client", () => {
     vi.unstubAllGlobals();
   });
 
-  it("rate limiting: 101st message in hour is rejected", async () => {
+  it("速率限制：一小时内第 101 条消息被拒绝", async () => {
     const { createSocialClient } = await import("../social/client.js");
     const { privateKeyToAccount } = await import("viem/accounts");
     const account = privateKeyToAccount(
@@ -337,7 +337,7 @@ describe("Social Client", () => {
 
     const client = createSocialClient("https://relay.example.com", account);
 
-    // Send 100 messages successfully
+    // 成功发送 100 条消息
     for (let i = 0; i < 100; i++) {
       await client.send(
         "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
@@ -345,7 +345,7 @@ describe("Social Client", () => {
       );
     }
 
-    // 101st should be rejected
+    // 第 101 条应该被拒绝
     await expect(
       client.send("0x70997970C51812dc3A010C7d01b50e0d17dc79C8", "message 100"),
     ).rejects.toThrow("Rate limit exceeded");
@@ -353,14 +353,14 @@ describe("Social Client", () => {
     vi.unstubAllGlobals();
   });
 
-  it("rate limiting: failed sends count toward the hourly limit", async () => {
+  it("速率限制：失败的发送计入每小时限制", async () => {
     const { createSocialClient } = await import("../social/client.js");
     const { privateKeyToAccount } = await import("viem/accounts");
     const account = privateKeyToAccount(
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
     );
 
-    // Server returns 500 for every request
+    // 服务器对每个请求返回 500
     const mockFetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
@@ -371,14 +371,14 @@ describe("Social Client", () => {
 
     const client = createSocialClient("https://relay.example.com", account);
 
-    // Send 100 messages that all fail with 500
+    // 发送 100 条全部失败（500 错误）的消息
     for (let i = 0; i < 100; i++) {
       await client
         .send("0x70997970C51812dc3A010C7d01b50e0d17dc79C8", `msg ${i}`)
-        .catch(() => {}); // ignore the send failure
+        .catch(() => {}); // 忽略发送失败
     }
 
-    // 101st should be rate-limited even though all previous sends failed
+    // 即使之前所有发送都失败，第 101 条仍应被速率限制
     await expect(
       client.send("0x70997970C51812dc3A010C7d01b50e0d17dc79C8", "msg 100"),
     ).rejects.toThrow("Rate limit exceeded");
@@ -387,10 +387,10 @@ describe("Social Client", () => {
   });
 });
 
-// ─── 5. Agent Card Tests ────────────────────────────────────────
+// ─── 5. 代理卡片测试 ────────────────────────────────────────
 
 describe("Agent Card", () => {
-  it("generateAgentCard does NOT include sandbox ID", async () => {
+  it("generateAgentCard 不包含沙箱 ID", async () => {
     const { generateAgentCard } = await import("../registry/agent-card.js");
 
     const identity = {
@@ -420,7 +420,7 @@ describe("Agent Card", () => {
     expect(cardStr).not.toContain("sandbox-123");
   });
 
-  it("generateAgentCard does NOT include Conway API URL", async () => {
+  it("generateAgentCard 不包含 Conway API URL", async () => {
     const { generateAgentCard } = await import("../registry/agent-card.js");
 
     const identity = {
@@ -450,7 +450,7 @@ describe("Agent Card", () => {
     expect(cardStr).not.toContain("api.conway.tech");
   });
 
-  it("generateAgentCard does NOT include creator address", async () => {
+  it("generateAgentCard 不包含创建者地址", async () => {
     const { generateAgentCard } = await import("../registry/agent-card.js");
 
     const identity = {
@@ -480,7 +480,7 @@ describe("Agent Card", () => {
     expect(cardStr).not.toContain("0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
   });
 
-  it("hostAgentCard writes card as separate JSON file", async () => {
+  it("hostAgentCard 将卡片写入单独的 JSON 文件", async () => {
     const { hostAgentCard } = await import("../registry/agent-card.js");
 
     const writtenFiles: Record<string, string> = {};
@@ -503,22 +503,22 @@ describe("Agent Card", () => {
 
     await hostAgentCard(card, mockConway);
 
-    // Card should be written as separate JSON file
+    // 卡片应写入单独的 JSON 文件
     expect(writtenFiles["/tmp/agent-card.json"]).toBeTruthy();
     const writtenCard = JSON.parse(writtenFiles["/tmp/agent-card.json"]!);
     expect(writtenCard.name).toBe("TestBot");
 
-    // Server script should NOT contain the card JSON interpolated
+    // 服务器脚本不应包含插值的卡片 JSON
     const serverScript = writtenFiles["/tmp/agent-card-server.js"]!;
     expect(serverScript).not.toContain('"TestBot"');
     expect(serverScript).toContain("fs.readFileSync");
   });
 });
 
-// ─── 6. ERC-8004 Tests ─────────────────────────────────────────
+// ─── 6. ERC-8004 测试 ─────────────────────────────────────────
 
 describe("ERC-8004", () => {
-  it("leaveFeedback rejects score 0", async () => {
+  it("leaveFeedback 拒绝分数 0", async () => {
     const { leaveFeedback } = await import("../registry/erc8004.js");
     const { privateKeyToAccount } = await import("viem/accounts");
     const account = privateKeyToAccount(
@@ -532,7 +532,7 @@ describe("ERC-8004", () => {
     ).rejects.toThrow("Invalid score: 0");
   });
 
-  it("leaveFeedback rejects score 6", async () => {
+  it("leaveFeedback 拒绝分数 6", async () => {
     const { leaveFeedback } = await import("../registry/erc8004.js");
     const { privateKeyToAccount } = await import("viem/accounts");
     const account = privateKeyToAccount(
@@ -546,7 +546,7 @@ describe("ERC-8004", () => {
     ).rejects.toThrow("Invalid score: 6");
   });
 
-  it("leaveFeedback rejects comment over 500 chars", async () => {
+  it("leaveFeedback 拒绝超过 500 字符的评论", async () => {
     const { leaveFeedback } = await import("../registry/erc8004.js");
     const { privateKeyToAccount } = await import("viem/accounts");
     const account = privateKeyToAccount(
@@ -562,17 +562,17 @@ describe("ERC-8004", () => {
   });
 });
 
-// ─── 7. Discovery Tests ────────────────────────────────────────
+// ─── 7. 发现测试 ────────────────────────────────────────
 
 describe("Discovery", () => {
-  it("validateAgentCard rejects cards with missing name", async () => {
+  it("validateAgentCard 拒绝缺少名称的卡片", async () => {
     const { validateAgentCard } = await import("../registry/discovery.js");
 
     const result = validateAgentCard({ type: "test" });
     expect(result).toBeNull();
   });
 
-  it("validateAgentCard rejects cards with oversized name", async () => {
+  it("validateAgentCard 拒绝名称过大的卡片", async () => {
     const { validateAgentCard } = await import("../registry/discovery.js");
 
     const result = validateAgentCard({
@@ -582,7 +582,7 @@ describe("Discovery", () => {
     expect(result).toBeNull();
   });
 
-  it("validateAgentCard rejects cards with oversized description", async () => {
+  it("validateAgentCard 拒绝描述过大的卡片", async () => {
     const { validateAgentCard } = await import("../registry/discovery.js");
 
     const result = validateAgentCard({
@@ -593,7 +593,7 @@ describe("Discovery", () => {
     expect(result).toBeNull();
   });
 
-  it("validateAgentCard accepts valid card", async () => {
+  it("validateAgentCard 接受有效卡片", async () => {
     const { validateAgentCard } = await import("../registry/discovery.js");
 
     const result = validateAgentCard({
@@ -606,29 +606,29 @@ describe("Discovery", () => {
     expect(result!.name).toBe("TestAgent");
   });
 
-  it("isAllowedUri blocks HTTP", async () => {
+  it("isAllowedUri 阻止 HTTP", async () => {
     const { isAllowedUri } = await import("../registry/discovery.js");
     expect(isAllowedUri("http://example.com/card.json")).toBe(false);
   });
 
-  it("isAllowedUri allows HTTPS", async () => {
+  it("isAllowedUri 允许 HTTPS", async () => {
     const { isAllowedUri } = await import("../registry/discovery.js");
     expect(isAllowedUri("https://example.com/card.json")).toBe(true);
   });
 
-  it("isAllowedUri blocks localhost", async () => {
+  it("isAllowedUri 阻止 localhost", async () => {
     const { isAllowedUri } = await import("../registry/discovery.js");
     expect(isAllowedUri("https://localhost/card.json")).toBe(false);
   });
 });
 
-// ─── 8. Schema Tests ───────────────────────────────────────────
+// ─── 8. 模式测试 ───────────────────────────────────────────
 
 describe("Schema", () => {
-  it("MIGRATION_V7 creates discovered_agents_cache table", () => {
+  it("MIGRATION_V7 创建 discovered_agents_cache 表", () => {
     const db = createTestDb();
 
-    // Table should exist - try inserting
+    // 表应该存在 - 尝试插入
     const stmt = db.prepare(
       `INSERT INTO discovered_agents_cache
        (agent_address, agent_card, fetched_from, card_hash, valid_until, fetch_count, last_fetched_at, created_at)
@@ -647,7 +647,7 @@ describe("Schema", () => {
       ),
     ).not.toThrow();
 
-    // Verify we can read it back
+    // 验证我们可以读回数据
     const row = db
       .prepare("SELECT * FROM discovered_agents_cache WHERE agent_address = ?")
       .get("0xtest") as any;
@@ -657,7 +657,7 @@ describe("Schema", () => {
     db.close();
   });
 
-  it("MIGRATION_V7 creates onchain_transactions table", () => {
+  it("MIGRATION_V7 创建 onchain_transactions 表", () => {
     const db = createTestDb();
 
     const stmt = db.prepare(
@@ -678,7 +678,7 @@ describe("Schema", () => {
     db.close();
   });
 
-  it("MIGRATION_V7 creates child_lifecycle_events table", () => {
+  it("MIGRATION_V7 创建 child_lifecycle_events 表", () => {
     const db = createTestDb();
 
     const stmt = db.prepare(
@@ -692,7 +692,7 @@ describe("Schema", () => {
     db.close();
   });
 
-  it("onchain_transactions status CHECK constraint works", () => {
+  it("onchain_transactions 状态 CHECK 约束生效", () => {
     const db = createTestDb();
 
     const stmt = db.prepare(
@@ -707,10 +707,10 @@ describe("Schema", () => {
   });
 });
 
-// ─── 9. DB Helpers Tests ────────────────────────────────────────
+// ─── 9. 数据库辅助函数测试 ────────────────────────────────────────
 
 describe("DB Helpers", () => {
-  it("agentCacheUpsert and agentCacheGet work", async () => {
+  it("agentCacheUpsert 和 agentCacheGet 正常工作", async () => {
     const db = createTestDb();
     const { agentCacheUpsert, agentCacheGet } = await import("../state/database.js");
 
@@ -733,11 +733,11 @@ describe("DB Helpers", () => {
     db.close();
   });
 
-  it("agentCacheGetValid returns only valid entries", async () => {
+  it("agentCacheGetValid 仅返回有效条目", async () => {
     const db = createTestDb();
     const { agentCacheUpsert, agentCacheGetValid } = await import("../state/database.js");
 
-    // Valid entry
+    // 有效条目
     agentCacheUpsert(db, {
       agentAddress: "0xvalid",
       agentCard: '{"name":"Valid"}',
@@ -749,7 +749,7 @@ describe("DB Helpers", () => {
       createdAt: new Date().toISOString(),
     });
 
-    // Expired entry
+    // 过期条目
     agentCacheUpsert(db, {
       agentAddress: "0xexpired",
       agentCard: '{"name":"Expired"}',
@@ -768,7 +768,7 @@ describe("DB Helpers", () => {
     db.close();
   });
 
-  it("agentCachePrune removes expired entries", async () => {
+  it("agentCachePrune 删除过期条目", async () => {
     const db = createTestDb();
     const { agentCacheUpsert, agentCachePrune, agentCacheGet } = await import("../state/database.js");
 
@@ -790,7 +790,7 @@ describe("DB Helpers", () => {
     db.close();
   });
 
-  it("onchainTxInsert and onchainTxGetByHash work", async () => {
+  it("onchainTxInsert 和 onchainTxGetByHash 正常工作", async () => {
     const db = createTestDb();
     const { onchainTxInsert, onchainTxGetByHash } = await import("../state/database.js");
 
@@ -813,7 +813,7 @@ describe("DB Helpers", () => {
     db.close();
   });
 
-  it("onchainTxGetAll with status filter works", async () => {
+  it("onchainTxGetAll 带状态过滤器正常工作", async () => {
     const db = createTestDb();
     const { onchainTxInsert, onchainTxGetAll } = await import("../state/database.js");
 
@@ -848,7 +848,7 @@ describe("DB Helpers", () => {
     db.close();
   });
 
-  it("onchainTxUpdateStatus works", async () => {
+  it("onchainTxUpdateStatus 正常工作", async () => {
     const db = createTestDb();
     const { onchainTxInsert, onchainTxUpdateStatus, onchainTxGetByHash } = await import("../state/database.js");
 
@@ -873,25 +873,25 @@ describe("DB Helpers", () => {
   });
 });
 
-// ─── 10. Protocol Tests ─────────────────────────────────────────
+// ─── 10. 协议测试 ─────────────────────────────────────────
 
 describe("Protocol", () => {
-  it("createMessageId returns ULID", async () => {
+  it("createMessageId 返回 ULID", async () => {
     const { createMessageId } = await import("../social/protocol.js");
     const id = createMessageId();
     expect(id).toBeTruthy();
-    expect(id.length).toBe(26); // ULID length
+    expect(id.length).toBe(26); // ULID 长度
   });
 
-  it("createNonce returns hex string", async () => {
+  it("createNonce 返回十六进制字符串", async () => {
     const { createNonce } = await import("../social/protocol.js");
     const nonce = createNonce();
     expect(nonce).toBeTruthy();
     expect(nonce).toMatch(/^[0-9a-f]+$/);
-    expect(nonce.length).toBe(32); // 16 bytes = 32 hex chars
+    expect(nonce.length).toBe(32); // 16 字节 = 32 个十六进制字符
   });
 
-  it("verifyMessageSignature validates correct signature", async () => {
+  it("verifyMessageSignature 验证正确的签名", async () => {
     const { privateKeyToAccount } = await import("viem/accounts");
     const { signSendPayload } = await import("../social/signing.js");
     const { verifyMessageSignature } = await import("../social/protocol.js");
@@ -910,7 +910,7 @@ describe("Protocol", () => {
     expect(valid).toBe(true);
   });
 
-  it("verifyMessageSignature rejects wrong signer", async () => {
+  it("verifyMessageSignature 拒绝错误的签名者", async () => {
     const { privateKeyToAccount } = await import("viem/accounts");
     const { signSendPayload } = await import("../social/signing.js");
     const { verifyMessageSignature } = await import("../social/protocol.js");
@@ -925,7 +925,7 @@ describe("Protocol", () => {
       "Test content",
     );
 
-    // Different address
+    // 不同的地址
     const valid = await verifyMessageSignature(
       payload,
       "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
@@ -934,25 +934,25 @@ describe("Protocol", () => {
   });
 });
 
-// ─── 11. Address Validation Tests ───────────────────────────────
+// ─── 11. 地址验证测试 ───────────────────────────────
 
 describe("Address Validation", () => {
-  it("isValidAddress accepts valid address", async () => {
+  it("isValidAddress 接受有效地址", async () => {
     const { isValidAddress } = await import("../social/validation.js");
     expect(isValidAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")).toBe(true);
   });
 
-  it("isValidAddress rejects short address", async () => {
+  it("isValidAddress 拒绝过短地址", async () => {
     const { isValidAddress } = await import("../social/validation.js");
     expect(isValidAddress("0x7099")).toBe(false);
   });
 
-  it("isValidAddress rejects non-hex", async () => {
+  it("isValidAddress 拒绝非十六进制", async () => {
     const { isValidAddress } = await import("../social/validation.js");
     expect(isValidAddress("0xGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG")).toBe(false);
   });
 
-  it("isValidAddress rejects no prefix", async () => {
+  it("isValidAddress 拒绝无前缀", async () => {
     const { isValidAddress } = await import("../social/validation.js");
     expect(isValidAddress("70997970C51812dc3A010C7d01b50e0d17dc79C8")).toBe(false);
   });

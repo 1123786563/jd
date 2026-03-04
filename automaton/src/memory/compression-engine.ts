@@ -1,7 +1,7 @@
 /**
- * Dynamic Context Compression Engine
+ * 动态上下文压缩引擎
  *
- * Progressive 5-stage compression cascade for long-running conversations.
+ * 用于长时间运行的对话的渐进式 5 阶段压缩级联。
  */
 
 import { promises as fs } from "node:fs";

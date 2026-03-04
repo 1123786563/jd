@@ -12,14 +12,14 @@ const DEFAULT_CONSENSUS_CRITIC_ROLE = "reviewer";
 const DEFAULT_REVIEW_TIMEOUT_MS = 30 * 60_000;
 
 export type ExecutionPhase =
-  | "idle"
-  | "classifying"
-  | "planning"
-  | "plan_review"
-  | "executing"
-  | "replanning"
-  | "complete"
-  | "failed";
+  | "idle"          // 空闲
+  | "classifying"   // 分类中
+  | "planning"      // 规划中
+  | "plan_review"   // 计划审核
+  | "executing"     // 执行中
+  | "replanning"    // 重新规划
+  | "complete"      // 完成
+  | "failed";       // 失败
 
 export interface ExecutionState {
   phase: ExecutionPhase;
@@ -32,7 +32,7 @@ export interface ExecutionState {
   phaseEnteredAt: string;
 }
 
-export type PlanApprovalMode = "auto" | "supervised" | "consensus";
+export type PlanApprovalMode = "auto" | "supervised" | "consensus"; // 自动 | 监督 | 共识
 
 export interface PlanApprovalConfig {
   mode: PlanApprovalMode;
@@ -42,11 +42,11 @@ export interface PlanApprovalConfig {
 }
 
 export type ReplanTrigger =
-  | { type: "task_failure"; taskId: string; error: string }
-  | { type: "budget_breach"; actualCents: number; estimatedCents: number }
-  | { type: "requirement_change"; newInput: string; conflictScore: number }
-  | { type: "environment_change"; resource: string; error: string }
-  | { type: "opportunity"; suggestion: string; agentAddress: string };
+  | { type: "task_failure"; taskId: string; error: string }           // 任务失败
+  | { type: "budget_breach"; actualCents: number; estimatedCents: number }  // 预算超支
+  | { type: "requirement_change"; newInput: string; conflictScore: number }  // 需求变更
+  | { type: "environment_change"; resource: string; error: string }  // 环境变化
+  | { type: "opportunity"; suggestion: string; agentAddress: string };  // 机会
 
 const TRANSITIONS: Record<ExecutionPhase, ReadonlySet<ExecutionPhase>> = {
   idle: new Set(["classifying"]),
@@ -59,6 +59,9 @@ const TRANSITIONS: Record<ExecutionPhase, ReadonlySet<ExecutionPhase>> = {
   failed: new Set([]),
 };
 
+/**
+ * 计划模式控制器
+ */
 export class PlanModeController {
   constructor(private readonly db: Database) {}
 
@@ -66,13 +69,13 @@ export class PlanModeController {
     const state = this.getState();
     if (state.phase !== from) {
       throw new Error(
-        `Invalid transition precondition: state is '${state.phase}', expected '${from}' (reason: ${reason})`,
+        `无效的转换前置条件：状态为 '${state.phase}'，期望 '${from}' (原因: ${reason})`,
       );
     }
 
     const valid = to === "failed" ? true : TRANSITIONS[from]?.has(to) ?? false;
     if (!valid) {
-      throw new Error(`Invalid transition '${from}' -> '${to}' (reason: ${reason})`);
+      throw new Error(`无效的转换 '${from}' -> '${to}' (原因: ${reason})`);
     }
 
     const next: Partial<ExecutionState> = {
@@ -88,6 +91,9 @@ export class PlanModeController {
     this.setState(next);
   }
 
+  /**
+   * 检查是否可以生成代理
+   */
   canSpawnAgents(): boolean {
     const state = this.getState();
     return state.phase === "executing" && state.planId !== null;
@@ -129,6 +135,9 @@ export class PlanModeController {
   }
 }
 
+/**
+ * 分类任务复杂度
+ */
 export async function classifyComplexity(
   params: {
     taskDescription: string;
@@ -154,18 +163,18 @@ export async function classifyComplexity(
         {
           role: "system",
           content: [
-            "Classify task complexity for an autonomous agent.",
-            "Return strict JSON: estimatedSteps (number), reason (string), stepOutline (string[]).",
-            "Estimate concrete action steps, not thoughts.",
-            "No markdown.",
+            "为自主代理分类任务复杂度。",
+            "返回严格 JSON：estimatedSteps (数字)、reason (字符串)、stepOutline (字符串[])。",
+            "估算具体行动步骤，而非思考步骤。",
+            "不使用 markdown。",
           ].join(" "),
         },
         {
           role: "user",
           content: [
-            `Agent role: ${params.agentRole || "generalist"}`,
-            `Available tools: ${formatTools(params.availableTools)}`,
-            `Task: ${description || "empty task description"}`,
+            `代理角色：${params.agentRole || "通才"}`,
+            `可用工具：${formatTools(params.availableTools)}`,
+            `任务：${description || "空任务描述"}`,
           ].join("\n"),
         },
       ],
@@ -200,6 +209,9 @@ export async function classifyComplexity(
   }
 }
 
+/**
+ * 持久化计划到文件
+ */
 export async function persistPlan(params: {
   goalId: string;
   version: number;
@@ -227,17 +239,23 @@ export async function persistPlan(params: {
   return { jsonPath, mdPath };
 }
 
+/**
+ * 从文件加载计划
+ */
 export async function loadPlan(planFilePath: string): Promise<PlannerOutput> {
   const raw = await fs.readFile(planFilePath, "utf8");
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (error) {
-    throw new Error(`Invalid plan JSON at '${planFilePath}': ${toErrorMessage(error)}`);
+    throw new Error(`'${planFilePath}' 处的计划 JSON 无效：${toErrorMessage(error)}`);
   }
   return validatePlannerOutput(parsed);
 }
 
+/**
+ * 审核计划
+ */
 export async function reviewPlan(
   plan: PlannerOutput,
   config: PlanApprovalConfig,
@@ -249,29 +267,32 @@ export async function reviewPlan(
       if (plan.estimatedTotalCostCents > normalized.autoBudgetThreshold) {
         return {
           approved: true,
-          feedback: `Auto-approved above threshold (${plan.estimatedTotalCostCents} > ${normalized.autoBudgetThreshold}).`,
+          feedback: `自动批准超过阈值 (${plan.estimatedTotalCostCents} > ${normalized.autoBudgetThreshold})。`,
         };
       }
       return { approved: true };
     }
 
     case "supervised": {
-      throw new Error("awaiting human approval");
+      throw new Error("等待人工批准");
     }
 
     case "consensus": {
       return {
         approved: true,
-        feedback: `Consensus review stub (critic role '${normalized.consensusCriticRole}', timeout ${normalized.reviewTimeoutMs}ms).`,
+        feedback: `共识审核存根（批评者角色 '${normalized.consensusCriticRole}'，超时 ${normalized.reviewTimeoutMs}ms）。`,
       };
     }
 
     default: {
-      return { approved: false, feedback: "Unsupported review mode." };
+      return { approved: false, feedback: "不支持的审核模式。" };
     }
   }
 }
 
+/**
+ * 判断是否应该重新规划
+ */
 export function shouldReplan(state: ExecutionState, trigger: ReplanTrigger): boolean {
   if (state.replansRemaining <= 0) {
     return false;
@@ -480,33 +501,33 @@ function formatTools(tools: string[]): string {
 
 function renderPlanMarkdown(goalId: string, version: number, plan: PlannerOutput): string {
   const lines: string[] = [];
-  lines.push(`# Plan: ${goalId} (v${version})`);
-  lines.push(`Status: DRAFT | Estimated Cost: ${plan.estimatedTotalCostCents} cents | Estimated Time: ${plan.estimatedTimeMinutes} min`);
+  lines.push(`# 计划：${goalId} (v${version})`);
+  lines.push(`状态：草稿 | 预估成本：${plan.estimatedTotalCostCents} 美分 | 预估时间：${plan.estimatedTimeMinutes} 分钟`);
   lines.push("");
-  lines.push("## Strategy");
-  lines.push(plan.strategy.trim().length > 0 ? plan.strategy.trim() : "No strategy provided.");
+  lines.push("## 策略");
+  lines.push(plan.strategy.trim().length > 0 ? plan.strategy.trim() : "未提供策略。");
   lines.push("");
-  lines.push("## Analysis");
-  lines.push(plan.analysis.trim().length > 0 ? plan.analysis.trim() : "No analysis provided.");
+  lines.push("## 分析");
+  lines.push(plan.analysis.trim().length > 0 ? plan.analysis.trim() : "未提供分析。");
   lines.push("");
-  lines.push("## Tasks");
+  lines.push("## 任务");
 
   if (plan.tasks.length === 0) {
-    lines.push("1. (No tasks)");
+    lines.push("1. (无任务)");
   } else {
     for (let index = 0; index < plan.tasks.length; index += 1) {
       const task = plan.tasks[index];
       lines.push(
-        `${index + 1}. [ ] ${task.title} — role: ${task.agentRole}, deps: ${task.dependencies.join(",") || "none"}, cost: ${task.estimatedCostCents}c, timeout: ${task.timeoutMs}ms`,
+        `${index + 1}. [ ] ${task.title} — 角色：${task.agentRole}，依赖：${task.dependencies.join(",") || "无"}，成本：${task.estimatedCostCents}c，超时：${task.timeoutMs}ms`,
       );
       lines.push(`   ${task.description}`);
     }
   }
 
   lines.push("");
-  lines.push("## Risks");
+  lines.push("## 风险");
   if (plan.risks.length === 0) {
-    lines.push("- none");
+    lines.push("- 无");
   } else {
     for (const risk of plan.risks) {
       lines.push(`- ${risk}`);

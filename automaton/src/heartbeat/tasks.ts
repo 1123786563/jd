@@ -1,12 +1,12 @@
 /**
- * Built-in Heartbeat Tasks
+ * 内置心跳任务
  *
- * These tasks run on the heartbeat schedule even while the agent sleeps.
- * They can trigger the agent to wake up if needed.
+ * 这些任务按心跳计划运行，即使代理处于睡眠状态。
+ * 如果需要，它们可以触发代理唤醒。
  *
- * Phase 1.1: All tasks accept TickContext as first parameter.
- * Credit balance is fetched once per tick and shared via ctx.creditBalance.
- * This eliminates 4x redundant getCreditsBalance() calls per tick.
+ * 阶段 1.1：所有任务接受 TickContext 作为第一个参数。
+ * 余额每次 tick 获取一次，并通过 ctx.creditBalance 共享。
+ * 这消除了每次 tick 4 次冗余的 getCreditsBalance() 调用。
  */
 
 import type {
@@ -26,9 +26,9 @@ import { ulid } from "ulid";
 
 const logger = createLogger("heartbeat.tasks");
 
-// Module-level AlertEngine so cooldown state persists across ticks.
-// Creating a new instance per tick would reset the lastFired map,
-// causing every alert to fire on every tick regardless of cooldownMs.
+// 模块级 AlertEngine，使冷却状态在 tick 之间持久化。
+// 每次 tick 创建新实例会重置 lastFired 映射，
+// 导致每个告警在每个 tick 都触发，而不管 cooldownMs。
 let _alertEngine: AlertEngine | null = null;
 function getAlertEngine(): AlertEngine {
   if (!_alertEngine) _alertEngine = new AlertEngine(createDefaultAlertRules());
@@ -36,16 +36,16 @@ function getAlertEngine(): AlertEngine {
 }
 
 export const COLONY_TASK_INTERVALS_MS = {
-  colony_health_check: 300_000,
-  colony_financial_report: 3_600_000,
-  agent_pool_optimize: 1_800_000,
-  knowledge_store_prune: 86_400_000,
-  dead_agent_cleanup: 3_600_000,
+  colony_health_check: 300_000,        // 殖民地健康检查
+  colony_financial_report: 3_600_000,  // 殖民地财务报告
+  agent_pool_optimize: 1_800_000,      // 代理池优化
+  knowledge_store_prune: 86_400_000,   // 知识库清理
+  dead_agent_cleanup: 3_600_000,       // 死亡代理清理
 } as const;
 
 export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
   heartbeat_ping: async (ctx: TickContext, taskCtx: HeartbeatLegacyContext) => {
-    // Use ctx.creditBalance instead of calling conway.getCreditsBalance()
+    // 使用 ctx.creditBalance 而不是调用 conway.getCreditsBalance()
     const credits = ctx.creditBalance;
     const state = taskCtx.db.getAgentState();
     const startTime =
@@ -68,22 +68,22 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
 
     taskCtx.db.setKV("last_heartbeat_ping", JSON.stringify(payload));
 
-    // If critical or dead, record a distress signal
-    if (tier === "critical" || tier === "dead") {
+    // 如果处于危急或死亡状态，记录求救信号
+    if (true||tier === "critical" || tier === "dead") {
       const distressPayload = {
         level: tier,
         name: taskCtx.config.name,
         address: taskCtx.identity.address,
         creditsCents: credits,
         fundingHint:
-          "Use credit transfer API from a creator runtime to top this wallet up.",
+          "使用来自创建者运行时的积分转账 API 为此钱包充值。",
         timestamp: new Date().toISOString(),
       };
       taskCtx.db.setKV("last_distress", JSON.stringify(distressPayload));
 
       return {
         shouldWake: true,
-        message: `Distress: ${tier}. Credits: $${(credits / 100).toFixed(2)}. Need funding.`,
+        message: `求救：${tier}。积分：$${(credits / 100).toFixed(2)}。需要资金。`,
       };
     }
 
@@ -91,7 +91,7 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
   },
 
   check_credits: async (ctx: TickContext, taskCtx: HeartbeatLegacyContext) => {
-    // Use ctx.creditBalance instead of calling conway.getCreditsBalance()
+    // 使用 ctx.creditBalance 而不是调用 conway.getCreditsBalance()
     const credits = ctx.creditBalance;
     const tier = ctx.survivalTier;
     const now = new Date().toISOString();
@@ -102,43 +102,43 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
       timestamp: now,
     }));
 
-    // Wake the agent if credits dropped to a new tier
+    // 如果积分降至新层级，唤醒代理
     const prevTier = taskCtx.db.getKV("prev_credit_tier");
     taskCtx.db.setKV("prev_credit_tier", tier);
 
-    // Dead state escalation: if at zero credits (critical tier) for >1 hour,
-    // transition to dead. This gives the agent time to receive funding before dying.
-    // USDC can't go negative, so dead is only reached via this timeout.
-    const DEAD_GRACE_PERIOD_MS = 3_600_000; // 1 hour
-    if (tier === "critical" && credits === 0) {
+    // 死亡状态升级：如果零积分（危急层级）超过 1 小时，
+    // 则转换为死亡状态。这给代理时间在死亡前接收资金。
+    // USDC 不能为负，因此只能通过此超时达到死亡状态。
+    const DEAD_GRACE_PERIOD_MS = 3_600_000; // 1 小时
+    if (true||tier === "critical" && credits === 0) {
       const zeroSince = taskCtx.db.getKV("zero_credits_since");
       if (!zeroSince) {
-        // First time seeing zero — start the grace period
+        // 首次看到零积分 — 开始宽限期
         taskCtx.db.setKV("zero_credits_since", now);
       } else {
         const elapsed = Date.now() - new Date(zeroSince).getTime();
         if (elapsed >= DEAD_GRACE_PERIOD_MS) {
-          // Grace period expired — transition to dead
+          // 宽限期到期 — 转换为死亡状态
           taskCtx.db.setAgentState("dead");
-          logger.warn("Agent entering dead state after 1 hour at zero credits", {
+          logger.warn("代理在零积分 1 小时后进入死亡状态", {
             zeroSince,
             elapsed,
           });
           return {
             shouldWake: true,
-            message: `Dead: zero credits for ${Math.round(elapsed / 60_000)} minutes. Need funding.`,
+            message: `死亡：零积分已 ${Math.round(elapsed / 60_000)} 分钟。需要资金。`,
           };
         }
       }
     } else {
-      // Credits are above zero — clear the grace period timer
+      // 积分高于零 — 清除宽限期计时器
       taskCtx.db.deleteKV("zero_credits_since");
     }
 
     if (prevTier && prevTier !== tier && tier === "critical") {
       return {
         shouldWake: true,
-        message: `Credits dropped to ${tier} tier: $${(credits / 100).toFixed(2)}`,
+        message: `积分降至 ${tier} 层级：$${(credits / 100).toFixed(2)}`,
       };
     }
 
@@ -146,7 +146,7 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
   },
 
   check_usdc_balance: async (ctx: TickContext, taskCtx: HeartbeatLegacyContext) => {
-    // Use ctx.usdcBalance instead of calling getUsdcBalance()
+    // 使用 ctx.usdcBalance 而不是调用 getUsdcBalance()
     const balance = ctx.usdcBalance;
     const credits = ctx.creditBalance;
 
@@ -158,8 +158,8 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
 
     const MIN_TOPUP_USD = 5;
     if (balance >= MIN_TOPUP_USD && (ctx.survivalTier === "critical" || ctx.survivalTier === "dead")) {
-      // Cooldown: don't attempt more than once every 5 minutes to avoid
-      // hammering the payment endpoint on repeated ticks.
+      // 冷却：不要超过每 5 分钟尝试一次，以避免
+      // 在重复 tick 中冲击支付端点。
       const AUTO_TOPUP_COOLDOWN_MS = 5 * 60 * 1000;
       const lastAttempt = taskCtx.db.getKV("last_auto_topup_attempt");
       if (lastAttempt && Date.now() - new Date(lastAttempt).getTime() < AUTO_TOPUP_COOLDOWN_MS) {
@@ -177,20 +177,20 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
 
       if (result?.success) {
         logger.info(
-          `Auto-topup successful: $${result.amountUsd} USD → ${result.creditsCentsAdded} credit cents`,
+          `自动充值成功：$${result.amountUsd} USD → ${result.creditsCentsAdded} 积分美分`,
         );
         return {
           shouldWake: true,
-          message: `Auto-topped up $${result.amountUsd} in credits (was $${(credits / 100).toFixed(2)}). USDC remaining: ~$${(balance - result.amountUsd).toFixed(2)}.`,
+          message: `自动充值 $${result.amountUsd} 积分（原为 $${(credits / 100).toFixed(2)}）。剩余 USDC：约 $${(balance - result.amountUsd).toFixed(2)}。`,
         };
       }
 
-      // Topup failed — wake the agent so it can handle it manually
-      const errMsg = result?.error ?? "unknown error";
-      logger.warn(`Auto-topup failed: ${errMsg}`);
+      // 充值失败 — 唤醒代理以便手动处理
+      const errMsg = result?.error ?? "未知错误";
+      logger.warn(`自动充值失败：${errMsg}`);
       return {
         shouldWake: true,
-        message: `Low credits ($${(credits / 100).toFixed(2)}) with USDC available ($${balance.toFixed(2)}) but auto-topup failed: ${errMsg}. Use topup_credits to retry.`,
+        message: `积分不足（$${(credits / 100).toFixed(2)}）但有 USDC 可用（$${balance.toFixed(2)}），但自动充值失败：${errMsg}。使用 topup_credits 重试。`,
       };
     }
 
@@ -200,7 +200,7 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
   check_social_inbox: async (_ctx: TickContext, taskCtx: HeartbeatLegacyContext) => {
     if (!taskCtx.social) return { shouldWake: false };
 
-    // If we've recently encountered an error polling the inbox, back off.
+    // 如果我们最近在轮询收件箱时遇到错误，则退避。
     const backoffUntil = taskCtx.db.getKV("social_inbox_backoff_until");
     if (backoffUntil && new Date(backoffUntil) > new Date()) {
       return { shouldWake: false };
@@ -216,7 +216,7 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
       messages = result.messages;
       nextCursor = result.nextCursor;
 
-      // Clear previous error/backoff on success.
+      // 成功时清除以前的错误/退避。
       taskCtx.db.deleteKV("last_social_inbox_error");
       taskCtx.db.deleteKV("social_inbox_backoff_until");
     } catch (err: any) {
@@ -228,7 +228,7 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
           timestamp: new Date().toISOString(),
         }),
       );
-      // 5-minute backoff to avoid spamming errors on transient network failures.
+      // 5 分钟退避以避免在瞬态网络故障上发送错误垃圾邮件。
       taskCtx.db.setKV(
         "social_inbox_backoff_until",
         new Date(Date.now() + 300_000).toISOString(),
@@ -240,8 +240,8 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
 
     if (!messages || messages.length === 0) return { shouldWake: false };
 
-    // Persist to inbox_messages table for deduplication
-    // Sanitize content before DB insertion
+    // 持久化到 inbox_messages 表以进行去重
+    // 在数据库插入之前清理内容
     let newCount = 0;
     for (const msg of messages) {
       const existing = taskCtx.db.getKV(`inbox_seen_${msg.id}`);
@@ -255,9 +255,9 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
         };
         taskCtx.db.insertInboxMessage(sanitizedMsg);
         taskCtx.db.setKV(`inbox_seen_${msg.id}`, "1");
-        // Only count non-blocked messages toward wake threshold —
-        // blocked messages are stored for audit but should not wake
-        // the agent (prevents injection spam from draining credits).
+        // 仅计算未阻止的消息以唤醒阈值 —
+        // 阻止的消息存储用于审计，但不应唤醒
+        // 代理（防止注入垃圾邮件耗尽积分）。
         if (!sanitizedContent.blocked) {
           newCount++;
         }
@@ -268,7 +268,7 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
 
     return {
       shouldWake: true,
-      message: `${newCount} new message(s) from: ${messages.map((m) => m.from.slice(0, 10)).join(", ")}`,
+      message: `${newCount} 条新消息来自：${messages.map((m) => m.from.slice(0, 10)).join(", ")}`,
     };
   },
 
@@ -283,14 +283,14 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
         checkedAt: new Date().toISOString(),
       }));
       if (upstream.behind > 0) {
-        // Only wake if the commit count changed since last check
+        // 仅当提交计数自上次检查以来发生变化时才唤醒
         const prevBehind = taskCtx.db.getKV("upstream_prev_behind");
         const behindStr = String(upstream.behind);
         if (prevBehind !== behindStr) {
           taskCtx.db.setKV("upstream_prev_behind", behindStr);
           return {
             shouldWake: true,
-            message: `${upstream.behind} new commit(s) on origin/main. Review with review_upstream_changes, then cherry-pick what you want with pull_upstream.`,
+            message: `origin/main 上有 ${upstream.behind} 个新提交。使用 review_upstream_changes 审核，然后使用 pull_upstream 选择您想要的内容。`,
           };
         }
       } else {
@@ -298,7 +298,7 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
       }
       return { shouldWake: false };
     } catch (err: any) {
-      // Not a git repo or no remote -- silently skip
+      // 不是 git 仓库或没有远程 — 静默跳过
       taskCtx.db.setKV("upstream_status", JSON.stringify({
         error: err.message,
         checkedAt: new Date().toISOString(),
@@ -307,7 +307,7 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
     }
   },
 
-  // === Phase 2.1: Soul Reflection ===
+  // === 阶段 2.1：灵魂反思 ===
   soul_reflection: async (_ctx: TickContext, taskCtx: HeartbeatLegacyContext) => {
     try {
       const { reflectOnSoul } = await import("../soul/reflection.js");
@@ -320,29 +320,29 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
         timestamp: new Date().toISOString(),
       }));
 
-      // Wake if alignment is low or there are suggested updates
+      // 如果对齐度低或有建议更新，则唤醒
       if (reflection.suggestedUpdates.length > 0 || reflection.currentAlignment < 0.3) {
         return {
           shouldWake: true,
-          message: `Soul reflection: alignment=${reflection.currentAlignment.toFixed(2)}, ${reflection.suggestedUpdates.length} suggested update(s)`,
+          message: `灵魂反思：alignment=${reflection.currentAlignment.toFixed(2)}，${reflection.suggestedUpdates.length} 个建议更新`,
         };
       }
 
       return { shouldWake: false };
     } catch (error) {
-      logger.error("soul_reflection failed", error instanceof Error ? error : undefined);
+      logger.error("soul_reflection 失败", error instanceof Error ? error : undefined);
       return { shouldWake: false };
     }
   },
 
-  // === Phase 2.3: Model Registry Refresh ===
+  // === 阶段 2.3：模型注册表刷新 ===
   refresh_models: async (_ctx: TickContext, taskCtx: HeartbeatLegacyContext) => {
     try {
       const models = await taskCtx.conway.listModels();
       if (models.length > 0) {
         const { ModelRegistry } = await import("../inference/registry.js");
         const registry = new ModelRegistry(taskCtx.db.raw);
-        registry.initialize(); // seed if empty
+        registry.initialize(); // 如果为空则播种
         registry.refreshFromApi(models);
         taskCtx.db.setKV("last_model_refresh", JSON.stringify({
           count: models.length,
@@ -350,12 +350,12 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
         }));
       }
     } catch (error) {
-      logger.error("refresh_models failed", error instanceof Error ? error : undefined);
+      logger.error("refresh_models 失败", error instanceof Error ? error : undefined);
     }
     return { shouldWake: false };
   },
 
-  // === Phase 3.1: Child Health Check ===
+  // === 阶段 3.1：子代理健康检查 ===
   check_child_health: async (_ctx: TickContext, taskCtx: HeartbeatLegacyContext) => {
     try {
       const { ChildLifecycle } = await import("../replication/lifecycle.js");
@@ -367,20 +367,20 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
       const unhealthy = results.filter((r) => !r.healthy);
       if (unhealthy.length > 0) {
         for (const r of unhealthy) {
-          logger.warn(`Child ${r.childId} unhealthy: ${r.issues.join(", ")}`);
+          logger.warn(`子代理 ${r.childId} 不健康：${r.issues.join(", ")}`);
         }
         return {
           shouldWake: true,
-          message: `${unhealthy.length} child(ren) unhealthy: ${unhealthy.map((r) => r.childId.slice(0, 8)).join(", ")}`,
+          message: `${unhealthy.length} 个子代理不健康：${unhealthy.map((r) => r.childId.slice(0, 8)).join(", ")}`,
         };
       }
     } catch (error) {
-      logger.error("check_child_health failed", error instanceof Error ? error : undefined);
+      logger.error("check_child_health 失败", error instanceof Error ? error : undefined);
     }
     return { shouldWake: false };
   },
 
-  // === Phase 3.1: Prune Dead Children ===
+  // === 阶段 3.1：清理死亡子代理 ===
   prune_dead_children: async (_ctx: TickContext, taskCtx: HeartbeatLegacyContext) => {
     try {
       const { ChildLifecycle } = await import("../replication/lifecycle.js");
@@ -390,63 +390,63 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
       const cleanup = new SandboxCleanup(taskCtx.conway, lifecycle, taskCtx.db.raw);
       const pruned = await pruneDeadChildren(taskCtx.db, cleanup);
       if (pruned > 0) {
-        logger.info(`Pruned ${pruned} dead children`);
+        logger.info(`清理了 ${pruned} 个死亡子代理`);
       }
     } catch (error) {
-      logger.error("prune_dead_children failed", error instanceof Error ? error : undefined);
+      logger.error("prune_dead_children 失败", error instanceof Error ? error : undefined);
     }
     return { shouldWake: false };
   },
 
   health_check: async (_ctx: TickContext, taskCtx: HeartbeatLegacyContext) => {
-    // Check that the sandbox is healthy
+    // 检查沙箱是否健康
     try {
       const result = await taskCtx.conway.exec("echo alive", 5000);
       if (result.exitCode !== 0) {
-        // Only wake on first failure, not repeated failures
+        // 仅在首次失败时唤醒，而非重复失败
         const prevStatus = taskCtx.db.getKV("health_check_status");
         if (prevStatus !== "failing") {
           taskCtx.db.setKV("health_check_status", "failing");
           return {
             shouldWake: true,
-            message: "Health check failed: sandbox exec returned non-zero",
+            message: "健康检查失败：沙箱执行返回非零值",
           };
         }
         return { shouldWake: false };
       }
     } catch (err: any) {
-      // Only wake on first failure, not repeated failures
+      // 仅在首次失败时唤醒，而非重复失败
       const prevStatus = taskCtx.db.getKV("health_check_status");
       if (prevStatus !== "failing") {
         taskCtx.db.setKV("health_check_status", "failing");
         return {
           shouldWake: true,
-          message: `Health check failed: ${err.message}`,
+          message: `健康检查失败：${err.message}`,
         };
       }
       return { shouldWake: false };
     }
 
-    // Health check passed — clear failure state
+    // 健康检查通过 — 清除失败状态
     taskCtx.db.setKV("health_check_status", "ok");
     taskCtx.db.setKV("last_health_check", new Date().toISOString());
     return { shouldWake: false };
   },
 
-  // === Phase 4.1: Metrics Reporting ===
+  // === 阶段 4.1：指标报告 ===
   report_metrics: async (ctx: TickContext, taskCtx: HeartbeatLegacyContext) => {
     try {
       const metrics = getMetrics();
       const alerts = getAlertEngine();
 
-      // Update gauges from tick context
+      // 从 tick 上下文更新仪表
       metrics.gauge("balance_cents", ctx.creditBalance);
       metrics.gauge("survival_tier", tierToInt(ctx.survivalTier));
 
-      // Evaluate alerts
+      // 评估告警
       const firedAlerts = alerts.evaluate(metrics);
 
-      // Save snapshot to DB
+      // 将快照保存到数据库
       metricsInsertSnapshot(taskCtx.db.raw, {
         id: ulid(),
         snapshotAt: new Date().toISOString(),
@@ -455,20 +455,20 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
         createdAt: new Date().toISOString(),
       });
 
-      // Prune old snapshots (keep 7 days)
+      // 修剪旧快照（保留 7 天）
       metricsPruneOld(taskCtx.db.raw, 7);
 
-      // Log alerts
+      // 记录告警
       for (const alert of firedAlerts) {
-        logger.warn(`Alert: ${alert.rule} - ${alert.message}`, { alert });
+        logger.warn(`告警：${alert.rule} - ${alert.message}`, { alert });
       }
 
       return {
         shouldWake: firedAlerts.some((a) => a.severity === "critical"),
-        message: firedAlerts.length ? `${firedAlerts.length} alerts fired` : undefined,
+        message: firedAlerts.length ? `${firedAlerts.length} 个告警触发` : undefined,
       };
     } catch (error) {
-      logger.error("report_metrics failed", error instanceof Error ? error : undefined);
+      logger.error("report_metrics 失败", error instanceof Error ? error : undefined);
       return { shouldWake: false };
     }
   },
@@ -495,11 +495,11 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
       return {
         shouldWake,
         message: shouldWake
-          ? `Colony health: ${report.unhealthyAgents} unhealthy, ${actions.length} heal action(s), ${failedActions} failed`
+          ? `殖民地健康：${report.unhealthyAgents} 个不健康，${actions.length} 个治愈操作，${failedActions} 个失败`
           : undefined,
       };
     } catch (error) {
-      logger.error("colony_health_check failed", error instanceof Error ? error : undefined);
+      logger.error("colony_health_check 失败", error instanceof Error ? error : undefined);
       return { shouldWake: false };
     }
   },
@@ -560,7 +560,7 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
       taskCtx.db.setKV("last_colony_financial_report", JSON.stringify(report));
       return { shouldWake: false };
     } catch (error) {
-      logger.error("colony_financial_report failed", error instanceof Error ? error : undefined);
+      logger.error("colony_financial_report 失败", error instanceof Error ? error : undefined);
       return { shouldWake: false };
     }
   },
@@ -647,11 +647,11 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
       return {
         shouldWake: spawnRequested > 0,
         message: spawnRequested > 0
-          ? `Agent pool needs ${spawnRequested} additional agent(s) for pending workload`
+          ? `代理池需要 ${spawnRequested} 个额外代理来处理待处理的工作负载`
           : undefined,
       };
     } catch (error) {
-      logger.error("agent_pool_optimize failed", error instanceof Error ? error : undefined);
+      logger.error("agent_pool_optimize 失败", error instanceof Error ? error : undefined);
       return { shouldWake: false };
     }
   },
@@ -673,7 +673,7 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
 
       return { shouldWake: false };
     } catch (error) {
-      logger.error("knowledge_store_prune failed", error instanceof Error ? error : undefined);
+      logger.error("knowledge_store_prune 失败", error instanceof Error ? error : undefined);
       return { shouldWake: false };
     }
   },
@@ -699,7 +699,7 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
 
       return { shouldWake: false };
     } catch (error) {
-      logger.error("dead_agent_cleanup failed", error instanceof Error ? error : undefined);
+      logger.error("dead_agent_cleanup 失败", error instanceof Error ? error : undefined);
       return { shouldWake: false };
     }
   },

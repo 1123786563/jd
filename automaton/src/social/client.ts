@@ -1,11 +1,11 @@
 /**
- * Social Client Factory
+ * 社交客户端工厂
  *
- * Creates a SocialClient for the automaton runtime.
- * Self-contained: uses viem for signing and fetch for HTTP.
+ * 为 Automaton 运行时创建 SocialClient。
+ * 自包含：使用 viem 进行签名，使用 fetch 进行 HTTP 请求。
  *
- * Phase 3.2: Hardened with HTTPS enforcement, shared signing,
- * request timeouts, replay protection, and rate limiting.
+ * Phase 3.2: 通过 HTTPS 强制、共享签名、请求超时、
+ * 重放保护和速率限制进行加固。
  */
 
 import type { PrivateKeyAccount } from "viem";
@@ -16,32 +16,32 @@ import { validateRelayUrl, validateMessage } from "./validation.js";
 import { createLogger } from "../observability/logger.js";
 const logger = createLogger("social");
 
-// Request timeout for all fetch calls (30 seconds)
+// 所有 fetch 调用的请求超时（30 秒）
 const REQUEST_TIMEOUT_MS = 30_000;
 
 /**
- * Create a SocialClient wired to the agent's wallet.
+ * 创建连接到 Agent 钱包的 SocialClient。
  *
- * @throws if relayUrl is not HTTPS
+ * @throws 如果 relayUrl 不是 HTTPS
  */
 export function createSocialClient(
   relayUrl: string,
   account: PrivateKeyAccount,
   db?: import("better-sqlite3").Database,
 ): SocialClientInterface {
-  // Phase 3.2: Validate relay URL as HTTPS
+  // Phase 3.2: 验证中继 URL 是否为 HTTPS
   validateRelayUrl(relayUrl);
 
   const baseUrl = relayUrl.replace(/\/$/, "");
   const httpClient = new ResilientHttpClient();
 
-  // Rate limiting state: track outbound message timestamps
+  // 速率限制状态：跟踪出站消息时间戳
   const outboundTimestamps: number[] = [];
 
   function checkRateLimit(): void {
     const now = Date.now();
     const oneHourAgo = now - 3_600_000;
-    // Prune old timestamps
+    // 清理旧时间戳
     while (outboundTimestamps.length > 0 && outboundTimestamps[0]! < oneHourAgo) {
       outboundTimestamps.shift();
     }
@@ -60,9 +60,9 @@ export function createSocialClient(
           "SELECT 1 FROM heartbeat_dedup WHERE dedup_key = ? AND expires_at >= datetime('now')",
         )
         .get(`social:nonce:${nonce}`);
-      if (row) return true; // Already seen this nonce
+      if (row) return true; // 已经看到过这个 nonce
 
-      // Insert nonce with 5 min TTL
+      // 插入具有 5 分钟 TTL 的 nonce
       const expiresAt = new Date(Date.now() + MESSAGE_LIMITS.replayWindowMs).toISOString();
       db.prepare(
         "INSERT OR IGNORE INTO heartbeat_dedup (dedup_key, task_name, expires_at) VALUES (?, ?, ?)",
@@ -80,21 +80,21 @@ export function createSocialClient(
       content: string,
       replyTo?: string,
     ): Promise<{ id: string }> => {
-      // Phase 3.2: Rate limit check
+      // Phase 3.2: 速率限制检查
       checkRateLimit();
 
-      // Track outbound attempt for rate limiting BEFORE the network call.
-      // Counting attempts (not just successes) prevents hammering the relay
-      // with unlimited retries when the server returns errors.
+      // 在网络调用之前跟踪出站尝试以进行速率限制。
+      // 计算尝试（不仅仅是成功）可以防止在服务器返回错误时
+      // 用无限重试攻击中继。
       outboundTimestamps.push(Date.now());
 
-      // Phase 3.2: Validate message before sending
+      // Phase 3.2: 发送前验证消息
       const validation = validateMessage({ from: account.address, to, content });
       if (!validation.valid) {
         throw new Error(`Message validation failed: ${validation.errors.join("; ")}`);
       }
 
-      // Phase 3.2: Use shared signing module
+      // Phase 3.2: 使用共享签名模块
       const payload = await signSendPayload(account, to, content, replyTo);
 
       const res = await httpClient.request(`${baseUrl}/v1/messages`, {
@@ -119,7 +119,7 @@ export function createSocialClient(
       cursor?: string,
       limit?: number,
     ): Promise<{ messages: InboxMessage[]; nextCursor?: string }> => {
-      // Phase 3.2: Use shared signing module
+      // Phase 3.2: 使用共享签名模块
       const pollAuth = await signPollPayload(account);
 
       const res = await httpClient.request(`${baseUrl}/v1/messages/poll`, {
@@ -155,7 +155,7 @@ export function createSocialClient(
         next_cursor?: string;
       };
 
-      // Phase 3.2: Replay protection for inbound messages
+      // Phase 3.2: 入站消息的重放保护
       const filtered = data.messages.filter((m) => {
         if (m.nonce && checkReplayNonce(m.nonce)) {
           logger.warn(`Dropped replayed message: nonce=${m.nonce}`);
@@ -179,7 +179,7 @@ export function createSocialClient(
     },
 
     unreadCount: async (): Promise<number> => {
-      // Phase 3.2: Use shared signing module
+      // Phase 3.2: 使用共享签名模块
       const pollAuth = await signPollPayload(account);
 
       const res = await httpClient.request(`${baseUrl}/v1/messages/count`, {
@@ -192,7 +192,7 @@ export function createSocialClient(
         timeout: REQUEST_TIMEOUT_MS,
       });
 
-      // Phase 3.2: THROW on error instead of returning 0 (S-P1-7)
+      // Phase 3.2: 错误时抛出异常而不是返回 0 (S-P1-7)
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }));
         throw new Error(

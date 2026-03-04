@@ -120,7 +120,7 @@ describe("orchestration/messaging", () => {
   });
 
   describe("LocalDBTransport", () => {
-    it("deliver writes to inbox_messages", async () => {
+    it("deliver 将消息写入 inbox_messages", async () => {
       const ctx = createTestDb({ address: "0xorigin" });
       raw = ctx.raw;
       const transport = new LocalDBTransport(ctx.db);
@@ -138,7 +138,7 @@ describe("orchestration/messaging", () => {
       expect(row?.status).toBe("received");
     });
 
-    it("getRecipients returns known child addresses", () => {
+    it("getRecipients 返回已知的子地址", () => {
       const ctx = createTestDb({ recipients: ["0x1", "0x2"] });
       raw = ctx.raw;
       const transport = new LocalDBTransport(ctx.db);
@@ -148,7 +148,7 @@ describe("orchestration/messaging", () => {
   });
 
   describe("ColonyMessaging.send", () => {
-    it("sends successfully on first attempt", async () => {
+    it("首次发送成功", async () => {
       const ctx = createTestDb();
       raw = ctx.raw;
       const transport: MessageTransport = {
@@ -165,7 +165,7 @@ describe("orchestration/messaging", () => {
       expect(events[0].content).toContain("message_sent");
     });
 
-    it("retries on transient transport failure", async () => {
+    it("传输层故障时重试", async () => {
       vi.useFakeTimers();
       const ctx = createTestDb();
       raw = ctx.raw;
@@ -188,7 +188,7 @@ describe("orchestration/messaging", () => {
       expect(transport.deliver).toHaveBeenCalledTimes(3);
     });
 
-    it("throws after retries are exhausted", async () => {
+    it("重试次数耗尽后抛出异常", async () => {
       vi.useFakeTimers();
       const ctx = createTestDb();
       raw = ctx.raw;
@@ -209,7 +209,7 @@ describe("orchestration/messaging", () => {
       expect(transport.deliver).toHaveBeenCalledTimes(4);
     });
 
-    it("rejects malformed outbound message", async () => {
+    it("拒绝格式错误的外发消息", async () => {
       const ctx = createTestDb();
       raw = ctx.raw;
 
@@ -237,7 +237,7 @@ describe("orchestration/messaging", () => {
       ["shutdown_request", "handleShutdownRequest"],
       ["peer_query", "handlePeerQuery"],
       ["peer_response", "handlePeerResponse"],
-    ])("routes %s messages", async (type, handler) => {
+    ])("路由 %s 消息", async (type, handler) => {
       const ctx = createTestDb();
       raw = ctx.raw;
       const messaging = new ColonyMessaging({ deliver: vi.fn(), getRecipients: () => [] }, ctx.db);
@@ -254,7 +254,7 @@ describe("orchestration/messaging", () => {
       expect(processed[0].handledBy).toBe(handler);
     });
 
-    it("parses envelope payloads", async () => {
+    it("解析信封载荷", async () => {
       const ctx = createTestDb();
       raw = ctx.raw;
       const messaging = new ColonyMessaging({ deliver: vi.fn(), getRecipients: () => [] }, ctx.db);
@@ -275,7 +275,7 @@ describe("orchestration/messaging", () => {
       expect(processed[0].success).toBe(true);
     });
 
-    it("orders processing by priority (critical first)", async () => {
+    it("按优先级排序处理（优先处理紧急消息）", async () => {
       const ctx = createTestDb();
       raw = ctx.raw;
       const messaging = new ColonyMessaging({ deliver: vi.fn(), getRecipients: () => [] }, ctx.db);
@@ -295,7 +295,7 @@ describe("orchestration/messaging", () => {
       expect(processed.map((entry) => entry.message.id)).toEqual(["critical", "low"]);
     });
 
-    it("uses createdAt as tiebreaker for same priority", async () => {
+    it("优先级相同时使用 createdAt 作为排序依据", async () => {
       const ctx = createTestDb();
       raw = ctx.raw;
       const messaging = new ColonyMessaging({ deliver: vi.fn(), getRecipients: () => [] }, ctx.db);
@@ -315,7 +315,7 @@ describe("orchestration/messaging", () => {
       expect(processed.map((entry) => entry.message.id)).toEqual(["early", "late"]);
     });
 
-    it("rejects malformed JSON", async () => {
+    it("拒绝格式错误的 JSON", async () => {
       const ctx = createTestDb();
       raw = ctx.raw;
       const messaging = new ColonyMessaging({ deliver: vi.fn(), getRecipients: () => [] }, ctx.db);
@@ -329,7 +329,7 @@ describe("orchestration/messaging", () => {
       expect(processed[0].error).toContain("valid JSON");
     });
 
-    it("rejects invalid message shapes", async () => {
+    it("拒绝无效的消息格式", async () => {
       const ctx = createTestDb();
       raw = ctx.raw;
       const messaging = new ColonyMessaging({ deliver: vi.fn(), getRecipients: () => [] }, ctx.db);
@@ -345,7 +345,7 @@ describe("orchestration/messaging", () => {
       expect(processed[0].error).toContain("invalid message.priority");
     });
 
-    it("rejects expired messages", async () => {
+    it("拒绝已过期的消息", async () => {
       const ctx = createTestDb();
       raw = ctx.raw;
       const messaging = new ColonyMessaging({ deliver: vi.fn(), getRecipients: () => [] }, ctx.db);
@@ -364,7 +364,7 @@ describe("orchestration/messaging", () => {
       expect(processed[0].error).toContain("expired");
     });
 
-    it("marks inbox rows processed even when malformed", async () => {
+    it("即使格式错误也标记收件箱行为已处理", async () => {
       const ctx = createTestDb();
       raw = ctx.raw;
       const messaging = new ColonyMessaging({ deliver: vi.fn(), getRecipients: () => [] }, ctx.db);
@@ -379,7 +379,7 @@ describe("orchestration/messaging", () => {
       expect(row.processed_at).not.toBeNull();
     });
 
-    it("records handler failure and continues", async () => {
+    it("记录处理器失败并继续", async () => {
       const ctx = createTestDb();
       raw = ctx.raw;
       const messaging = new ColonyMessaging({ deliver: vi.fn(), getRecipients: () => [] }, ctx.db);
@@ -404,7 +404,7 @@ describe("orchestration/messaging", () => {
   });
 
   describe("broadcast and message construction", () => {
-    it("broadcast sends to all recipients", async () => {
+    it("广播发送给所有接收者", async () => {
       const ctx = createTestDb({ recipients: ["0xa", "0xb", "0xc"], address: "0xself" });
       raw = ctx.raw;
 
@@ -425,7 +425,7 @@ describe("orchestration/messaging", () => {
       expect(envelopes.every((entry) => entry.message.priority === "critical")).toBe(true);
     });
 
-    it("broadcast is a no-op when there are no recipients", async () => {
+    it("没有接收者时广播为空操作", async () => {
       const ctx = createTestDb();
       raw = ctx.raw;
       const transport: MessageTransport = {
@@ -438,7 +438,7 @@ describe("orchestration/messaging", () => {
       expect(transport.deliver).not.toHaveBeenCalled();
     });
 
-    it("createMessage fills defaults", () => {
+    it("createMessage 填充默认值", () => {
       const ctx = createTestDb({ address: "0xcreator" });
       raw = ctx.raw;
       const messaging = new ColonyMessaging({ deliver: vi.fn(), getRecipients: () => [] }, ctx.db);
@@ -457,7 +457,7 @@ describe("orchestration/messaging", () => {
       expect(msg.expiresAt).toBeNull();
     });
 
-    it("createMessage respects explicit overrides", () => {
+    it("createMessage 尊重显式覆盖", () => {
       const ctx = createTestDb({ address: "0xcreator" });
       raw = ctx.raw;
       const messaging = new ColonyMessaging({ deliver: vi.fn(), getRecipients: () => [] }, ctx.db);

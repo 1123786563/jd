@@ -1,8 +1,8 @@
 /**
- * Ollama Model Discovery
+ * Ollama 模型发现
  *
- * Fetches available models from a local Ollama instance and registers
- * them in the model registry so they can be used for inference.
+ * 从本地 Ollama 实例获取可用模型并将其注册到模型注册表中，
+ * 以便它们可用于推理。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -29,11 +29,11 @@ interface OllamaTagsResponse {
 }
 
 /**
- * Fetch all available models from Ollama's /api/tags endpoint
- * and upsert them into the model registry.
+ * 从 Ollama 的 /api/tags 端点获取所有可用模型
+ * 并将它们插入或更新到模型注册表中。
  *
- * Returns the list of discovered model IDs, or an empty array if
- * Ollama is unreachable (treated as a soft failure).
+ * 返回发现的模型 ID 列表，如果 Ollama 无法访问则返回空数组
+ * （被视为软故障）。
  */
 export async function discoverOllamaModels(
   baseUrl: string,
@@ -45,17 +45,17 @@ export async function discoverOllamaModels(
   try {
     const resp = await fetch(url, { signal: AbortSignal.timeout(5_000) });
     if (!resp.ok) {
-      logger.warn(`Ollama /api/tags returned ${resp.status} — skipping discovery`);
+      logger.warn(`Ollama /api/tags 返回 ${resp.status} — 跳过发现`);
       return [];
     }
     data = await resp.json() as OllamaTagsResponse;
   } catch (err: any) {
-    logger.warn(`Ollama not reachable at ${baseUrl}: ${err.message}`);
+    logger.warn(`Ollama 在 ${baseUrl} 无法访问：${err.message}`);
     return [];
   }
 
   if (!Array.isArray(data.models)) {
-    logger.warn("Ollama /api/tags response has no models array");
+    logger.warn("Ollama /api/tags 响应没有模型数组");
     return [];
   }
 
@@ -71,13 +71,13 @@ export async function discoverOllamaModels(
       modelId,
       provider: "ollama",
       displayName: formatDisplayName(modelId),
-      // Ollama models are local — no cost
+      // Ollama 模型是本地的 — 无成本
       tierMinimum: existing?.tierMinimum ?? "critical",
       costPer1kInput: 0,
       costPer1kOutput: 0,
       maxTokens: existing?.maxTokens ?? 4096,
       contextWindow: existing?.contextWindow ?? 8192,
-      // Most modern Ollama models support tools; default true
+      // 大多数现代 Ollama 模型支持工具；默认为 true
       supportsTools: existing?.supportsTools ?? true,
       supportsVision: existing?.supportsVision ?? false,
       parameterStyle: "max_tokens",
@@ -91,7 +91,7 @@ export async function discoverOllamaModels(
   }
 
   if (registered.length > 0) {
-    logger.info(`Ollama: registered ${registered.length} model(s): ${registered.join(", ")}`);
+    logger.info(`Ollama: 已注册 ${registered.length} 个模型：${registered.join(", ")}`);
   }
 
   return registered;

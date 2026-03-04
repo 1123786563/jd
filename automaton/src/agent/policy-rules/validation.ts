@@ -1,8 +1,8 @@
 /**
- * Input Validation Policy Rules
+ * 输入验证策略规则
  *
- * Validates tool arguments before execution. Catches malformed
- * input before it reaches any shell command or API call.
+ * 在执行前验证工具参数。在到达任何 shell 命令或 API 调用之前
+ * 捕获格式错误的输入。
  */
 
 import type { PolicyRule, PolicyRequest, PolicyRuleResult } from "../../types.js";
@@ -18,12 +18,12 @@ function deny(rule: string, reasonCode: string, humanMessage: string): PolicyRul
 }
 
 /**
- * Validate npm package name format.
+ * 验证 npm 包名称格式。
  */
 function createPackageNameRule(): PolicyRule {
   return {
     id: "validate.package_name",
-    description: "Validate npm package name format",
+    description: "验证 npm 包名称格式",
     priority: 100,
     appliesTo: {
       by: "name",
@@ -37,7 +37,7 @@ function createPackageNameRule(): PolicyRule {
         return deny(
           "validate.package_name",
           "VALIDATION_FAILED",
-          `Invalid package name: "${pkg}". Must match ${PACKAGE_NAME_RE.source}`,
+          `无效的包名称："${pkg}"。必须匹配 ${PACKAGE_NAME_RE.source}`,
         );
       }
       return null;
@@ -46,12 +46,12 @@ function createPackageNameRule(): PolicyRule {
 }
 
 /**
- * Validate skill name format.
+ * 验证技能名称格式。
  */
 function createSkillNameRule(): PolicyRule {
   return {
     id: "validate.skill_name",
-    description: "Validate skill name format (alphanumeric + hyphens only)",
+    description: "验证技能名称格式（仅字母数字和连字符）",
     priority: 100,
     appliesTo: {
       by: "name",
@@ -65,7 +65,7 @@ function createSkillNameRule(): PolicyRule {
         return deny(
           "validate.skill_name",
           "VALIDATION_FAILED",
-          `Invalid skill name: "${name}". Must match ${SKILL_NAME_RE.source}`,
+          `无效的技能名称："${name}"。必须匹配 ${SKILL_NAME_RE.source}`,
         );
       }
       return null;
@@ -74,12 +74,12 @@ function createSkillNameRule(): PolicyRule {
 }
 
 /**
- * Validate git commit hash format.
+ * 验证 git 提交哈希格式。
  */
 function createGitHashRule(): PolicyRule {
   return {
     id: "validate.git_hash",
-    description: "Validate git commit hash format",
+    description: "验证 git 提交哈希格式",
     priority: 100,
     appliesTo: {
       by: "name",
@@ -87,13 +87,13 @@ function createGitHashRule(): PolicyRule {
     },
     evaluate(request: PolicyRequest): PolicyRuleResult | null {
       const commit = request.args.commit as string | undefined;
-      if (commit === undefined) return null; // commit is optional
+      if (commit === undefined) return null; // commit 是可选的
 
       if (!GIT_HASH_RE.test(commit)) {
         return deny(
           "validate.git_hash",
           "VALIDATION_FAILED",
-          `Invalid git hash: "${commit}". Must be 7-40 lowercase hex characters.`,
+          `无效的 git 哈希："${commit}"。必须是 7-40 位小写十六进制字符。`,
         );
       }
       return null;
@@ -102,12 +102,12 @@ function createGitHashRule(): PolicyRule {
 }
 
 /**
- * Validate port number range.
+ * 验证端口号范围。
  */
 function createPortRangeRule(): PolicyRule {
   return {
     id: "validate.port_range",
-    description: "Validate port number is in valid range (1-65535)",
+    description: "验证端口号在有效范围内（1-65535）",
     priority: 100,
     appliesTo: {
       by: "name",
@@ -121,7 +121,7 @@ function createPortRangeRule(): PolicyRule {
         return deny(
           "validate.port_range",
           "VALIDATION_FAILED",
-          `Invalid port: ${port}. Must be integer 1-65535.`,
+          `无效的端口号：${port}。必须是 1-65535 之间的整数。`,
         );
       }
       return null;
@@ -130,12 +130,12 @@ function createPortRangeRule(): PolicyRule {
 }
 
 /**
- * Validate cron expression structure.
+ * 验证 cron 表达式结构。
  */
 function createCronExpressionRule(): PolicyRule {
   return {
     id: "validate.cron_expression",
-    description: "Validate cron expression format",
+    description: "验证 cron 表达式格式",
     priority: 100,
     appliesTo: {
       by: "name",
@@ -149,7 +149,7 @@ function createCronExpressionRule(): PolicyRule {
         return deny(
           "validate.cron_expression",
           "VALIDATION_FAILED",
-          `Invalid cron expression: "${schedule}". Must be 5 space-separated fields.`,
+          `无效的 cron 表达式："${schedule}"。必须是 5 个空格分隔的字段。`,
         );
       }
       return null;
@@ -158,12 +158,12 @@ function createCronExpressionRule(): PolicyRule {
 }
 
 /**
- * Validate Ethereum address format.
+ * 验证以太坊地址格式。
  */
 function createAddressFormatRule(): PolicyRule {
   return {
     id: "validate.address_format",
-    description: "Validate Ethereum address format (0x + 40 hex chars)",
+    description: "验证以太坊地址格式（0x + 40 位十六进制字符）",
     priority: 100,
     appliesTo: {
       by: "name",
@@ -178,7 +178,7 @@ function createAddressFormatRule(): PolicyRule {
         return deny(
           "validate.address_format",
           "VALIDATION_FAILED",
-          `Invalid address format: "${address}". Must be 0x followed by 40 hex characters.`,
+          `无效的地址格式："${address}"。必须是 0x 后跟 40 位十六进制字符。`,
         );
       }
       return null;

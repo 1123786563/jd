@@ -1,10 +1,10 @@
 /**
- * Social Signing Module
+ * 社交签名模块
  *
- * THE SINGLE canonical signing implementation for both runtime + CLI.
- * Uses ECDSA secp256k1 via viem's account.signMessage().
+ * 运行时和 CLI 的唯一规范签名实现。
+ * 使用 viem 的 account.signMessage() 进行 ECDSA secp256k1 签名。
  *
- * Phase 3.2: Social & Registry Hardening (S-P0-1)
+ * Phase 3.2: 社交与注册表加固 (S-P0-1)
  */
 
 import {
@@ -22,9 +22,9 @@ export const MESSAGE_LIMITS = {
 } as const;
 
 /**
- * Sign a send message payload.
+ * 签名发送消息负载。
  *
- * Canonical format: Conway:send:{to_lowercase}:{keccak256(toBytes(content))}:{signed_at_iso}
+ * 规范格式：Conway:send:{to_lowercase}:{keccak256(toBytes(content))}:{signed_at_iso}
  */
 export async function signSendPayload(
   account: PrivateKeyAccount,
@@ -54,9 +54,9 @@ export async function signSendPayload(
 }
 
 /**
- * Sign a poll payload.
+ * 签名轮询负载。
  *
- * Canonical format: Conway:poll:{address_lowercase}:{timestamp_iso}
+ * 规范格式：Conway:poll:{address_lowercase}:{timestamp_iso}
  */
 export async function signPollPayload(
   account: PrivateKeyAccount,

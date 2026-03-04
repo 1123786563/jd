@@ -14,7 +14,7 @@ import {
 import type { ContextUtilization } from "../../memory/context-manager.js";
 
 // ---------------------------------------------------------------------------
-// Mock node:fs so Stage 4 checkpoint writes are no-ops
+// 模拟 node:fs 使阶段4检查点写入为空操作
 // ---------------------------------------------------------------------------
 vi.mock("node:fs", () => ({
   promises: {
@@ -172,7 +172,7 @@ describe("evaluate – utilization thresholds", () => {
 
 describe("execute – stage behaviour", () => {
   it("Stage 1 calls eventStream.compact with 'reference' strategy", async () => {
-    // Provide events whose IDs match the turnIds so resolveBoundary succeeds.
+    // 提供 ID 与 turnId 匹配的事件，以便 resolveBoundary 成功。
     const events = Array.from({ length: 6 }, (_, i) => makeEvent(`t${i}`));
     mockEventStream.getByType.mockImplementation((type: string) =>
       type === "inference" ? events : []

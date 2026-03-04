@@ -1,8 +1,7 @@
 /**
- * Memory System Types
+ * 记忆系统类型
  *
- * Re-exports memory types from types.ts and adds internal types
- * used by the memory subsystem.
+ * 从 types.ts 重新导出记忆类型，并添加记忆子系统使用的内部类型。
  */
 
 export type {
@@ -24,7 +23,7 @@ export { DEFAULT_MEMORY_BUDGET } from "../types.js";
 
 import type { TurnClassification, ToolCallResult } from "../types.js";
 
-// ─── Internal Types ─────────────────────────────────────────────
+// ─── 内部类型 ─────────────────────────────────────────────
 
 export interface TurnClassificationRule {
   pattern: (toolCalls: ToolCallResult[], thinking: string) => boolean;
@@ -32,10 +31,10 @@ export interface TurnClassificationRule {
 }
 
 export interface MemoryIngestionConfig {
-  maxWorkingMemoryEntries: number;
-  episodicRetentionDays: number;
-  semanticMaxEntries: number;
-  enableAutoIngestion: boolean;
+  maxWorkingMemoryEntries: number;    // 工作记忆最大条目数限制
+  episodicRetentionDays: number;       // 情景记忆保留天数
+  semanticMaxEntries: number;          // 语义记忆最大条目数限制
+  enableAutoIngestion: boolean;        // 是否启用自动摄取功能
 }
 
 export const DEFAULT_INGESTION_CONFIG: MemoryIngestionConfig = {
@@ -45,8 +44,9 @@ export const DEFAULT_INGESTION_CONFIG: MemoryIngestionConfig = {
   enableAutoIngestion: true,
 };
 
-// ─── Turn Classification ────────────────────────────────────────
+// ─── 回合分类 ────────────────────────────────────────
 
+// 战略工具集
 const STRATEGIC_TOOLS = new Set([
   "update_genesis_prompt",
   "edit_own_file",
@@ -58,6 +58,7 @@ const STRATEGIC_TOOLS = new Set([
   "update_soul",
 ]);
 
+// 生产力工具集
 const PRODUCTIVE_TOOLS = new Set([
   "exec",
   "write_file",
@@ -75,6 +76,7 @@ const PRODUCTIVE_TOOLS = new Set([
   "set_goal",
 ]);
 
+// 通信工具集
 const COMMUNICATION_TOOLS = new Set([
   "send_message",
   "check_social_inbox",
@@ -82,6 +84,7 @@ const COMMUNICATION_TOOLS = new Set([
   "note_about_agent",
 ]);
 
+// 维护工具集
 const MAINTENANCE_TOOLS = new Set([
   "check_credits",
   "check_usdc_balance",
@@ -102,22 +105,23 @@ const MAINTENANCE_TOOLS = new Set([
   "search_domains",
 ]);
 
+// 错误关键词
 const ERROR_KEYWORDS = ["error", "failed", "exception", "blocked", "denied"];
 
 /**
- * Classify a turn based on its tool calls and thinking content.
- * Rule-based, no inference required.
+ * 根据工具调用和思考内容对回合进行分类。
+ * 基于规则，无需推理。
  */
 export function classifyTurn(
   toolCalls: ToolCallResult[],
   thinking: string,
 ): TurnClassification {
-  // Error classification: any tool call with an error
+  // 错误分类：任何工具调用有错误
   if (toolCalls.some((tc) => tc.error)) {
     return "error";
   }
 
-  // Check thinking for error keywords
+  // 检查思考内容中的错误关键词
   const thinkingLower = thinking.toLowerCase();
   if (ERROR_KEYWORDS.some((kw) => thinkingLower.includes(kw)) && toolCalls.length === 0) {
     return "error";
@@ -125,31 +129,31 @@ export function classifyTurn(
 
   const toolNames = new Set(toolCalls.map((tc) => tc.name));
 
-  // Strategic: any strategic tool used
+  // 战略：使用了任何战略工具
   for (const name of toolNames) {
     if (STRATEGIC_TOOLS.has(name)) return "strategic";
   }
 
-  // Communication: any communication tool used
+  // 通信：使用了任何通信工具
   for (const name of toolNames) {
     if (COMMUNICATION_TOOLS.has(name)) return "communication";
   }
 
-  // Productive: any productive tool used
+  // 生产力：使用了任何生产力工具
   for (const name of toolNames) {
     if (PRODUCTIVE_TOOLS.has(name)) return "productive";
   }
 
-  // Maintenance: any maintenance tool used
+  // 维护：使用了任何维护工具
   for (const name of toolNames) {
     if (MAINTENANCE_TOOLS.has(name)) return "maintenance";
   }
 
-  // Idle: no tool calls and short thinking
+  // 空闲：无工具调用且思考内容简短
   if (toolCalls.length === 0 && thinking.length < 100) {
     return "idle";
   }
 
-  // Default to maintenance
+  // 默认为维护
   return "maintenance";
 }

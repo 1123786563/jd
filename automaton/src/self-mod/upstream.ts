@@ -1,9 +1,9 @@
 /**
- * Upstream Awareness
+ * 上游感知
  *
- * Helpers for the automaton to know its own git origin,
- * detect new upstream commits, and review diffs.
- * All git commands use execFileSync with argument arrays to prevent injection.
+ * 帮助 automaton 了解其自己的 git 源，
+ * 检测新的上游提交，并审查差异。
+ * 所有 git 命令都使用带参数数组的 execFileSync 以防止注入。
  */
 
 import { execFileSync } from "child_process";
@@ -11,7 +11,7 @@ import { execFileSync } from "child_process";
 const REPO_ROOT = process.cwd();
 
 /**
- * Run a git command using execFileSync with argument array (no shell interpolation).
+ * 使用带参数数组的 execFileSync 运行 git 命令（无 shell 插值）。
  */
 function git(args: string[]): string {
   return execFileSync("git", args, {
@@ -22,7 +22,7 @@ function git(args: string[]): string {
 }
 
 /**
- * Return origin URL (credentials stripped), current branch, and HEAD info.
+ * 返回源 URL（已去除凭据）、当前分支和 HEAD 信息。
  */
 export function getRepoInfo(): {
   originUrl: string;
@@ -31,7 +31,7 @@ export function getRepoInfo(): {
   headMessage: string;
 } {
   const rawUrl = git(["config", "--get", "remote.origin.url"]);
-  // Strip embedded credentials (https://user:token@host/... -> https://host/...)
+  // 去除嵌入的凭据（https://user:token@host/... -> https://host/...）
   const originUrl = rawUrl.replace(/\/\/[^@]+@/, "//");
   const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
   const headLine = git(["log", "-1", "--format=%h %s"]);
@@ -40,7 +40,7 @@ export function getRepoInfo(): {
 }
 
 /**
- * Fetch origin and report how many commits we're behind.
+ * 获取源并报告我们落后多少个提交。
  */
 export function checkUpstream(): {
   behind: number;
@@ -57,7 +57,7 @@ export function checkUpstream(): {
 }
 
 /**
- * Return per-commit diffs for every commit ahead of HEAD on origin/main.
+ * 返回 origin/main 上 HEAD 之前每个提交的每个提交差异。
  */
 export function getUpstreamDiffs(): {
   hash: string;
@@ -77,7 +77,7 @@ export function getUpstreamDiffs(): {
     try {
       diff = git(["diff", `${hash}~1..${hash}`]);
     } catch {
-      // First commit in the range may not have a parent
+      // 范围内的第一个提交可能没有父提交
       diff = git(["show", hash, "--format=", "--stat"]);
     }
     return { hash: hash.slice(0, 12), message, author, diff };

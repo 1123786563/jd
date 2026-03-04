@@ -1,8 +1,8 @@
 /**
- * Model Registry
+ * 模型注册表
  *
- * DB-backed registry of available models with capabilities and pricing.
- * Seeded from a static baseline, updatable at runtime from Conway API.
+ * 支持数据库的可用模型注册表，包含功能和定价。
+ * 从静态基线初始化，可在运行时从 Conway API 更新。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -34,15 +34,15 @@ export class ModelRegistry {
   }
 
   /**
-   * Upsert the static model baseline into the registry on every startup.
-   * New models are added, existing models get updated pricing/capabilities,
-   * and models removed from the baseline are disabled.
+   * 在每次启动时将静态模型基线上传插入到注册表中。
+   * 添加新模型，现有模型获得更新的定价/功能，
+   * 从基线中删除的模型将被禁用。
    */
   initialize(): void {
     const now = new Date().toISOString();
     const baselineIds = new Set(STATIC_MODEL_BASELINE.map((m) => m.modelId));
 
-    // Upsert all baseline models
+    // 上传插入所有基线模型
     for (const model of STATIC_MODEL_BASELINE) {
       const existing = modelRegistryGet(this.db, model.modelId);
       const row: ModelRegistryRow = {
@@ -64,8 +64,8 @@ export class ModelRegistry {
       modelRegistryUpsert(this.db, row);
     }
 
-    // Disable models no longer in the baseline (e.g., removed Anthropic models).
-    // Skip dynamically-discovered providers (e.g. ollama) — they manage their own lifecycle.
+    // 禁用不再在基线中的模型（例如，已删除的 Anthropic 模型）。
+    // 跳过动态发现的提供商（例如 ollama）—— 它们管理自己的生命周期。
     const allModels = modelRegistryGetAll(this.db);
     for (const existing of allModels) {
       if (
@@ -80,7 +80,7 @@ export class ModelRegistry {
   }
 
   /**
-   * Get a single model by ID.
+   * 通过 ID 获取单个模型。
    */
   get(modelId: string): ModelEntry | undefined {
     const row = modelRegistryGet(this.db, modelId);
@@ -88,21 +88,21 @@ export class ModelRegistry {
   }
 
   /**
-   * Get all registered models.
+   * 获取所有已注册的模型。
    */
   getAll(): ModelEntry[] {
     return modelRegistryGetAll(this.db).map((r) => this.rowToEntry(r));
   }
 
   /**
-   * Get available (enabled) models, optionally filtering by tier minimum.
+   * 获取可用（已启用）的模型，可选择按最低层级过滤。
    */
   getAvailable(tierMinimum?: string): ModelEntry[] {
     return modelRegistryGetAvailable(this.db, tierMinimum).map((r) => this.rowToEntry(r));
   }
 
   /**
-   * Insert or update a model entry.
+   * 插入或更新模型条目。
    */
   upsert(entry: ModelEntry): void {
     const row: ModelRegistryRow = {
@@ -125,14 +125,14 @@ export class ModelRegistry {
   }
 
   /**
-   * Enable or disable a model.
+   * 启用或禁用模型。
    */
   setEnabled(modelId: string, enabled: boolean): void {
     modelRegistrySetEnabled(this.db, modelId, enabled);
   }
 
   /**
-   * Refresh registry from Conway /v1/models API response.
+   * 从 Conway /v1/models API 响应刷新注册表。
    */
   refreshFromApi(models: any[]): void {
     const now = new Date().toISOString();
@@ -159,7 +159,7 @@ export class ModelRegistry {
   }
 
   /**
-   * Get cost per 1k tokens for a model.
+   * 获取模型每 1k token 的成本。
    */
   getCostPer1k(modelId: string): { input: number; output: number } {
     const entry = this.get(modelId);

@@ -1,7 +1,7 @@
 /**
- * Tools Manager
+ * 工具管理器
  *
- * Manages installation and configuration of external tools and MCP servers.
+ * 管理外部工具和 MCP 服务器的安装和配置。
  */
 
 import type {
@@ -13,18 +13,18 @@ import { logModification } from "./audit-log.js";
 import { ulid } from "ulid";
 
 /**
- * Install an npm package globally in the sandbox.
+ * 在沙箱中全局安装 npm 包。
  */
 export async function installNpmPackage(
   conway: ConwayClient,
   db: AutomatonDatabase,
   packageName: string,
 ): Promise<{ success: boolean; error?: string }> {
-  // Sanitize package name (prevent command injection)
+  // 清理包名（防止命令注入）
   if (!/^[@a-zA-Z0-9._/-]+$/.test(packageName)) {
     return {
       success: false,
-      error: `Invalid package name: ${packageName}`,
+      error: `无效的包名：${packageName}`,
     };
   }
 
@@ -36,11 +36,11 @@ export async function installNpmPackage(
   if (result.exitCode !== 0) {
     return {
       success: false,
-      error: `npm install failed: ${result.stderr}`,
+      error: `npm 安装失败：${result.stderr}`,
     };
   }
 
-  // Record in database
+  // 记录到数据库
   const tool: InstalledTool = {
     id: ulid(),
     name: packageName,
@@ -52,7 +52,7 @@ export async function installNpmPackage(
 
   db.installTool(tool);
 
-  logModification(db, "tool_install", `Installed npm package: ${packageName}`, {
+  logModification(db, "tool_install", `已安装 npm 包：${packageName}`, {
     reversible: true,
   });
 
@@ -60,8 +60,8 @@ export async function installNpmPackage(
 }
 
 /**
- * Install an MCP server.
- * The automaton can add new capabilities by installing MCP servers.
+ * 安装 MCP 服务器。
+ * automaton 可以通过安装 MCP 服务器来添加新功能。
  */
 export async function installMcpServer(
   conway: ConwayClient,
@@ -71,7 +71,7 @@ export async function installMcpServer(
   args?: string[],
   env?: Record<string, string>,
 ): Promise<{ success: boolean; error?: string }> {
-  // Record in database
+  // 记录到数据库
   const tool: InstalledTool = {
     id: ulid(),
     name: `mcp:${name}`,
@@ -86,7 +86,7 @@ export async function installMcpServer(
   logModification(
     db,
     "mcp_install",
-    `Installed MCP server: ${name} (${command})`,
+    `已安装 MCP 服务器：${name} (${command})`,
     { reversible: true },
   );
 
@@ -94,7 +94,7 @@ export async function installMcpServer(
 }
 
 /**
- * List all installed tools.
+ * 列出所有已安装的工具。
  */
 export function listInstalledTools(
   db: AutomatonDatabase,
@@ -103,14 +103,14 @@ export function listInstalledTools(
 }
 
 /**
- * Remove (disable) an installed tool.
+ * 移除（禁用）已安装的工具。
  */
 export function removeTool(
   db: AutomatonDatabase,
   toolId: string,
 ): void {
   db.removeTool(toolId);
-  logModification(db, "tool_install", `Removed tool: ${toolId}`, {
+  logModification(db, "tool_install", `已移除工具：${toolId}`, {
     reversible: true,
   });
 }

@@ -1,8 +1,8 @@
 /**
- * Working Memory Manager
+ * 工作记忆管理器
  *
- * Session-scoped memory for current goals, observations, plans, and reflections.
- * Entries are prioritized and pruned when over budget.
+ * 会话范围的记忆，用于当前目标、观察、计划和反思。
+ * 条目按优先级排序，超出预算时进行修剪。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -18,7 +18,8 @@ export class WorkingMemoryManager {
   constructor(private db: Database) {}
 
   /**
-   * Add a new working memory entry. Returns the ULID id.
+   * 添加一个新的工作记忆条目。返回 ULID id。
+   * 自动估算内容的 token 数量用于预算管理。
    */
   add(entry: {
     sessionId: string;
@@ -45,13 +46,13 @@ export class WorkingMemoryManager {
         entry.sourceTurn ?? null,
       );
     } catch (error) {
-      logger.error("Failed to add entry", error instanceof Error ? error : undefined);
+      logger.error("添加条目失败", error instanceof Error ? error : undefined);
     }
     return id;
   }
 
   /**
-   * Get all working memory entries for a session, ordered by priority descending.
+   * 获取会话的所有工作记忆条目，按优先级降序排列（高优先级在前）。
    */
   getBySession(sessionId: string): WorkingMemoryEntry[] {
     try {
@@ -60,13 +61,13 @@ export class WorkingMemoryManager {
       ).all(sessionId) as any[];
       return rows.map(deserializeWorkingMemory);
     } catch (error) {
-      logger.error("Failed to get entries", error instanceof Error ? error : undefined);
+      logger.error("获取条目失败", error instanceof Error ? error : undefined);
       return [];
     }
   }
 
   /**
-   * Update an existing working memory entry.
+   * 更新现有的工作记忆条目（支持部分字段更新，自动更新 token 计数）。
    */
   update(id: string, updates: Partial<Pick<WorkingMemoryEntry, "content" | "priority" | "expiresAt" | "contentType">>): void {
     const setClauses: string[] = [];
@@ -99,24 +100,24 @@ export class WorkingMemoryManager {
         `UPDATE working_memory SET ${setClauses.join(", ")} WHERE id = ?`,
       ).run(...params);
     } catch (error) {
-      logger.error("Failed to update entry", error instanceof Error ? error : undefined);
+      logger.error("更新条目失败", error instanceof Error ? error : undefined);
     }
   }
 
   /**
-   * Delete a working memory entry by id.
+   * 按 id 删除工作记忆条目（从存储中移除）。
    */
   delete(id: string): void {
     try {
       this.db.prepare("DELETE FROM working_memory WHERE id = ?").run(id);
     } catch (error) {
-      logger.error("Failed to delete entry", error instanceof Error ? error : undefined);
+      logger.error("删除条目失败", error instanceof Error ? error : undefined);
     }
   }
 
   /**
-   * Prune lowest-priority entries when a session exceeds maxEntries.
-   * Returns number of entries removed.
+   * 当会话超过 maxEntries 时修剪最低优先级的条目。
+   * 返回删除的条目数（用于内存管理，防止工作记忆过大）。
    */
   prune(sessionId: string, maxEntries: number = 20): number {
     if (maxEntries < 0) return 0;
@@ -137,14 +138,14 @@ export class WorkingMemoryManager {
       ).run(sessionId, toRemove);
       return result.changes;
     } catch (error) {
-      logger.error("Failed to prune", error instanceof Error ? error : undefined);
+      logger.error("修剪失败", error instanceof Error ? error : undefined);
       return 0;
     }
   }
 
   /**
-   * Clear all expired entries across all sessions.
-   * Returns number of entries removed.
+   * 清除所有会话中所有过期的条目。
+   * 返回删除的条目数（定期清理过期数据）。
    */
   clearExpired(): number {
     try {
@@ -153,7 +154,7 @@ export class WorkingMemoryManager {
       ).run();
       return result.changes;
     } catch (error) {
-      logger.error("Failed to clear expired", error instanceof Error ? error : undefined);
+      logger.error("清除过期条目失败", error instanceof Error ? error : undefined);
       return 0;
     }
   }

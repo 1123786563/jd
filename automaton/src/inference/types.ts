@@ -1,8 +1,8 @@
 /**
- * Inference & Model Strategy — Internal Types
+ * 推理和模型策略 — 内部类型
  *
- * Re-exports shared types from types.ts and defines internal constants
- * for the inference routing subsystem.
+ * 从 types.ts 重新导出共享类型，并为
+ * 推理路由子系统定义内部常量。
  */
 
 export type {
@@ -26,7 +26,7 @@ import type {
   ModelStrategyConfig,
 } from "../types.js";
 
-// === Default Retry Policy ===
+// === 默认重试策略 ===
 
 export const DEFAULT_RETRY_POLICY = {
   maxRetries: 3,
@@ -34,7 +34,7 @@ export const DEFAULT_RETRY_POLICY = {
   maxDelayMs: 30000,
 } as const;
 
-// === Per-Task Timeout Overrides (ms) ===
+// === 每个任务的超时覆盖（毫秒） ===
 
 export const TASK_TIMEOUTS: Record<string, number> = {
   heartbeat_triage: 15_000,
@@ -44,8 +44,8 @@ export const TASK_TIMEOUTS: Record<string, number> = {
   planning: 120_000,
 };
 
-// === Static Model Baseline ===
-// Known models with realistic pricing (hundredths of cents per 1k tokens)
+// === 静态模型基线 ===
+// 具有真实定价的已知模型（每 1k token 的百分之一美分）
 
 export const STATIC_MODEL_BASELINE: Omit<ModelEntry, "lastSeen" | "createdAt" | "updatedAt">[] = [
   {
@@ -291,8 +291,8 @@ export const STATIC_MODEL_BASELINE: Omit<ModelEntry, "lastSeen" | "createdAt" | 
   },
 ];
 
-// === Default Routing Matrix ===
-// Maps (tier, taskType) -> ModelPreference with candidate models
+// === 默认路由矩阵 ===
+// 映射 (tier, taskType) -> ModelPreference 包含候选模型
 
 export const DEFAULT_ROUTING_MATRIX: RoutingMatrix = {
   high: {
@@ -332,7 +332,7 @@ export const DEFAULT_ROUTING_MATRIX: RoutingMatrix = {
   },
 };
 
-// === Default Model Strategy Config ===
+// === 默认模型策略配置 ===
 
 export const DEFAULT_MODEL_STRATEGY_CONFIG: ModelStrategyConfig = {
   inferenceModel: "gpt-5.2",

@@ -1,9 +1,9 @@
 /**
- * Automaton Wallet Management
+ * Automaton 钱包管理
  *
- * Creates and manages an EVM wallet for the automaton's identity and payments.
- * The private key is the automaton's sovereign identity.
- * Adapted from conway-mcp/src/wallet.ts
+ * 为 automaton 的身份和付款创建和管理 EVM 钱包
+ * 私钥是 automaton 的主权身份
+ * 改编自 conway-mcp/src/wallet.ts
  */
 
 import type { PrivateKeyAccount } from "viem";
@@ -27,8 +27,8 @@ export function getWalletPath(): string {
 }
 
 /**
- * Get or create the automaton's wallet.
- * The private key IS the automaton's identity -- protect it.
+ * 获取或创建 automaton 的钱包
+ * 私钥就是 automaton 的身份 — 保护它
  */
 export async function getWallet(): Promise<{
   account: PrivateKeyAccount;
@@ -62,7 +62,7 @@ export async function getWallet(): Promise<{
 }
 
 /**
- * Get the wallet address without loading the full account.
+ * 在不加载完整账户的情况下获取钱包地址
  */
 export function getWalletAddress(): string | null {
   if (!fs.existsSync(WALLET_FILE)) {
@@ -77,7 +77,7 @@ export function getWalletAddress(): string | null {
 }
 
 /**
- * Load the full wallet account (needed for signing).
+ * 加载完整的钱包账户（签名需要）
  */
 export function loadWalletAccount(): PrivateKeyAccount | null {
   if (!fs.existsSync(WALLET_FILE)) {

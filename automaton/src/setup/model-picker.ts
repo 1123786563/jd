@@ -1,10 +1,10 @@
 /**
- * Interactive Model Picker
+ * 交互式模型选择器
  *
- * Presents a numbered list of available models and lets the user
- * pick one to set as the active inference model.
+ * 显示可用模型的编号列表，让用户
+ * 选择一个作为活动推理模型。
  *
- * Usage: automaton --pick-model
+ * 用法：automaton --pick-model
  */
 
 import chalk from "chalk";
@@ -23,51 +23,54 @@ const PROVIDER_LABEL: Record<string, string> = {
   other: "Other",
 };
 
+/**
+ * 运行模型选择器
+ */
 export async function runModelPicker(): Promise<void> {
   const config = loadConfig();
   if (!config) {
-    console.log(chalk.red("  Automaton is not configured. Run: automaton --setup"));
+    console.log(chalk.red("  Automaton 未配置。运行：automaton --setup"));
     return;
   }
 
   const dbPath = resolvePath(config.dbPath);
   const db = createDatabase(dbPath);
 
-  // Seed static baseline + discover Ollama models
+  // 从注册表加载静态基线模型 + 发现 Ollama 模型
   const registry = new ModelRegistry(db.raw);
   registry.initialize();
 
   const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || config.ollamaBaseUrl;
   if (ollamaBaseUrl) {
-    console.log(chalk.dim(`  Checking Ollama at ${ollamaBaseUrl}...`));
+    console.log(chalk.dim(`  正在检查 Ollama，地址：${ollamaBaseUrl}...`));
     await discoverOllamaModels(ollamaBaseUrl, db.raw);
   }
 
   const models = registry.getAll().filter((m) => m.enabled);
 
   if (models.length === 0) {
-    console.log(chalk.yellow("  No models available in registry."));
+    console.log(chalk.yellow("  注册表中没有可用模型。"));
     db.close();
     closePrompts();
     return;
   }
 
-  console.log(chalk.cyan("\n  Available Models\n"));
+  console.log(chalk.cyan("\n  可用模型\n"));
   printModelTable(models, config.inferenceModel);
 
   console.log("");
-  const input = await promptOptional("Enter model number (or press Enter to cancel)");
+  const input = await promptOptional("输入模型编号（或按 Enter 取消）");
   closePrompts();
 
   if (!input) {
-    console.log(chalk.dim("  Cancelled."));
+    console.log(chalk.dim("  已取消。"));
     db.close();
     return;
   }
 
   const idx = parseInt(input, 10) - 1;
   if (isNaN(idx) || idx < 0 || idx >= models.length) {
-    console.log(chalk.red(`  Invalid selection: "${input}"`));
+    console.log(chalk.red(`  无效的选择："${input}"`));
     db.close();
     return;
   }
@@ -79,12 +82,15 @@ export async function runModelPicker(): Promise<void> {
   }
   saveConfig(config);
 
-  console.log(chalk.green(`\n  Active model set to: ${selected.modelId} (${selected.displayName})`));
-  console.log(chalk.dim("  Restart the automaton for the change to take effect.\n"));
+  console.log(chalk.green(`\n  活动模型已设置为：${selected.modelId} (${selected.displayName})`));
+  console.log(chalk.dim("  重启 automaton 以使更改生效。\n"));
 
   db.close();
 }
 
+/**
+ * 打印模型表格
+ */
 function printModelTable(models: ModelEntry[], currentModelId: string): void {
   const numWidth = String(models.length).length;
 
@@ -95,8 +101,8 @@ function printModelTable(models: ModelEntry[], currentModelId: string): void {
     const cost = m.costPer1kInput === 0
       ? chalk.green("free     ")
       : chalk.dim(`$${(m.costPer1kInput / 100 / 1000 * 1_000_000).toFixed(2)}/M in`);
-    const active = m.modelId === currentModelId ? chalk.green(" ◀ active") : "";
-    const tools = m.supportsTools ? "" : chalk.dim(" (no tools)");
+    const active = m.modelId === currentModelId ? chalk.green(" ◀ 当前") : "";
+    const tools = m.supportsTools ? "" : chalk.dim(" (不支持工具)");
 
     console.log(
       `  ${chalk.white(num + ".")} ${chalk.cyan(m.modelId.padEnd(32))} ${chalk.dim(provider)} ${cost}${tools}${active}`,

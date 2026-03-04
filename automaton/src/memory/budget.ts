@@ -1,8 +1,8 @@
 /**
- * Memory Budget Manager
+ * 记忆预算管理器
  *
- * Manages token budget allocation for memory retrieval.
- * Trims memory retrieval results to fit within configured budgets.
+ * 管理记忆检索的 Token 预算分配。
+ * 修剪记忆检索结果以适应配置的预算。
  */
 
 import type { MemoryBudget, MemoryRetrievalResult } from "../types.js";
@@ -12,13 +12,13 @@ export class MemoryBudgetManager {
   constructor(private budget: MemoryBudget) {}
 
   /**
-   * Allocate memories within budget, trimming each tier as needed.
-   * Returns a new MemoryRetrievalResult that fits within the budget.
+   * 在预算范围内分配记忆，根据需要修剪每一层。
+   * 返回适合预算的新 MemoryRetrievalResult。
    */
   allocate(memories: MemoryRetrievalResult): MemoryRetrievalResult {
     let totalTokens = 0;
 
-    // Working memory tier
+    // 工作记忆层
     const { items: workingMemory, tokens: workingTokens } = this.trimTier(
       memories.workingMemory,
       this.budget.workingMemoryTokens,
@@ -26,7 +26,7 @@ export class MemoryBudgetManager {
     );
     totalTokens += workingTokens;
 
-    // Episodic memory tier
+    // 情景记忆层
     const { items: episodicMemory, tokens: episodicTokens } = this.trimTier(
       memories.episodicMemory,
       this.budget.episodicMemoryTokens,
@@ -34,7 +34,7 @@ export class MemoryBudgetManager {
     );
     totalTokens += episodicTokens;
 
-    // Semantic memory tier
+    // 语义记忆层
     const { items: semanticMemory, tokens: semanticTokens } = this.trimTier(
       memories.semanticMemory,
       this.budget.semanticMemoryTokens,
@@ -42,7 +42,7 @@ export class MemoryBudgetManager {
     );
     totalTokens += semanticTokens;
 
-    // Procedural memory tier
+    // 程序记忆层
     const { items: proceduralMemory, tokens: proceduralTokens } = this.trimTier(
       memories.proceduralMemory,
       this.budget.proceduralMemoryTokens,
@@ -50,7 +50,7 @@ export class MemoryBudgetManager {
     );
     totalTokens += proceduralTokens;
 
-    // Relationship memory tier
+    // 关系记忆层
     const { items: relationships, tokens: relationshipTokens } = this.trimTier(
       memories.relationships,
       this.budget.relationshipMemoryTokens,
@@ -69,14 +69,14 @@ export class MemoryBudgetManager {
   }
 
   /**
-   * Estimate token count for a text string.
+   * 估算文本字符串的 token 数量。
    */
   estimateTokens(text: string): number {
     return estimateTokens(text);
   }
 
   /**
-   * Get total budget across all tiers.
+   * 获取所有层的总预算。
    */
   getTotalBudget(): number {
     return (
@@ -89,7 +89,7 @@ export class MemoryBudgetManager {
   }
 
   /**
-   * Trim a tier's items to fit within a token budget.
+   * 修剪层的项目以适应 token 预算。
    */
   private trimTier<T>(
     items: T[],

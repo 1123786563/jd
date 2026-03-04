@@ -1,9 +1,9 @@
 /**
- * Inference Router
+ * 推理路由器
  *
- * Routes inference requests through the model registry using
- * tier-based selection, budget enforcement, and provider-specific
- * message transformation.
+ * 通过模型注册表路由推理请求，使用
+ * 基于层级的选择、预算强制执行和提供商特定的
+ * 消息转换。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -36,8 +36,8 @@ export class InferenceRouter {
   }
 
   /**
-   * Route an inference request: select model, check budget,
-   * transform messages, call inference, record cost.
+   * 路由推理请求：选择模型、检查预算、
+   * 转换消息、调用推理、记录成本。
    */
   async route(
     request: InferenceRequest,
@@ -45,12 +45,12 @@ export class InferenceRouter {
   ): Promise<InferenceResult> {
     const { messages, taskType, tier, sessionId, turnId, tools } = request;
 
-    // Check if API-only mode: skip budget checks
+    // 检查是否为 API-only 模式：跳过预算检查
     const isApiOnly = tier === "high" &&
                       this.budget.config.hourlyBudgetCents === 0 &&
                       this.budget.config.sessionBudgetCents === 0;
 
-    // 1. Select model from routing matrix
+    // 1. 从路由矩阵选择模型
     const model = this.selectModel(tier, taskType);
     if (!model) {
       return {
@@ -66,7 +66,7 @@ export class InferenceRouter {
       };
     }
 
-    // 2. Estimate cost and check budget (skip if API-only mode with no budget limits)
+    // 2. 估算成本并检查预算（如果是无预算限制的 API-only 模式则跳过）
     if (!isApiOnly) {
       const estimatedTokens = messages.reduce((sum, m) => sum + (m.content?.length || 0) / 4, 0);
       const estimatedCostCents = Math.ceil(
@@ -88,7 +88,7 @@ export class InferenceRouter {
         };
       }
 
-      // 3. Check session budget
+      // 3. 检查会话预算
       if (request.sessionId && this.budget.config.sessionBudgetCents > 0) {
         const sessionCost = this.budget.getSessionCost(request.sessionId);
         if (sessionCost + estimatedCostCents > this.budget.config.sessionBudgetCents) {
@@ -106,10 +106,10 @@ export class InferenceRouter {
       }
     }
 
-    // 4. Transform messages for provider
+    // 4. 为提供商转换消息
     const transformedMessages = this.transformMessagesForProvider(messages, model.provider);
 
-    // 5. Build inference options
+    // 5. 构建推理选项
     const preference = this.getPreference(tier, taskType);
     const maxTokens = request.maxTokens || preference?.maxTokens || model.maxTokens;
     const timeout = TASK_TIMEOUTS[taskType] || 120_000;
@@ -120,7 +120,7 @@ export class InferenceRouter {
       tools: tools,
     };
 
-    // 6. Call inference with timeout
+    // 6. 带超时调用推理
     const startTime = Date.now();
     let response: any;
     try {
@@ -134,7 +134,7 @@ export class InferenceRouter {
       }
     } catch (error: any) {
       const latencyMs = Date.now() - startTime;
-      // If fallback is enabled, try next candidate
+      // 如果启用了回退，尝试下一个候选项
       if (error.name === "AbortError") {
         return {
           content: `Inference timeout after ${timeout}ms`,
@@ -151,7 +151,7 @@ export class InferenceRouter {
     }
     const latencyMs = Date.now() - startTime;
 
-    // 7. Calculate actual cost
+    // 7. 计算实际成本
     const inputTokens = response.usage?.promptTokens || 0;
     const outputTokens = response.usage?.completionTokens || 0;
     const actualCostCents = Math.ceil(
@@ -159,7 +159,7 @@ export class InferenceRouter {
       (outputTokens / 1000) * model.costPer1kOutput / 100,
     );
 
-    // 8. Record cost
+    // 8. 记录成本
     this.budget.recordCost({
       sessionId,
       turnId: turnId || null,
@@ -174,7 +174,7 @@ export class InferenceRouter {
       cacheHit: false,
     });
 
-    // 9. Build result
+    // 9. 构建结果
     return {
       content: response.message?.content || "",
       model: model.modelId,
@@ -189,12 +189,12 @@ export class InferenceRouter {
   }
 
   /**
-   * Select the best model for a given tier and task type.
+   * 为给定层级和任务类型选择最佳模型。
    *
-   * Priority:
-   *   1. First routing-matrix candidate present in the registry
-   *   2. User-configured model(s) from ModelStrategyConfig
-   *      (free/Ollama models are allowed at any tier, including dead)
+   * 优先级：
+   *   1. 注册表中存在的第一个路由矩阵候选项
+   *   2. 来自 ModelStrategyConfig 的用户配置的模型
+   *      （免费/Ollama 模型允许在任何层级使用，包括 dead）
    */
   selectModel(tier: SurvivalTier, taskType: InferenceTaskType): ModelEntry | null {
     const TIER_ORDER: Record<string, number> = {
@@ -203,7 +203,7 @@ export class InferenceRouter {
 
     const tierRank = TIER_ORDER[tier] ?? 0;
 
-    // 1. Try routing-matrix candidates
+    // 1. 尝试路由矩阵候选项
     const preference = this.getPreference(tier, taskType);
     if (preference && preference.candidates.length > 0) {
       for (const candidateId of preference.candidates) {
@@ -214,8 +214,8 @@ export class InferenceRouter {
       }
     }
 
-    // 2. Fall back to user-configured models.
-    //    This handles local/Ollama setups where routing-matrix models are absent.
+    // 2. 回退到用户配置的模型。
+    //    这会处理路由矩阵模型不存在的本地/Ollama 设置。
     const strategy = this.budget.config;
     const fallbackIds: (string | undefined)[] =
       tier === "critical" || tier === "dead"
@@ -237,49 +237,49 @@ export class InferenceRouter {
   }
 
   /**
-   * Transform messages for a specific provider.
-   * Handles Anthropic's alternating-role requirement.
+   * 为特定提供商转换消息。
+   * 处理 Anthropic 的交替角色要求。
    */
   transformMessagesForProvider(messages: ChatMessage[], provider: ModelProvider): ChatMessage[] {
     if (messages.length === 0) {
-      throw new Error("Cannot route inference with empty message array");
+      throw new Error("无法使用空消息数组路由推理");
     }
 
     if (provider === "anthropic") {
       return this.fixAnthropicMessages(messages);
     }
 
-    // For OpenAI/Conway, merge consecutive same-role messages
+    // 对于 OpenAI/Conway，合并连续的相同角色消息
     return this.mergeConsecutiveSameRole(messages);
   }
 
   /**
-   * Fix messages for Anthropic's API requirements:
-   * 1. Extract system messages
-   * 2. Merge consecutive same-role messages
-   * 3. Merge consecutive tool messages into a single user message
-   *    with multiple tool_result content blocks
+   * 为 Anthropic API 要求修复消息：
+   * 1. 提取系统消息
+   * 2. 合并连续的相同角色消息
+   * 3. 将连续的工具消息合并为单个用户消息
+   *    包含多个 tool_result 内容块
    */
   private fixAnthropicMessages(messages: ChatMessage[]): ChatMessage[] {
     const result: ChatMessage[] = [];
 
     for (const msg of messages) {
-      // System messages are handled separately by the Anthropic client
+      // 系统消息由 Anthropic 客户端单独处理
       if (msg.role === "system") {
         result.push(msg);
         continue;
       }
 
-      // Tool messages become user messages with tool_result content
+      // 工具消息变为带有 tool_result 内容的用户消息
       if (msg.role === "tool") {
         const last = result[result.length - 1];
-        // If previous message was also a tool (now a user), merge into it
+        // 如果前一条消息也是工具（现在是用户），则合并到其中
         if (last && last.role === "user" && (last as any)._toolResultMerged) {
-          // Append to the merged content
+          // 追加到合并的内容中
           last.content = last.content + "\n[tool_result:" + (msg.tool_call_id || "unknown") + "] " + msg.content;
           continue;
         }
-        // Otherwise create a new user message
+        // 否则创建新的用户消息
         const userMsg: ChatMessage & { _toolResultMerged?: boolean } = {
           role: "user",
           content: "[tool_result:" + (msg.tool_call_id || "unknown") + "] " + msg.content,
@@ -289,7 +289,7 @@ export class InferenceRouter {
         continue;
       }
 
-      // For user/assistant: merge with previous if same role
+      // 对于 user/assistant：如果角色相同则与前面的合并
       const last = result[result.length - 1];
       if (last && last.role === msg.role) {
         last.content = (last.content || "") + "\n" + (msg.content || "");
@@ -302,7 +302,7 @@ export class InferenceRouter {
       result.push({ ...msg });
     }
 
-    // Clean up internal markers
+    // 清理内部标记
     for (const msg of result) {
       delete (msg as any)._toolResultMerged;
     }
@@ -311,7 +311,7 @@ export class InferenceRouter {
   }
 
   /**
-   * Merge consecutive messages with the same role.
+   * 合并具有相同角色的连续消息。
    */
   private mergeConsecutiveSameRole(messages: ChatMessage[]): ChatMessage[] {
     const result: ChatMessage[] = [];

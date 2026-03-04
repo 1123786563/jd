@@ -9,7 +9,7 @@ import {
 import type { Goal, TaskNode } from "../../orchestration/task-graph.js";
 
 // ---------------------------------------------------------------------------
-// Helpers
+// 辅助函数
 // ---------------------------------------------------------------------------
 
 function validOutput(overrides: Record<string, unknown> = {}) {
@@ -98,7 +98,7 @@ const failedTask: TaskNode = {
 // ---------------------------------------------------------------------------
 
 describe("validatePlannerOutput", () => {
-  it("accepts valid complete output", () => {
+  it("接受有效的完整输出", () => {
     const result = validatePlannerOutput(validOutput());
     expect(result.analysis).toBe("Analysis text");
     expect(result.strategy).toBe("Strategy text");
@@ -106,33 +106,33 @@ describe("validatePlannerOutput", () => {
     expect(result.tasks[0].title).toBe("Task 1");
   });
 
-  it("rejects non-object input", () => {
+  it("拒绝非对象输入", () => {
     expect(() => validatePlannerOutput("not an object")).toThrow("planner output must be an object");
   });
 
-  it("rejects null input", () => {
+  it("拒绝 null 输入", () => {
     expect(() => validatePlannerOutput(null)).toThrow("planner output must be an object");
   });
 
-  it("rejects missing analysis", () => {
+  it("拒绝缺少 analysis", () => {
     const output = validOutput();
     delete (output as Record<string, unknown>).analysis;
     expect(() => validatePlannerOutput(output)).toThrow("analysis");
   });
 
-  it("rejects missing strategy", () => {
+  it("拒绝缺少 strategy", () => {
     const output = validOutput();
     delete (output as Record<string, unknown>).strategy;
     expect(() => validatePlannerOutput(output)).toThrow("strategy");
   });
 
-  it("rejects missing tasks array", () => {
+  it("拒绝缺少 tasks 数组", () => {
     const output = validOutput();
     delete (output as Record<string, unknown>).tasks;
     expect(() => validatePlannerOutput(output)).toThrow("tasks");
   });
 
-  it("rejects task with missing title", () => {
+  it("拒绝缺少 title 的任务", () => {
     const output = validOutput({
       tasks: [
         {
@@ -148,7 +148,7 @@ describe("validatePlannerOutput", () => {
     expect(() => validatePlannerOutput(output)).toThrow("title");
   });
 
-  it("rejects task with negative cost", () => {
+  it("拒绝负成本的任务", () => {
     const output = validOutput({
       tasks: [
         {
@@ -165,7 +165,7 @@ describe("validatePlannerOutput", () => {
     expect(() => validatePlannerOutput(output)).toThrow("estimatedCostCents");
   });
 
-  it("rejects task with zero timeout", () => {
+  it("拒绝零超时的任务", () => {
     const output = validOutput({
       tasks: [
         {
@@ -182,7 +182,7 @@ describe("validatePlannerOutput", () => {
     expect(() => validatePlannerOutput(output)).toThrow("timeoutMs");
   });
 
-  it("detects dependency cycle (A depends on B depends on A)", () => {
+  it("检测依赖循环（A 依赖 B，B 依赖 A）", () => {
     const output = validOutput({
       tasks: [
         {
@@ -208,7 +208,7 @@ describe("validatePlannerOutput", () => {
     expect(() => validatePlannerOutput(output)).toThrow("cycle");
   });
 
-  it("detects self-dependency", () => {
+  it("检测自依赖", () => {
     const output = validOutput({
       tasks: [
         {
@@ -225,7 +225,7 @@ describe("validatePlannerOutput", () => {
     expect(() => validatePlannerOutput(output)).toThrow("itself");
   });
 
-  it("detects out-of-range dependency index", () => {
+  it("检测超出范围的依赖索引", () => {
     const output = validOutput({
       tasks: [
         {
@@ -242,7 +242,7 @@ describe("validatePlannerOutput", () => {
     expect(() => validatePlannerOutput(output)).toThrow("out-of-range");
   });
 
-  it("rejects duplicate custom role names", () => {
+  it("拒绝重复的自定义角色名称", () => {
     const customRole = {
       name: "my-role",
       description: "A custom role",
@@ -261,22 +261,22 @@ describe("validatePlannerOutput", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildPlannerPrompt", () => {
-  it("includes credit balance", () => {
+  it("包含积分余额", () => {
     const prompt = buildPlannerPrompt(context);
     expect(prompt).toContain("10000 cents");
   });
 
-  it("includes survival tier", () => {
+  it("包含生存层级", () => {
     const prompt = buildPlannerPrompt(context);
     expect(prompt).toContain("stable");
   });
 
-  it("includes available roles", () => {
+  it("包含可用角色", () => {
     const prompt = buildPlannerPrompt(context);
     expect(prompt).toContain("generalist");
   });
 
-  it("includes agent availability numbers", () => {
+  it("包含智能体可用性数量", () => {
     const prompt = buildPlannerPrompt(context);
     expect(prompt).toContain("2");   // idleAgents
     expect(prompt).toContain("0");   // busyAgents
@@ -289,7 +289,7 @@ describe("buildPlannerPrompt", () => {
 // ---------------------------------------------------------------------------
 
 describe("planGoal", () => {
-  it("returns validated output on valid response", async () => {
+  it("在有效响应时返回验证的输出", async () => {
     const mockInference = { chat: vi.fn() } as any;
     mockInference.chat.mockResolvedValue({ content: JSON.stringify(validOutput()) });
 
@@ -299,21 +299,21 @@ describe("planGoal", () => {
     expect(mockInference.chat).toHaveBeenCalledOnce();
   });
 
-  it("throws on empty response", async () => {
+  it("空响应时抛出异常", async () => {
     const mockInference = { chat: vi.fn() } as any;
     mockInference.chat.mockResolvedValue({ content: "" });
 
     await expect(planGoal(goal, context, mockInference)).rejects.toThrow("empty response");
   });
 
-  it("throws on invalid JSON response", async () => {
+  it("无效 JSON 响应时抛出异常", async () => {
     const mockInference = { chat: vi.fn() } as any;
     mockInference.chat.mockResolvedValue({ content: "not json at all" });
 
     await expect(planGoal(goal, context, mockInference)).rejects.toThrow("invalid JSON");
   });
 
-  it("throws on invalid schema response", async () => {
+  it("无效模式响应时抛出异常", async () => {
     const mockInference = { chat: vi.fn() } as any;
     mockInference.chat.mockResolvedValue({ content: JSON.stringify({ analysis: "ok" }) });
 
@@ -326,7 +326,7 @@ describe("planGoal", () => {
 // ---------------------------------------------------------------------------
 
 describe("replanAfterFailure", () => {
-  it("includes failure context in prompt", async () => {
+  it("在提示中包含失败上下文", async () => {
     const mockInference = { chat: vi.fn() } as any;
     mockInference.chat.mockResolvedValue({ content: JSON.stringify(validOutput()) });
 
@@ -338,7 +338,7 @@ describe("replanAfterFailure", () => {
     expect(userMessage.content).toContain("Failed task");
   });
 
-  it("returns validated output", async () => {
+  it("返回验证的输出", async () => {
     const mockInference = { chat: vi.fn() } as any;
     mockInference.chat.mockResolvedValue({ content: JSON.stringify(validOutput()) });
 
@@ -347,7 +347,7 @@ describe("replanAfterFailure", () => {
     expect(result.tasks).toHaveLength(1);
   });
 
-  it("throws on invalid planner response", async () => {
+  it("无效规划器响应时抛出异常", async () => {
     const mockInference = { chat: vi.fn() } as any;
     mockInference.chat.mockResolvedValue({ content: "{}" });
 
@@ -356,11 +356,11 @@ describe("replanAfterFailure", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Custom role validation
+// 自定义角色验证
 // ---------------------------------------------------------------------------
 
 describe("custom role validation", () => {
-  it("accepts valid custom role with all fields", () => {
+  it("接受包含所有字段的有效自定义角色", () => {
     const output = validOutput({
       customRoles: [
         {
@@ -384,7 +384,7 @@ describe("custom role validation", () => {
     expect(result.customRoles[0].treasuryLimits?.maxSingleTransfer).toBe(100);
   });
 
-  it("rejects custom role missing required fields", () => {
+  it("拒绝缺少必需字段的自定义角色", () => {
     const output = validOutput({
       customRoles: [
         {

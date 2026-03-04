@@ -108,7 +108,7 @@ afterEach(async () => {
 });
 
 describe("CompressionEngine.evaluate", () => {
-  it("evaluate returns no actions below 70%", async () => {
+  it("evaluate在低于70%时不返回任何操作", async () => {
     seedInferenceEvents(8);
     const plan = await engine.evaluate({
       ...utilizationSnapshot,
@@ -120,7 +120,7 @@ describe("CompressionEngine.evaluate", () => {
     expect(plan.reason).toContain("below compression threshold");
   });
 
-  it("Stage 1 triggers at >70%", async () => {
+  it("阶段1在>70%时触发", async () => {
     seedInferenceEvents(8);
     const plan = await engine.evaluate({
       ...utilizationSnapshot,
@@ -130,7 +130,7 @@ describe("CompressionEngine.evaluate", () => {
     expect(plan.actions.some((action) => action.type === "compact_tool_results")).toBe(true);
   });
 
-  it("Stage 2 triggers at >80%", async () => {
+  it("阶段2在>80%时触发", async () => {
     seedInferenceEvents(12);
     const plan = await engine.evaluate({
       ...utilizationSnapshot,
@@ -140,7 +140,7 @@ describe("CompressionEngine.evaluate", () => {
     expect(plan.actions.some((action) => action.type === "compress_turns")).toBe(true);
   });
 
-  it("Stage 3 triggers at >85%", async () => {
+  it("阶段3在>85%时触发", async () => {
     seedInferenceEvents(12);
     const plan = await engine.evaluate({
       ...utilizationSnapshot,
@@ -150,7 +150,7 @@ describe("CompressionEngine.evaluate", () => {
     expect(plan.actions.some((action) => action.type === "summarize_batch")).toBe(true);
   });
 
-  it("Stage 4 triggers at >90%", async () => {
+  it("阶段4在>90%时触发", async () => {
     seedInferenceEvents(12);
     const plan = await engine.evaluate({
       ...utilizationSnapshot,
@@ -160,7 +160,7 @@ describe("CompressionEngine.evaluate", () => {
     expect(plan.actions.some((action) => action.type === "checkpoint_and_reset")).toBe(true);
   });
 
-  it("Stage 5 triggers at >95%", async () => {
+  it("阶段5在>95%时触发", async () => {
     seedInferenceEvents(12);
     const plan = await engine.evaluate({
       ...utilizationSnapshot,
@@ -170,7 +170,7 @@ describe("CompressionEngine.evaluate", () => {
     expect(plan.actions.some((action) => action.type === "emergency_truncate")).toBe(true);
   });
 
-  it("evaluate emits non-negative estimated token savings", async () => {
+  it("evaluate发出非负的预估token节省", async () => {
     seedInferenceEvents(12);
     const plan = await engine.evaluate({
       ...utilizationSnapshot,
@@ -180,7 +180,7 @@ describe("CompressionEngine.evaluate", () => {
     expect(plan.estimatedTokensSaved).toBeGreaterThanOrEqual(0);
   });
 
-  it("turnsWithoutCompression increments when no action is needed", async () => {
+  it("当不需要操作时turnsWithoutCompression递增", async () => {
     seedInferenceEvents(2);
     const plan = await engine.evaluate({
       ...utilizationSnapshot,
@@ -191,7 +191,7 @@ describe("CompressionEngine.evaluate", () => {
     expect(result.metrics.turnsWithoutCompression).toBeGreaterThan(0);
   });
 
-  it("turnsWithoutCompression resets when actions are planned", async () => {
+  it("当计划操作时turnsWithoutCompression重置", async () => {
     seedInferenceEvents(12);
     await engine.evaluate({
       ...utilizationSnapshot,
@@ -208,7 +208,7 @@ describe("CompressionEngine.evaluate", () => {
 });
 
 describe("CompressionEngine.execute", () => {
-  it("executes Stage 1 compaction with reference strategy", async () => {
+  it("使用引用策略执行阶段1压缩", async () => {
     const ids = seedInferenceEvents(6);
 
     const plan: CompressionPlan = {
@@ -227,7 +227,7 @@ describe("CompressionEngine.execute", () => {
     expect(compactedCount.count).toBeGreaterThan(0);
   });
 
-  it("executes Stage 2 turn compression with summarize strategy", async () => {
+  it("使用摘要策略执行阶段2轮次压缩", async () => {
     const ids = seedInferenceEvents(6);
 
     const plan: CompressionPlan = {
@@ -246,7 +246,7 @@ describe("CompressionEngine.execute", () => {
     expect(compactedCount.count).toBeGreaterThan(0);
   });
 
-  it("Stage 3 summary success stores knowledge entries", async () => {
+  it("阶段3摘要成功存储知识条目", async () => {
     const ids = seedInferenceEvents(12);
 
     const plan: CompressionPlan = {
@@ -265,7 +265,7 @@ describe("CompressionEngine.execute", () => {
     expect(knowledgeCount.count).toBe(1);
   });
 
-  it("Stage 3 summary success appends reflection event", async () => {
+  it("阶段3摘要成功追加反思事件", async () => {
     const ids = seedInferenceEvents(12);
 
     const plan: CompressionPlan = {
@@ -284,7 +284,7 @@ describe("CompressionEngine.execute", () => {
     expect(reflectionRows.some((row) => row.content.includes("compression_batch_summary"))).toBe(true);
   });
 
-  it("Stage 3 failure falls through to Stage 4", async () => {
+  it("阶段3失败降级到阶段4", async () => {
     const ids = seedInferenceEvents(12);
     inference.chat.mockRejectedValue(new Error("stage3 unavailable"));
 
@@ -309,7 +309,7 @@ describe("CompressionEngine.execute", () => {
     expect(files.some((file) => file.endsWith(".json"))).toBe(true);
   });
 
-  it("Stage 4 creates checkpoint file", async () => {
+  it("阶段4创建检查点文件", async () => {
     seedInferenceEvents(8);
     const checkpointId = "01JTESTCHECKPOINT00000000000";
 
@@ -327,7 +327,7 @@ describe("CompressionEngine.execute", () => {
     expect(raw).toContain(checkpointId);
   });
 
-  it("Stage 4 appends checkpoint reflection event", async () => {
+  it("阶段4追加检查点反思事件", async () => {
     seedInferenceEvents(8);
 
     const plan: CompressionPlan = {
@@ -346,7 +346,7 @@ describe("CompressionEngine.execute", () => {
     expect(reflectionRows.some((row) => row.content.includes("compression_checkpoint_created"))).toBe(true);
   });
 
-  it("Stage 5 emergency truncation removes older events", async () => {
+  it("阶段5紧急截断移除旧事件", async () => {
     seedInferenceEvents(10);
 
     const plan: CompressionPlan = {
@@ -365,7 +365,7 @@ describe("CompressionEngine.execute", () => {
     expect(keptInference.count).toBeLessThanOrEqual(3);
   });
 
-  it("Stage 5 appends emergency warning event", async () => {
+  it("阶段5追加紧急警告事件", async () => {
     seedInferenceEvents(10);
 
     const plan: CompressionPlan = {
@@ -384,7 +384,7 @@ describe("CompressionEngine.execute", () => {
     expect(warningCount.count).toBe(1);
   });
 
-  it("execute logs compression metrics events", async () => {
+  it("execute记录压缩指标事件", async () => {
     seedInferenceEvents(6);
 
     const plan: CompressionPlan = {
@@ -404,7 +404,7 @@ describe("CompressionEngine.execute", () => {
     expect(metricsRows.count).toBe(1);
   });
 
-  it("metrics tracking accumulates checkpoint counters", async () => {
+  it("指标跟踪累积检查点计数器", async () => {
     seedInferenceEvents(8);
 
     const checkpointPlan: CompressionPlan = {
@@ -424,7 +424,7 @@ describe("CompressionEngine.execute", () => {
     expect(second.metrics.totalCheckpoints).toBe(2);
   });
 
-  it("metrics expose averageCompressionRatio across runs", async () => {
+  it("指标跨运行暴露平均压缩率", async () => {
     const ids = seedInferenceEvents(6);
 
     const plan: CompressionPlan = {

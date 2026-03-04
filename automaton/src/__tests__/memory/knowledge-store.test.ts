@@ -50,12 +50,12 @@ afterEach(() => {
 });
 
 describe("KnowledgeStore", () => {
-  it("add creates entry with ULID", () => {
+  it("add创建带有ULID的条目", () => {
     const id = addKnowledge();
     expect(id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
   });
 
-  it("add persists all entry fields", () => {
+  it("add持久化所有条目字段", () => {
     const id = addKnowledge({
       category: "market",
       key: "pricing-signal",
@@ -75,11 +75,11 @@ describe("KnowledgeStore", () => {
     expect(entry?.expiresAt).toBe("2026-12-01T00:00:00.000Z");
   });
 
-  it("get returns null for unknown id", () => {
+  it("get对未知ID返回null", () => {
     expect(store.get("01HZZZZZZZZZZZZZZZZZZZZZZZ")).toBeNull();
   });
 
-  it("get increments access count", () => {
+  it("get递增访问计数", () => {
     const id = addKnowledge();
 
     const first = store.get(id);
@@ -89,7 +89,7 @@ describe("KnowledgeStore", () => {
     expect(second?.accessCount).toBe(2);
   });
 
-  it("get returns null for expired entries", () => {
+  it("get对过期条目返回null", () => {
     const id = addKnowledge({
       expiresAt: "2020-01-01T00:00:00.000Z",
     });
@@ -97,7 +97,7 @@ describe("KnowledgeStore", () => {
     expect(store.get(id)).toBeNull();
   });
 
-  it("search finds entries by key query", () => {
+  it("search通过键查询查找条目", () => {
     addKnowledge({ key: "deploy-runbook", content: "infra procedures" });
     addKnowledge({ key: "budget-sheet", content: "finance" });
 
@@ -106,7 +106,7 @@ describe("KnowledgeStore", () => {
     expect(results[0].key).toBe("deploy-runbook");
   });
 
-  it("search finds entries by content query", () => {
+  it("search通过内容查询查找条目", () => {
     addKnowledge({ key: "k1", content: "incident postmortem with root cause" });
 
     const results = store.search("root cause");
@@ -114,7 +114,7 @@ describe("KnowledgeStore", () => {
     expect(results[0].content).toContain("root cause");
   });
 
-  it("search supports category filter", () => {
+  it("search支持类别过滤器", () => {
     addKnowledge({ category: "technical", key: "api-timeout", content: "retry config" });
     addKnowledge({ category: "financial", key: "api-budget", content: "monthly spend" });
 
@@ -123,7 +123,7 @@ describe("KnowledgeStore", () => {
     expect(results[0].category).toBe("technical");
   });
 
-  it("search excludes expired rows", () => {
+  it("search排除过期行", () => {
     addKnowledge({ key: "still-valid", content: "active", expiresAt: null });
     addKnowledge({ key: "expired", content: "active", expiresAt: "2020-01-01T00:00:00.000Z" });
 
@@ -131,7 +131,7 @@ describe("KnowledgeStore", () => {
     expect(results.map((entry) => entry.key)).toEqual(["still-valid"]);
   });
 
-  it("search respects limit", () => {
+  it("search遵守限制", () => {
     addKnowledge({ key: "term-1", content: "needle" });
     addKnowledge({ key: "term-2", content: "needle" });
     addKnowledge({ key: "term-3", content: "needle" });
@@ -140,7 +140,7 @@ describe("KnowledgeStore", () => {
     expect(results).toHaveLength(2);
   });
 
-  it("update changes mutable fields", () => {
+  it("update更改可变字段", () => {
     const id = addKnowledge({ key: "before", confidence: 0.5 });
 
     store.update(id, {
@@ -155,14 +155,14 @@ describe("KnowledgeStore", () => {
     expect(entry?.tokenCount).toBe(123);
   });
 
-  it("remove deletes an entry", () => {
+  it("remove删除条目", () => {
     const id = addKnowledge();
     store.remove(id);
 
     expect(store.get(id)).toBeNull();
   });
 
-  it("getByCategory returns only selected category", () => {
+  it("getByCategory仅返回选定的类别", () => {
     addKnowledge({ category: "technical", key: "k-tech" });
     addKnowledge({ category: "market", key: "k-market" });
 
@@ -171,7 +171,7 @@ describe("KnowledgeStore", () => {
     expect(technical[0].key).toBe("k-tech");
   });
 
-  it("getByCategory sorts by confidence desc then lastVerified desc", () => {
+  it("getByCategory按置信度降序然后按lastVerified降序排序", () => {
     const old = addKnowledge({ category: "technical", key: "old-high", confidence: 0.9, lastVerified: "2026-01-01T00:00:00.000Z" });
     const newer = addKnowledge({ category: "technical", key: "new-high", confidence: 0.9, lastVerified: "2026-01-02T00:00:00.000Z" });
     const low = addKnowledge({ category: "technical", key: "low", confidence: 0.2, lastVerified: "2026-01-03T00:00:00.000Z" });
@@ -184,7 +184,7 @@ describe("KnowledgeStore", () => {
     expect(items.map((item) => item.key)).toEqual(["new-high", "old-high", "low"]);
   });
 
-  it("prune removes expired entries", () => {
+  it("prune移除过期条目", () => {
     addKnowledge({ key: "expired-1", expiresAt: "2020-01-01T00:00:00.000Z" });
     addKnowledge({ key: "active-1", expiresAt: null });
 
@@ -196,7 +196,7 @@ describe("KnowledgeStore", () => {
     expect(keys).not.toContain("expired-1");
   });
 
-  it("prune removes low-confidence stale entries", () => {
+  it("prune移除低置信度的陈旧条目", () => {
     addKnowledge({
       key: "stale-low",
       confidence: 0.2,
@@ -218,7 +218,7 @@ describe("KnowledgeStore", () => {
     expect(keys).not.toContain("stale-low");
   });
 
-  it("prune keeps high-confidence stale entries", () => {
+  it("prune保留高置信度的陈旧条目", () => {
     addKnowledge({
       key: "stale-high",
       confidence: 0.95,
@@ -230,7 +230,7 @@ describe("KnowledgeStore", () => {
     expect(store.search("stale-high")).toHaveLength(1);
   });
 
-  it("getStats returns correct aggregates", () => {
+  it("getStats返回正确的聚合", () => {
     addKnowledge({ category: "technical", tokenCount: 20, key: "t1" });
     addKnowledge({ category: "technical", tokenCount: 30, key: "t2" });
     addKnowledge({ category: "financial", tokenCount: 50, key: "f1" });
@@ -244,7 +244,7 @@ describe("KnowledgeStore", () => {
     expect(stats.byCategory.market).toBe(0);
   });
 
-  it("getStats handles empty table", () => {
+  it("getStats处理空表", () => {
     const stats = store.getStats();
 
     expect(stats.total).toBe(0);
@@ -258,7 +258,7 @@ describe("KnowledgeStore", () => {
     });
   });
 
-  it("update with empty patch is a no-op", () => {
+  it("update使用空补丁是无操作", () => {
     const id = addKnowledge({ key: "noop-key" });
     store.update(id, {});
 
@@ -266,7 +266,7 @@ describe("KnowledgeStore", () => {
     expect(entry?.key).toBe("noop-key");
   });
 
-  it("getByCategory excludes expired rows", () => {
+  it("getByCategory排除过期行", () => {
     addKnowledge({ category: "technical", key: "valid", expiresAt: null });
     addKnowledge({ category: "technical", key: "expired", expiresAt: "2020-01-01T00:00:00.000Z" });
 

@@ -1,8 +1,8 @@
 /**
- * Policy Engine
+ * 策略引擎
  *
- * Centralized policy evaluation for all tool calls.
- * Every executeTool() call passes through this engine before execution.
+ * 所有工具调用的集中策略评估。
+ * 每次 executeTool() 调用在执行前都通过此引擎。
  */
 
 import { createHash } from "crypto";
@@ -30,8 +30,8 @@ export class PolicyEngine {
   }
 
   /**
-   * Evaluate a tool call request against all applicable policy rules.
-   * Returns a PolicyDecision with the overall action.
+   * 根据所有适用的策略规则评估工具调用请求。
+   * 返回包含总体操作的 PolicyDecision。
    */
   evaluate(request: PolicyRequest): PolicyDecision {
     const startTime = Date.now();
@@ -43,7 +43,7 @@ export class PolicyEngine {
     const rulesTriggered: string[] = [];
     let overallAction: PolicyAction = "allow";
     let reasonCode = "ALLOWED";
-    let humanMessage = "All policy checks passed";
+    let humanMessage = "所有策略检查通过";
 
     for (const rule of applicableRules) {
       rulesEvaluated.push(rule.id);
@@ -59,7 +59,7 @@ export class PolicyEngine {
         overallAction = "deny";
         reasonCode = result.reasonCode;
         humanMessage = result.humanMessage;
-        break; // First deny wins
+        break; // 第一个拒绝获胜
       }
 
       if (result.action === "quarantine" && overallAction === "allow") {
@@ -94,7 +94,7 @@ export class PolicyEngine {
   }
 
   /**
-   * Log a policy decision to the database.
+   * 将策略决策记录到数据库。
    */
   logDecision(decision: PolicyDecision, turnId?: string): void {
     const row: PolicyDecisionRow = {
@@ -113,12 +113,12 @@ export class PolicyEngine {
     try {
       insertPolicyDecision(this.db, row);
     } catch {
-      // Don't let logging failures block tool execution
+      // 不要让日志记录失败阻止工具执行
     }
   }
 
   /**
-   * Derive authority level from input source.
+   * 从输入源推导权限级别。
    */
   static deriveAuthorityLevel(
     inputSource: InputSource | undefined,
@@ -136,7 +136,7 @@ export class PolicyEngine {
   }
 
   /**
-   * Check if a rule applies to the given request's tool.
+   * 检查规则是否适用于给定请求的工具。
    */
   private ruleApplies(rule: PolicyRule, request: PolicyRequest): boolean {
     const selector = rule.appliesTo;

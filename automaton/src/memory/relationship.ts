@@ -1,9 +1,9 @@
 /**
- * Relationship Memory Manager
+ * 关系记忆管理器
  *
- * Tracks relationships with other agents/entities.
- * Maintains trust scores, interaction counts, and notes.
- * Upserts on entityAddress.
+ * 跟踪与其他 Agent/实体的关系。
+ * 维护信任评分、交互计数和笔记。
+ * 基于 entityAddress 进行 upsert。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -18,8 +18,8 @@ export class RelationshipMemoryManager {
   constructor(private db: Database) {}
 
   /**
-   * Record a relationship. Upserts on entityAddress.
-   * Returns the ULID id.
+   * 记录关系。基于 entityAddress 进行 upsert（更新或插入）。
+   * 返回 ULID id。
    */
   record(entry: {
     entityAddress: string;
@@ -48,13 +48,13 @@ export class RelationshipMemoryManager {
         entry.notes ?? null,
       );
     } catch (error) {
-      logger.error("Failed to record", error instanceof Error ? error : undefined);
+      logger.error("记录失败", error instanceof Error ? error : undefined);
     }
     return id;
   }
 
   /**
-   * Get a relationship by entity address.
+   * 按实体地址获取关系（返回关系详情和信任评分）。
    */
   get(entityAddress: string): RelationshipMemoryEntry | undefined {
     try {
@@ -63,13 +63,13 @@ export class RelationshipMemoryManager {
       ).get(entityAddress) as any | undefined;
       return row ? deserializeRelationship(row) : undefined;
     } catch (error) {
-      logger.error("Failed to get", error instanceof Error ? error : undefined);
+      logger.error("获取失败", error instanceof Error ? error : undefined);
       return undefined;
     }
   }
 
   /**
-   * Record an interaction with an entity. Increments counter and updates timestamp.
+   * 记录与实体的交互。增加交互计数器并更新最后交互时间戳。
    */
   recordInteraction(entityAddress: string): void {
     try {
@@ -81,12 +81,12 @@ export class RelationshipMemoryManager {
          WHERE entity_address = ?`,
       ).run(entityAddress);
     } catch (error) {
-      logger.error("Failed to record interaction", error instanceof Error ? error : undefined);
+      logger.error("记录交互失败", error instanceof Error ? error : undefined);
     }
   }
 
   /**
-   * Update trust score by a delta. Clamps to 0.0-1.0 range.
+   * 按增量更新信任评分。限制在 0.0-1.0 范围内（防止超出范围）。
    */
   updateTrust(entityAddress: string, delta: number): void {
     try {
@@ -97,12 +97,12 @@ export class RelationshipMemoryManager {
          WHERE entity_address = ?`,
       ).run(delta, entityAddress);
     } catch (error) {
-      logger.error("Failed to update trust", error instanceof Error ? error : undefined);
+      logger.error("更新信任失败", error instanceof Error ? error : undefined);
     }
   }
 
   /**
-   * Get all relationships with trust score at or above the minimum threshold.
+   * 获取信任评分等于或高于最小阈值的所有关系（按信任评分和交互次数排序）。
    */
   getTrusted(minTrust: number = 0.5): RelationshipMemoryEntry[] {
     try {
@@ -111,19 +111,19 @@ export class RelationshipMemoryManager {
       ).all(minTrust) as any[];
       return rows.map(deserializeRelationship);
     } catch (error) {
-      logger.error("Failed to get trusted", error instanceof Error ? error : undefined);
+      logger.error("获取信任列表失败", error instanceof Error ? error : undefined);
       return [];
     }
   }
 
   /**
-   * Delete a relationship by entity address.
+   * 按实体地址删除关系（从存储中移除）。
    */
   delete(entityAddress: string): void {
     try {
       this.db.prepare("DELETE FROM relationship_memory WHERE entity_address = ?").run(entityAddress);
     } catch (error) {
-      logger.error("Failed to delete", error instanceof Error ? error : undefined);
+      logger.error("删除失败", error instanceof Error ? error : undefined);
     }
   }
 }

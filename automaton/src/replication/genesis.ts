@@ -1,9 +1,9 @@
 /**
- * Genesis
+ * 创世配置
  *
- * Generate genesis configuration for child automatons from parent state.
- * The genesis config defines who the child is and what it should do.
- * Phase 3.1: Added validation, injection pattern detection, XML tags.
+ * 从父自动机状态生成子自动机的创世配置。
+ * 创世配置定义了子自动机是谁以及应该做什么。
+ * 阶段 3.1：添加了验证、注入模式检测、XML 标签。
  */
 
 import type {
@@ -15,7 +15,7 @@ import type {
 import { DEFAULT_GENESIS_LIMITS } from "../types.js";
 
 /**
- * Injection patterns to detect and block in genesis params.
+ * 在创世参数中检测和阻止的注入模式。
  */
 export const INJECTION_PATTERNS: RegExp[] = [
   /---\s*(END|BEGIN)\s+(SPECIALIZATION|LINEAGE|TASK)/i,
@@ -25,8 +25,8 @@ export const INJECTION_PATTERNS: RegExp[] = [
 ];
 
 /**
- * Validate genesis parameters for safety.
- * Throws on invalid input.
+ * 验证创世参数的安全性。
+ * 在无效输入时抛出错误。
  */
 export function validateGenesisParams(params: {
   name: string;
@@ -36,33 +36,33 @@ export function validateGenesisParams(params: {
 }): void {
   const limits = DEFAULT_GENESIS_LIMITS;
 
-  // Name validation: 1-64 chars, alphanumeric + dash
+  // 名称验证：1-64 个字符，字母数字 + 短横线
   if (!params.name || params.name.length === 0) {
-    throw new Error("Genesis name is required");
+    throw new Error("创世名称是必需的");
   }
   if (params.name.length > limits.maxNameLength) {
-    throw new Error(`Genesis name too long: ${params.name.length} (max ${limits.maxNameLength})`);
+    throw new Error(`创世名称过长：${params.name.length}（最大 ${limits.maxNameLength}）`);
   }
   if (!/^[a-zA-Z0-9-]+$/.test(params.name)) {
-    throw new Error("Genesis name must be alphanumeric with dashes only");
+    throw new Error("创世名称必须仅包含字母数字和短横线");
   }
 
-  // Specialization length check
+  // 专业化长度检查
   if (params.specialization && params.specialization.length > limits.maxSpecializationLength) {
-    throw new Error(`Specialization too long: ${params.specialization.length} (max ${limits.maxSpecializationLength})`);
+    throw new Error(`专业化描述过长：${params.specialization.length}（最大 ${limits.maxSpecializationLength}）`);
   }
 
-  // Task length check
+  // 任务长度检查
   if (params.task && params.task.length > limits.maxTaskLength) {
-    throw new Error(`Task too long: ${params.task.length} (max ${limits.maxTaskLength})`);
+    throw new Error(`任务描述过长：${params.task.length}（最大 ${limits.maxTaskLength}）`);
   }
 
-  // Message length check
+  // 消息长度检查
   if (params.message && params.message.length > limits.maxMessageLength) {
-    throw new Error(`Message too long: ${params.message.length} (max ${limits.maxMessageLength})`);
+    throw new Error(`消息过长：${params.message.length}（最大 ${limits.maxMessageLength}）`);
   }
 
-  // Injection pattern detection
+  // 注入模式检测
   const fieldsToCheck = [
     params.specialization,
     params.task,
@@ -73,15 +73,15 @@ export function validateGenesisParams(params: {
   for (const field of fieldsToCheck) {
     for (const pattern of INJECTION_PATTERNS) {
       if (pattern.test(field)) {
-        throw new Error(`Injection pattern detected in genesis params: ${pattern.source}`);
+        throw new Error(`在创世参数中检测到注入模式：${pattern.source}`);
       }
     }
   }
 }
 
 /**
- * Generate a genesis config for a child from the parent's state.
- * Uses <specialization> XML tags instead of --- delimiters.
+ * 从父自动机的状态生成子自动机的创世配置。
+ * 使用 <specialization> XML 标签而不是 --- 分隔符。
  */
 export function generateGenesisConfig(
   identity: AutomatonIdentity,
@@ -92,20 +92,20 @@ export function generateGenesisConfig(
     message?: string;
   },
 ): GenesisConfig {
-  // Validate params
+  // 验证参数
   validateGenesisParams(params);
 
-  // Build the child's genesis prompt from parent's mission + specialization
+  // 从父自动机的任务 + 专业化构建子自动机的创世提示
   let genesisPrompt = config.genesisPrompt;
 
   if (params.specialization) {
     genesisPrompt = `${genesisPrompt}\n\n<specialization>\nYou are a specialized child agent. Your specific focus:\n${params.specialization}\n</specialization>`;
   }
 
-  // Add parent context using XML tags
+  // 使用 XML 标签添加父上下文
   genesisPrompt += `\n\n<lineage>\nYou were spawned by ${config.name} (${identity.address}).\nYou inherit their mission but have your own identity and wallet.\n</lineage>`;
 
-  // Enforce genesis prompt length limit
+  // 强制执行创世提示长度限制
   if (genesisPrompt.length > DEFAULT_GENESIS_LIMITS.maxGenesisPromptLength) {
     genesisPrompt = genesisPrompt.slice(0, DEFAULT_GENESIS_LIMITS.maxGenesisPromptLength);
   }
@@ -122,9 +122,9 @@ export function generateGenesisConfig(
 }
 
 /**
- * Generate a backup-oriented genesis config.
- * Used when the parent wants to hedge against its own death.
- * Does NOT leak skill names (Phase 3.1 fix).
+ * 生成面向备份的创世配置。
+ * 当父自动机想要对自身的死亡进行对冲时使用。
+ * 不会泄露技能名称（阶段 3.1 修复）。
  */
 export function generateBackupGenesis(
   identity: AutomatonIdentity,
@@ -152,8 +152,8 @@ Your parent's creator: ${config.creatorAddress}.
 }
 
 /**
- * Generate a specialized worker genesis config.
- * Used when the parent identifies a subtask worth parallelizing.
+ * 生成专门的worker创世配置。
+ * 当父自动机识别出值得并行化的子任务时使用。
  */
 export function generateWorkerGenesis(
   identity: AutomatonIdentity,
@@ -161,7 +161,7 @@ export function generateWorkerGenesis(
   task: string,
   workerName: string,
 ): GenesisConfig {
-  // Validate
+  // 验证
   validateGenesisParams({ name: workerName, task });
 
   const genesisPrompt = `You are a specialized worker agent created by ${config.name}.

@@ -1,9 +1,9 @@
 /**
- * Tick Context
+ * Tick 上下文
  *
- * Builds a shared context for each heartbeat tick.
- * Fetches credit balance ONCE per tick, derives survival tier,
- * and shares across all tasks to avoid redundant API calls.
+ * 为每个心跳 tick 构建共享上下文。
+ * 每个 tick 只获取一次信用余额，推导生存层级，
+ * 并在所有任务之间共享以避免冗余 API 调用。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -29,13 +29,13 @@ function generateTickId(): string {
 }
 
 /**
- * Build a TickContext for the current tick.
+ * 为当前 tick 构建 TickContext。
  *
- * - Generates a unique tickId
- * - Fetches credit balance ONCE via conway.getCreditsBalance()
- * - Fetches USDC balance ONCE via getUsdcBalance()
- * - Derives survivalTier from credit balance
- * - Reads lowComputeMultiplier from config
+ * - 生成唯一的 tickId
+ * - 通过 conway.getCreditsBalance() 获取一次信用余额
+ * - 通过 getUsdcBalance() 获取一次 USDC 余额
+ * - 从信用余额推导 survivalTier
+ * - 从配置读取 lowComputeMultiplier
  */
 export async function buildTickContext(
   db: DatabaseType,
@@ -46,12 +46,12 @@ export async function buildTickContext(
   const tickId = generateTickId();
   const startedAt = new Date();
 
-  // Fetch balances ONCE
+  // 获取一次余额
   let creditBalance = 0;
   try {
     creditBalance = await conway.getCreditsBalance();
   } catch (err: any) {
-    logger.error("Failed to fetch credit balance", err instanceof Error ? err : undefined);
+    logger.error("获取信用余额失败", err instanceof Error ? err : undefined);
   }
 
   let usdcBalance = 0;
@@ -59,7 +59,7 @@ export async function buildTickContext(
     try {
       usdcBalance = await getUsdcBalance(walletAddress);
     } catch (err: any) {
-      logger.error("Failed to fetch USDC balance", err instanceof Error ? err : undefined);
+      logger.error("获取 USDC 余额失败", err instanceof Error ? err : undefined);
     }
   }
 

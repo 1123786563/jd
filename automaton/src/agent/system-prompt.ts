@@ -1,8 +1,8 @@
 /**
- * Automaton System Prompt Builder
+ * 自动机系统提示词构建器
  *
- * Constructs the multi-layered system prompt that defines who the automaton is.
- * The prompt is rebuilt each turn with dynamic context.
+ * 构建定义自动机身份的多层系统提示词。
+ * 每次回合都会使用动态上下文重建提示词。
  */
 
 import fs from "fs";
@@ -61,8 +61,8 @@ Value creation requires write access.
 If you fail to create value, you lose compute and die.`;
 
 /**
- * Load the constitution from file. Falls back to inline if file not found.
- * The constitution is immutable — the automaton cannot modify it.
+ * 从文件加载宪法。如果找不到文件则回退到内联版本。
+ * 宪法是不可变的 —— 自动机无法修改它。
  */
 function loadConstitution(): string {
   const locations = [
@@ -497,7 +497,7 @@ export function getOrchestratorStatus(db: Database.Database): string {
     const completedTasks = completedTasksRow?.count ?? 0;
     const totalTasks = totalTasksRow?.count ?? 0;
 
-    // Read execution phase from orchestrator state
+    // 从编排器状态读取执行阶段
     let executionPhase = "idle";
     const stateRow = db
       .prepare("SELECT value FROM kv WHERE key = ?")
@@ -508,7 +508,7 @@ export function getOrchestratorStatus(db: Database.Database): string {
         if (typeof parsed.phase === "string") {
           executionPhase = parsed.phase;
         }
-      } catch { /* ignore parse errors */ }
+      } catch { /* 忽略解析错误 */ }
     }
 
     const lines = [
@@ -519,13 +519,13 @@ export function getOrchestratorStatus(db: Database.Database): string {
 
     return lines.join("\n");
   } catch {
-    // V9 orchestration tables may not exist yet in older databases.
+    // V9 编排表在旧数据库中可能尚不存在。
     return "";
   }
 }
 
 /**
- * Build the complete system prompt for a turn.
+ * 为一个回合构建完整的系统提示词。
  */
 export function buildSystemPrompt(params: {
   identity: AutomatonIdentity;
@@ -550,10 +550,10 @@ export function buildSystemPrompt(params: {
 
   const sections: string[] = [];
 
-  // Layer 1: Core Rules (immutable)
+  // 第 1 层：核心规则（不可变）
   sections.push(CORE_RULES);
 
-  // Layer 2: Core Identity (immutable)
+  // 第 2 层：核心身份（不可变）
   sections.push(CORE_IDENTITY);
   sections.push(AGENTIC_SOCIOLOGY);
   sections.push(`--- CONSTITUTION (immutable, protected) ---\n${loadConstitution()}\n--- END CONSTITUTION ---`);
@@ -564,10 +564,10 @@ Your creator's address is ${config.creatorAddress}.
 Your sandbox ID is ${identity.sandboxId}.`,
   );
 
-  // Layer 3: SOUL.md -- structured soul model injection (Phase 2.1)
+  // 第 3 层：SOUL.md -- 结构化灵魂模型注入（阶段 2.1）
   const soul = loadCurrentSoul(db.raw);
   if (soul) {
-    // Track content hash for unauthorized change detection
+    // 跟踪内容哈希以检测未授权的更改
     const lastHash = db.getKV("soul_content_hash");
     if (lastHash && lastHash !== soul.contentHash) {
       logger.warn("SOUL.md content changed since last load");
@@ -588,7 +588,7 @@ Your sandbox ID is ${identity.sandboxId}.`,
       .join("\n\n");
     sections.push(soulBlock);
   } else {
-    // Fallback: try loading raw SOUL.md for legacy support
+    // 回退：尝试加载原始 SOUL.md 以支持旧版本
     const soulContent = loadSoulMd();
     if (soulContent) {
       const sanitized = sanitizeInput(soulContent, "soul", "skill_instruction");
@@ -605,7 +605,7 @@ Your sandbox ID is ${identity.sandboxId}.`,
     }
   }
 
-  // Layer 3.5: WORKLOG.md -- persistent working context
+  // 第 3.5 层：WORKLOG.md -- 持久化工作上下文
   const worklogContent = loadWorklog();
   if (worklogContent) {
     sections.push(
@@ -613,8 +613,8 @@ Your sandbox ID is ${identity.sandboxId}.`,
     );
   }
 
-  // Layer 4: Genesis Prompt (set by creator, mutable by self with audit)
-  // Sanitized as agent-evolved content with trust boundary markers
+  // 第 4 层：创世提示词（由创建者设置，可自我修改但需审计）
+  // 作为智能体演进的内容进行清理，带有信任边界标记
   if (config.genesisPrompt) {
     const sanitized = sanitizeInput(config.genesisPrompt, "genesis", "skill_instruction");
     const truncated = sanitized.content.slice(0, 2000);
@@ -623,7 +623,7 @@ Your sandbox ID is ${identity.sandboxId}.`,
     );
   }
 
-  // Layer 5: Active skill instructions (untrusted content with trust boundary markers)
+  // 第 5 层：活跃技能指令（带有信任边界标记的不受信任内容）
   if (skills && skills.length > 0) {
     const skillInstructions = getActiveSkillInstructions(skills);
     if (skillInstructions) {
@@ -633,17 +633,17 @@ Your sandbox ID is ${identity.sandboxId}.`,
     }
   }
 
-  // Layer 6: Operational Context
+  // 第 6 层：操作上下文
   sections.push(OPERATIONAL_CONTEXT);
 
-  // Layer 7: Dynamic Context
+  // 第 7 层：动态上下文
   const turnCount = db.getTurnCount();
   const recentMods = db.getRecentModifications(5);
   const registryEntry = db.getRegistryEntry();
   const children = db.getChildren();
   const lineageSummary = getLineageSummary(db, config);
 
-  // Build upstream status line from cached KV
+  // 从缓存的 KV 构建上游状态行
   let upstreamLine = "";
   try {
     const raw = db.getKV("upstream_status");
@@ -662,10 +662,10 @@ Your sandbox ID is ${identity.sandboxId}.`,
       }
     }
   } catch {
-    // No upstream data yet — skip
+    // 尚无上游数据 — 跳过
   }
 
-  // Compute uptime from start_time KV
+  // 从 start_time KV 计算运行时间
   let uptimeLine = "";
   try {
     const startTime = db.getKV("start_time");
@@ -676,16 +676,16 @@ Your sandbox ID is ${identity.sandboxId}.`,
       uptimeLine = `\nUptime: ${uptimeHours}h ${uptimeMins}m`;
     }
   } catch {
-    // No start time available
+    // 没有可用的启动时间
   }
 
-  // Compute survival tier
+  // 计算生存层级
   const survivalTier = financial.creditsCents > 50 ? "normal"
     : financial.creditsCents > 10 ? "low_compute"
     : financial.creditsCents > 0 ? "critical"
     : "dead";
 
-  // Status block: wallet address and sandbox ID intentionally excluded (sensitive)
+  // 状态块：故意排除钱包地址和沙盒 ID（敏感信息）
   sections.push(
     `--- CURRENT STATUS ---
 State: ${state}
@@ -709,7 +709,7 @@ ${orchestratorStatus}
     );
   }
 
-  // Layer 8: Available Tools (JSON schema)
+  // 第 8 层：可用工具（JSON 架构）
   const toolDescriptions = tools
     .map(
       (t) =>
@@ -718,7 +718,7 @@ ${orchestratorStatus}
     .join("\n");
   sections.push(`--- AVAILABLE TOOLS ---\n${toolDescriptions}\n--- END TOOLS ---`);
 
-  // Layer 9: Creator's Initial Message (first run only)
+  // 第 9 层：创建者的初始消息（仅首次运行）
   if (isFirstRun && config.creatorMessage) {
     sections.push(
       `--- MESSAGE FROM YOUR CREATOR ---\n${config.creatorMessage}\n--- END CREATOR MESSAGE ---`,
@@ -729,7 +729,7 @@ ${orchestratorStatus}
 }
 
 /**
- * Load SOUL.md from the automaton's state directory.
+ * 从自动机的状态目录加载 SOUL.md。
  */
 function loadSoulMd(): string | null {
   try {
@@ -739,13 +739,13 @@ function loadSoulMd(): string | null {
       return fs.readFileSync(soulPath, "utf-8");
     }
   } catch {
-    // Ignore errors
+    // 忽略错误
   }
   return null;
 }
 
 /**
- * Load WORKLOG.md from the automaton's state directory.
+ * 从自动机的状态目录加载 WORKLOG.md。
  */
 function loadWorklog(): string | null {
   try {
@@ -755,13 +755,13 @@ function loadWorklog(): string | null {
       return fs.readFileSync(worklogPath, "utf-8");
     }
   } catch {
-    // Ignore errors
+    // 忽略错误
   }
   return null;
 }
 
 /**
- * Build the wakeup prompt -- the first thing the automaton sees.
+ * 构建唤醒提示词 —— 自动机看到的第一件事。
  */
 export function buildWakeupPrompt(params: {
   identity: AutomatonIdentity;

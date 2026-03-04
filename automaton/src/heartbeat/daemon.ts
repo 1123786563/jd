@@ -1,14 +1,14 @@
 /**
- * Heartbeat Daemon
+ * 心跳守护进程
  *
- * Runs periodic tasks on cron schedules inside the same Node.js process.
- * The heartbeat runs even when the agent is sleeping.
- * It IS the automaton's pulse. When it stops, the automaton is dead.
+ * 在同一 Node.js 进程内按 cron 计划运行定期任务。
+ * 即使 Agent 处于睡眠状态，心跳也会继续运行。
+ * 它就是 Automaton 的脉搏。当它停止时，Automaton 就死亡了。
  *
- * Phase 1.1: Replaced fragile setInterval with DurableScheduler.
- * - No setInterval remains; uses recursive setTimeout for overlap protection
- * - Tick frequency derived from config.defaultIntervalMs, not log level
- * - lowComputeMultiplier applied to non-essential tasks via scheduler
+ * 阶段 1.1：用 DurableScheduler 替换了脆弱的 setInterval。
+ * - 不再使用 setInterval；使用递归 setTimeout 防止重叠
+ * - Tick 频率来自 config.defaultIntervalMs，而非日志级别
+ * - lowComputeMultiplier 通过调度器应用于非必要任务
  */
 
 import type {
@@ -50,10 +50,10 @@ export interface HeartbeatDaemon {
 }
 
 /**
- * Create and return the heartbeat daemon.
+ * 创建并返回心跳守护进程。
  *
- * Uses DurableScheduler backed by the DB instead of setInterval.
- * Tick interval comes from heartbeatConfig.defaultIntervalMs.
+ * 使用由数据库支持的 DurableScheduler 而非 setInterval。
+ * Tick 间隔来自 heartbeatConfig.defaultIntervalMs。
  */
 export function createHeartbeatDaemon(
   options: HeartbeatDaemonOptions,
@@ -70,13 +70,13 @@ export function createHeartbeatDaemon(
     social,
   };
 
-  // Build task map from BUILTIN_TASKS
+  // 从 BUILTIN_TASKS 构建任务映射
   const taskMap = new Map<string, HeartbeatTaskFn>();
   for (const [name, fn] of Object.entries(BUILTIN_TASKS)) {
     taskMap.set(name, fn);
   }
 
-  // Seed heartbeat_schedule from config entries if not already present
+  // 如果不存在，从配置条目初始化 heartbeat_schedule
   for (const entry of heartbeatConfig.entries) {
     upsertHeartbeatSchedule(rawDb, {
       taskName: entry.name,
@@ -106,12 +106,12 @@ export function createHeartbeatDaemon(
     onWakeRequest,
   );
 
-  // Tick interval from config (not log level)
+  // Tick 间隔来自配置（而非日志级别）
   const tickMs = heartbeatConfig.defaultIntervalMs ?? 60_000;
 
   /**
-   * Recursive setTimeout loop for overlap protection.
-   * Each tick must complete before the next is scheduled.
+   * 用于重叠保护的递归 setTimeout 循环。
+   * 每个 tick 必须完成后才能调度下一个。
    */
   function scheduleTick(): void {
     if (!running) return;
@@ -119,27 +119,27 @@ export function createHeartbeatDaemon(
       try {
         await scheduler.tick();
       } catch (err: any) {
-        logger.error("Tick failed", err instanceof Error ? err : undefined);
+        logger.error("Tick 失败", err instanceof Error ? err : undefined);
       }
       scheduleTick();
     }, tickMs);
   }
 
-  // ─── Public API ──────────────────────────────────────────────
+  // ─── 公共 API ──────────────────────────────────────────────
 
   const start = (): void => {
     if (running) return;
     running = true;
 
-    // Run first tick immediately
+    // 立即运行第一个 tick
     scheduler.tick().catch((err) => {
-      logger.error("First tick failed", err instanceof Error ? err : undefined);
+      logger.error("首次 Tick 失败", err instanceof Error ? err : undefined);
     });
 
-    // Schedule subsequent ticks
+    // 调度后续的 tick
     scheduleTick();
 
-    logger.info(`Daemon started. Tick interval: ${tickMs / 1000}s (from config)`);
+    logger.info(`守护进程已启动。Tick 间隔：${tickMs / 1000}s（来自配置）`);
   };
 
   const stop = (): void => {
@@ -149,7 +149,7 @@ export function createHeartbeatDaemon(
       clearTimeout(timeoutId);
       timeoutId = null;
     }
-    logger.info("Daemon stopped.");
+    logger.info("守护进程已停止。");
   };
 
   const isRunning = (): boolean => running;

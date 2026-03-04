@@ -93,11 +93,11 @@ export function createGoal(
   const normalizedDescription = description.trim();
 
   if (!normalizedTitle) {
-    throw new Error("Goal title cannot be empty");
+    throw new Error("目标标题不能为空");
   }
 
   if (!normalizedDescription) {
-    throw new Error("Goal description cannot be empty");
+    throw new Error("目标描述不能为空");
   }
 
   const id = insertGoal(db, {
@@ -108,7 +108,7 @@ export function createGoal(
 
   const row = getGoalById(db, id);
   if (!row) {
-    throw new Error(`Failed to load goal after insertion: ${id}`);
+    throw new Error(`插入后加载目标失败: ${id}`);
   }
 
   return goalRowToGoal(row, []);
@@ -120,7 +120,7 @@ export function decomposeGoal(
   tasks: Omit<TaskNode, "id" | "metadata">[],
 ): void {
   if (!getGoalById(db, goalId)) {
-    throw new Error(`Goal not found: ${goalId}`);
+    throw new Error(`未找到目标: ${goalId}`);
   }
 
   if (tasks.length === 0) {
@@ -131,19 +131,19 @@ export function decomposeGoal(
   for (const task of tasks) {
     const normalizedTitle = task.title.trim();
     if (!normalizedTitle) {
-      throw new Error("Task title cannot be empty");
+      throw new Error("任务标题不能为空");
     }
 
     if (!task.description.trim()) {
-      throw new Error(`Task description cannot be empty for: ${task.title}`);
+      throw new Error(`任务描述不能为空: ${task.title}`);
     }
 
     if (task.goalId !== goalId) {
-      throw new Error(`Task goal mismatch for '${task.title}'. Expected ${goalId}, got ${task.goalId}`);
+      throw new Error(`任务 '${task.title}' 的目标 ID 不匹配。期望 ${goalId}，实际 ${task.goalId}`);
     }
 
     if (!Number.isInteger(task.priority) || task.priority < 0 || task.priority > 100) {
-      throw new Error(`Task priority must be an integer in [0,100] for '${task.title}'`);
+      throw new Error(`任务 '${task.title}' 的优先级必须是 [0,100] 范围内的整数`);
     }
 
     titleCounts.set(task.title, (titleCounts.get(task.title) ?? 0) + 1);
@@ -163,7 +163,7 @@ export function decomposeGoal(
   }));
 
   if (detectCycles(cycleTasks)) {
-    throw new Error("Task graph contains a cycle; decomposition must be a DAG");
+    throw new Error("任务图包含循环；分解必须是有向无环图（DAG）");
   }
 
   withTransaction(db, () => {
@@ -239,17 +239,17 @@ export function getReadyTasks(db: Database): TaskNode[] {
 export function assignTask(db: Database, taskId: string, agentAddress: string): void {
   const normalizedAddress = agentAddress.trim();
   if (!normalizedAddress) {
-    throw new Error("agentAddress cannot be empty");
+    throw new Error("代理地址不能为空");
   }
 
   withTransaction(db, () => {
     const task = getTaskById(db, taskId);
     if (!task) {
-      throw new Error(`Task not found: ${taskId}`);
+      throw new Error(`未找到任务: ${taskId}`);
     }
 
     if (task.status !== "pending") {
-      throw new Error(`Task ${taskId} is not assignable from status '${task.status}'`);
+      throw new Error(`任务 ${taskId} 在状态 '${task.status}' 下不可分配`);
     }
 
     updateTaskStatus(db, taskId, "assigned");
@@ -261,11 +261,11 @@ export function completeTask(db: Database, taskId: string, result: TaskResult): 
   withTransaction(db, () => {
     const task = getTaskById(db, taskId);
     if (!task) {
-      throw new Error(`Task not found: ${taskId}`);
+      throw new Error(`未找到任务: ${taskId}`);
     }
 
     if (TERMINAL_TASK_STATUSES.has(task.status)) {
-      throw new Error(`Task ${taskId} is already in terminal status '${task.status}'`);
+      throw new Error(`任务 ${taskId} 已处于终止状态 '${task.status}'`);
     }
 
     updateTaskStatus(db, taskId, "completed");
@@ -282,11 +282,11 @@ export function failTask(db: Database, taskId: string, error: string, shouldRetr
   withTransaction(db, () => {
     const task = getTaskById(db, taskId);
     if (!task) {
-      throw new Error(`Task not found: ${taskId}`);
+      throw new Error(`未找到任务: ${taskId}`);
     }
 
     if (TERMINAL_TASK_STATUSES.has(task.status)) {
-      throw new Error(`Task ${taskId} is already in terminal status '${task.status}'`);
+      throw new Error(`任务 ${taskId} 已处于终止状态 '${task.status}'`);
     }
 
     const failureResult: TaskResult = {
@@ -567,16 +567,16 @@ function validateParentReference(
   }
 
   if (parentId === taskId) {
-    throw new Error(`Task ${taskId} cannot be its own parent`);
+    throw new Error(`任务 ${taskId} 不能作为自己的父任务`);
   }
 
   const parentTask = getTaskById(db, parentId);
   if (!parentTask) {
-    throw new Error(`Parent task ${parentId} not found for task ${taskId}`);
+    throw new Error(`未找到任务 ${taskId} 的父任务 ${parentId}`);
   }
 
   if (parentTask.goalId !== goalId) {
-    throw new Error(`Parent task ${parentId} is outside goal ${goalId}`);
+    throw new Error(`父任务 ${parentId} 不在目标 ${goalId} 中`);
   }
 }
 
@@ -588,16 +588,16 @@ function validateDependencyReferences(
 ): void {
   for (const dependencyId of dependencies) {
     if (dependencyId === taskId) {
-      throw new Error(`Task ${taskId} cannot depend on itself`);
+      throw new Error(`任务 ${taskId} 不能依赖自己`);
     }
 
     const dependencyTask = getTaskById(db, dependencyId);
     if (!dependencyTask) {
-      throw new Error(`Dependency task ${dependencyId} not found for task ${taskId}`);
+      throw new Error(`未找到任务 ${taskId} 的依赖任务 ${dependencyId}`);
     }
 
     if (dependencyTask.goalId !== goalId) {
-      throw new Error(`Dependency task ${dependencyId} is outside goal ${goalId}`);
+      throw new Error(`依赖任务 ${dependencyId} 不在目标 ${goalId} 中`);
     }
   }
 }

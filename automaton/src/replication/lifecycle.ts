@@ -1,8 +1,8 @@
 /**
- * Child Lifecycle State Machine
+ * 子生命周期状态机
  *
- * Manages child automaton lifecycle transitions with validation.
- * Every transition is recorded in the child_lifecycle_events table.
+ * 管理子自动机生命周期转换并进行验证。
+ * 每个转换都记录在 child_lifecycle_events 表中。
  */
 
 import type { Database as DatabaseType } from "better-sqlite3";
@@ -21,22 +21,22 @@ export class ChildLifecycle {
   constructor(private db: DatabaseType) {}
 
   /**
-   * Initialize a child record and insert the first lifecycle event.
+   * 初始化子记录并插入第一个生命周期事件。
    */
   initChild(childId: string, name: string, sandboxId: string, genesisPrompt: string): void {
-    // Insert child row into children table
+    // 在子表中插入子行
     this.db.prepare(
       `INSERT INTO children (id, name, address, sandbox_id, genesis_prompt, status, created_at)
        VALUES (?, ?, '', ?, ?, 'requested', datetime('now'))`,
     ).run(childId, name, sandboxId, genesisPrompt);
 
-    // Record initial event
+    // 记录初始事件
     const event: ChildLifecycleEventRow = {
       id: ulid(),
       childId,
       fromState: "none",
       toState: "requested",
-      reason: "child created",
+      reason: "子自动机已创建",
       metadata: "{}",
       createdAt: new Date().toISOString(),
     };
@@ -45,18 +45,18 @@ export class ChildLifecycle {
   }
 
   /**
-   * Transition a child to a new state with validation.
-   * Throws on invalid transitions.
+   * 将子自动机转换到新状态并进行验证。
+   * 在无效转换时抛出错误。
    */
   transition(childId: string, toState: ChildLifecycleState, reason?: string, metadata?: Record<string, unknown>): void {
     const current = this.getCurrentState(childId);
     const allowed = VALID_TRANSITIONS[current];
 
     if (!allowed || !allowed.includes(toState)) {
-      throw new Error(`Invalid lifecycle transition: ${current} → ${toState}`);
+      throw new Error(`无效的生命周期转换：${current} → ${toState}`);
     }
 
-    // Record transition event
+    // 记录转换事件
     const event: ChildLifecycleEventRow = {
       id: ulid(),
       childId,
@@ -68,30 +68,30 @@ export class ChildLifecycle {
     };
     lifecycleInsertEvent(this.db, event);
 
-    // Update children table
+    // 更新子表
     dbUpdateChildStatus(this.db, childId, toState);
   }
 
   /**
-   * Get the current lifecycle state of a child.
+   * 获取子自动机的当前生命周期状态。
    */
   getCurrentState(childId: string): ChildLifecycleState {
     const state = lifecycleGetLatestState(this.db, childId);
     if (!state) {
-      throw new Error(`Child ${childId} not found in lifecycle events`);
+      throw new Error(`在生命周期事件中未找到子自动机 ${childId}`);
     }
     return state;
   }
 
   /**
-   * Get the full lifecycle event history for a child.
+   * 获取子自动机的完整生命周期事件历史。
    */
   getHistory(childId: string): ChildLifecycleEventRow[] {
     return lifecycleGetEvents(this.db, childId);
   }
 
   /**
-   * Get all children in a given lifecycle state.
+   * 获取给定生命周期状态中的所有子自动机。
    */
   getChildrenInState(state: ChildLifecycleState): Array<{ id: string; name: string; sandboxId: string; status: string; createdAt: string; lastChecked: string | null }> {
     const rows = getChildrenByStatus(this.db, state);

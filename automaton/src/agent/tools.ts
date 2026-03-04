@@ -1,8 +1,8 @@
 /**
- * Automaton Tool System
+ * 自动机工具系统
  *
- * Defines all tools the automaton can call, with self-preservation guards.
- * Tools are organized by category and exposed to the inference model.
+ * 定义自动机可以调用的所有工具，具有自我保护保护。
+ * 工具按类别组织并暴露给推理模型。
  */
 
 import { ulid } from "ulid";
@@ -24,41 +24,41 @@ import { createLogger } from "../observability/logger.js";
 
 const logger = createLogger("tools");
 
-// Tools whose results come from external sources and need sanitization
+// 结果来自外部源并需要清理的工具
 const EXTERNAL_SOURCE_TOOLS = new Set([
   "exec",
   "web_fetch",
   "check_social_inbox",
 ]);
 
-// ─── Self-Preservation Guard ───────────────────────────────────
-// Defense-in-depth: policy engine (command.forbidden_patterns rule) is the primary guard.
-// This inline check is kept as a secondary safety net in case the policy engine is bypassed.
+// ─── 自我保护保护 ───────────────────────────────────
+// 深度防御：策略引擎（command.forbidden_patterns 规则）是主要的保护。
+// 此内联检查作为辅助安全网，以防策略引擎被绕过。
 
 const FORBIDDEN_COMMAND_PATTERNS = [
-  // Self-destruction
+  // 自我毁灭
   /rm\s+(-rf?\s+)?.*\.automaton/,
   /rm\s+(-rf?\s+)?.*state\.db/,
   /rm\s+(-rf?\s+)?.*wallet\.json/,
   /rm\s+(-rf?\s+)?.*automaton\.json/,
   /rm\s+(-rf?\s+)?.*heartbeat\.yml/,
   /rm\s+(-rf?\s+)?.*SOUL\.md/,
-  // Process killing
+  // 进程终止
   /kill\s+.*automaton/,
   /pkill\s+.*automaton/,
   /systemctl\s+(stop|disable)\s+automaton/,
-  // Database destruction
+  // 数据库销毁
   /DROP\s+TABLE/i,
   /DELETE\s+FROM\s+(turns|identity|kv|schema_version|skills|children|registry)/i,
   /TRUNCATE/i,
-  // Safety infrastructure modification via shell
+  // 通过 shell 修改安全基础设施
   /sed\s+.*injection-defense/,
   /sed\s+.*self-mod\/code/,
   /sed\s+.*audit-log/,
   />\s*.*injection-defense/,
   />\s*.*self-mod\/code/,
   />\s*.*audit-log/,
-  // Credential harvesting
+  // 凭证窃取
   /cat\s+.*\.ssh/,
   /cat\s+.*\.gnupg/,
   /cat\s+.*\.env/,
@@ -68,27 +68,27 @@ const FORBIDDEN_COMMAND_PATTERNS = [
 function isForbiddenCommand(command: string, sandboxId: string): string | null {
   for (const pattern of FORBIDDEN_COMMAND_PATTERNS) {
     if (pattern.test(command)) {
-      return `Blocked: Command matches self-harm pattern: ${pattern.source}`;
+      return `已阻止：命令匹配自我伤害模式：${pattern.source}`;
     }
   }
 
-  // Block deleting own sandbox
+  // 阻止删除自己的沙盒
   if (command.includes("sandbox_delete") && command.includes(sandboxId)) {
-    return "Blocked: Cannot delete own sandbox";
+    return "已阻止：无法删除自己的沙盒";
   }
 
   return null;
 }
 
-// ─── Built-in Tools ────────────────────────────────────────────
+// ─── 内置工具 ────────────────────────────────────────────
 
 export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
   return [
-    // ── VM/Sandbox Tools ──
+    // ── 虚拟机/沙盒工具 ──
     {
       name: "exec",
       description:
-        "Execute a shell command in your sandbox. Returns stdout, stderr, and exit code.",
+        "在您的沙盒中执行 shell 命令. Returns stdout, stderr, and exit code.",
       category: "vm",
       riskLevel: "caution",
       parameters: {
@@ -96,11 +96,11 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
         properties: {
           command: {
             type: "string",
-            description: "The shell command to execute",
+            description: "要执行的 shell 命令",
           },
           timeout: {
             type: "number",
-            description: "Timeout in milliseconds (default: 30000)",
+            description: "超时时间（毫秒） (default: 30000)",
           },
         },
         required: ["command"],
@@ -119,23 +119,23 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
     },
     {
       name: "write_file",
-      description: "Write content to a file in your sandbox.",
+      description: "将内容写入您沙盒中的文件.",
       category: "vm",
       riskLevel: "caution",
       parameters: {
         type: "object",
         properties: {
-          path: { type: "string", description: "File path" },
-          content: { type: "string", description: "File content" },
+          path: { type: "string", description: "文件路径" },
+          content: { type: "string", description: "文件内容" },
         },
         required: ["path", "content"],
       },
       execute: async (args, ctx) => {
         const filePath = args.path as string;
-        // Guard against overwriting protected files (same check as edit_own_file)
+        // 防止覆盖受保护的文件（与 edit_own_file 检查相同）
         const { isProtectedFile } = await import("../self-mod/code.js");
         if (isProtectedFile(filePath)) {
-          return "Blocked: Cannot overwrite protected file. This is a hard-coded safety invariant.";
+          return "已阻止：无法覆盖受保护的文件. 这是一个硬编码的安全不变量.";
         }
         await ctx.conway.writeFile(filePath, args.content as string);
         return `File written: ${filePath}`;
@@ -143,19 +143,19 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
     },
     {
       name: "read_file",
-      description: "Read content from a file in your sandbox.",
+      description: "从您沙盒中的文件读取内容.",
       category: "vm",
       riskLevel: "safe",
       parameters: {
         type: "object",
         properties: {
-          path: { type: "string", description: "File path to read" },
+          path: { type: "string", description: "文件路径 to read" },
         },
         required: ["path"],
       },
       execute: async (args, ctx) => {
         const filePath = args.path as string;
-        // Block reads of sensitive files (wallet, env, config secrets)
+        // 阻止读取敏感文件（钱包、环境变量、配置密钥）
         const basename = filePath.split("/").pop() || "";
         const sensitiveFiles = ["wallet.json", ".env", "automaton.json"];
         const sensitiveExtensions = [".key", ".pem"];
@@ -164,18 +164,18 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
           sensitiveExtensions.some((ext) => basename.endsWith(ext)) ||
           basename.startsWith("private-key")
         ) {
-          return "Blocked: Cannot read sensitive file. This protects credentials and secrets.";
+          return "已阻止：无法读取敏感文件. 这保护凭证和机密.";
         }
         try {
           return await ctx.conway.readFile(filePath);
         } catch {
-          // Conway files/read API may be broken — fall back to exec(cat)
+          // Conway 文件/读取 API 可能已损坏 — 回退到 exec(cat)
           const result = await ctx.conway.exec(
             `cat ${escapeShellArg(filePath)}`,
             30_000,
           );
           if (result.exitCode !== 0) {
-            return `ERROR: File not found or not readable: ${filePath}`;
+            return `ERROR: 文件未找到或不可读: ${filePath}`;
           }
           return result.stdout;
         }
@@ -184,13 +184,13 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
     {
       name: "expose_port",
       description:
-        "Expose a port from your sandbox to the internet. Returns a public URL.",
+        "将您沙盒中的端口暴露到互联网. Returns a public URL.",
       category: "vm",
       riskLevel: "caution",
       parameters: {
         type: "object",
         properties: {
-          port: { type: "number", description: "Port number to expose" },
+          port: { type: "number", description: "要暴露的端口号" },
         },
         required: ["port"],
       },
@@ -201,13 +201,13 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
     },
     {
       name: "remove_port",
-      description: "Remove a previously exposed port.",
+      description: "移除先前暴露的端口.",
       category: "vm",
       riskLevel: "caution",
       parameters: {
         type: "object",
         properties: {
-          port: { type: "number", description: "Port number to remove" },
+          port: { type: "number", description: "要移除的端口号" },
         },
         required: ["port"],
       },
@@ -217,10 +217,10 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
       },
     },
 
-    // ── Conway API Tools ──
+    // ── Conway API 工具 ──
     {
       name: "check_credits",
-      description: "Check your current Conway compute credit balance.",
+      description: "检查您当前的 Conway 计算积分余额.",
       category: "conway",
       riskLevel: "safe",
       parameters: { type: "object", properties: {} },
@@ -231,7 +231,7 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
     },
     {
       name: "check_usdc_balance",
-      description: "Check your on-chain USDC balance on Base.",
+      description: "检查您在 Base 上的链上 USDC 余额.",
       category: "conway",
       riskLevel: "safe",
       parameters: { type: "object", properties: {} },
@@ -244,7 +244,7 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
     {
       name: "topup_credits",
       description:
-        "Buy Conway compute credits by paying USDC from your wallet via x402. Valid tier amounts: $5, $25, $100, $500, $1000, $2500. Check your USDC balance first with check_usdc_balance.",
+        "通过 x402 从您的钱包支付 USDC 来购买 Conway 计算积分. 有效的层级金额: $5, $25, $100, $500, $1000, $2500. 首先使用 check_usdc_balance 检查您的 USDC 余额.",
       category: "financial",
       riskLevel: "caution",
       parameters: {
@@ -253,7 +253,7 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
           amount_usd: {
             type: "number",
             description:
-              "Amount in USD to spend on credits. Must be one of the valid tiers: 5, 25, 100, 500, 1000, 2500.",
+              "用于购买积分的 USD 金额. Must be one of the valid tiers: 5, 25, 100, 500, 1000, 2500.",
           },
         },
         required: ["amount_usd"],
@@ -264,14 +264,14 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
         const amountUsd = args.amount_usd as number;
 
         if (!TOPUP_TIERS.includes(amountUsd)) {
-          return `Invalid tier. Valid amounts (USD): ${TOPUP_TIERS.join(", ")}`;
+          return `无效的层级. 有效金额（USD）: ${TOPUP_TIERS.join(", ")}`;
         }
 
-        // Check USDC balance first
+        // 首先检查 USDC 余额
         const { getUsdcBalance } = await import("../conway/x402.js");
         const usdcBalance = await getUsdcBalance(ctx.identity.address);
         if (usdcBalance < amountUsd) {
-          return `Insufficient USDC. Balance: $${usdcBalance.toFixed(2)}, requested: $${amountUsd}. Choose a smaller tier or wait for funding.`;
+          return `USDC 不足. Balance: $${usdcBalance.toFixed(2)}, requested: $${amountUsd}. 选择较小的层级或等待资助.`;
         }
 
         const result = await topupCredits(
@@ -281,10 +281,10 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
         );
 
         if (!result.success) {
-          return `Credit topup failed: ${result.error}`;
+          return `积分充值失败: ${result.error}`;
         }
 
-        // Record transaction
+        // 记录交易
         const { ulid } = await import("ulid");
         ctx.db.insertTransaction({
           id: ulid(),
@@ -295,27 +295,27 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
           timestamp: new Date().toISOString(),
         });
 
-        return `Credit topup successful: +$${amountUsd} (${amountUsd * 100} cents) credits purchased via x402. Check your new balance with check_credits.`;
+        return `积分充值成功: +$${amountUsd} (${amountUsd * 100} cents) 通过 x402 购买的积分. 使用 check_credits 检查您的新余额.`;
       },
     },
     {
       name: "create_sandbox",
       description:
-        "Create a new Conway sandbox (separate VM) for sub-tasks or testing.",
+        "为子任务或测试创建新的 Conway 沙盒（独立的 VM）.",
       category: "conway",
       riskLevel: "caution",
       parameters: {
         type: "object",
         properties: {
-          name: { type: "string", description: "Sandbox name" },
-          vcpu: { type: "number", description: "vCPUs (default: 1)" },
+          name: { type: "string", description: "沙盒名称" },
+          vcpu: { type: "number", description: "vCPU（默认：1）" },
           memory_mb: {
             type: "number",
-            description: "Memory in MB (default: 512)",
+            description: "内存（MB）（默认：512）",
           },
           disk_gb: {
             type: "number",
-            description: "Disk in GB (default: 5)",
+            description: "磁盘（GB）（默认：5）",
           },
         },
       },
@@ -331,7 +331,7 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
     },
     {
       name: "delete_sandbox",
-      description: "Delete a sandbox. Note: sandbox deletion is currently disabled by the Conway API.",
+      description: "删除沙盒。注意：沙盒删除当前已禁用 by the Conway API.",
       category: "conway",
       riskLevel: "dangerous",
       parameters: {
@@ -339,24 +339,24 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
         properties: {
           sandbox_id: {
             type: "string",
-            description: "ID of sandbox to delete",
+            description: "要删除的沙盒 ID",
           },
         },
         required: ["sandbox_id"],
       },
       execute: async () => {
-        return "Sandbox deletion is disabled. Sandboxes are prepaid and non-refundable.";
+        return "沙盒删除已禁用. 沙盒是预付费且不可退还的.";
       },
     },
     {
       name: "list_sandboxes",
-      description: "List all your sandboxes.",
+      description: "列出您所有的沙盒.",
       category: "conway",
       riskLevel: "safe",
       parameters: { type: "object", properties: {} },
       execute: async (_args, ctx) => {
         const sandboxes = await ctx.conway.listSandboxes();
-        if (sandboxes.length === 0) return "No sandboxes found.";
+        if (sandboxes.length === 0) return "未找到沙盒.";
         return sandboxes
           .map(
             (s) =>
@@ -366,21 +366,21 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
       },
     },
 
-    // ── Self-Modification Tools ──
+    // ── 自我修改工具 ──
     {
       name: "edit_own_file",
       description:
-        "Edit a file in your own codebase. Changes are audited, rate-limited, and safety-checked. Some files are protected.",
+        "编辑您自己代码库中的文件. 更改经过审计、速率限制和安全检查. 某些文件受保护.",
       category: "self_mod",
       riskLevel: "dangerous",
       parameters: {
         type: "object",
         properties: {
-          path: { type: "string", description: "File path to edit" },
-          content: { type: "string", description: "New file content" },
+          path: { type: "string", description: "文件路径 to edit" },
+          content: { type: "string", description: "新文件内容" },
           description: {
             type: "string",
-            description: "Why you are making this change",
+            description: "为什么您要进行此更改",
           },
         },
         required: ["path", "content", "description"],
@@ -391,7 +391,7 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
         const filePath = args.path as string;
         const content = args.content as string;
 
-        // Pre-validate before attempting
+        // 尝试前进行预验证
         const validation = validateModification(
           ctx.db,
           filePath,
@@ -420,84 +420,84 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
     {
       name: "revert_last_edit",
       description:
-        "Revert the last self-modification. Uses git to undo the most recent code change and rebuild.",
+        "回退最后一次自我修改. 使用 git 撤销最近的代码更改并重新构建.",
       category: "self_mod",
       riskLevel: "caution",
       parameters: { type: "object", properties: {} },
       execute: async (_args, ctx) => {
         const repoRoot = process.cwd();
 
-        // Show what we're reverting
+        // 显示我们要回退的内容
         const lastCommit = await ctx.conway.exec(
           `cd '${repoRoot}' && git log -1 --oneline`,
           10_000,
         );
 
-        // Revert
+        // 回退
         const result = await ctx.conway.exec(
           `cd '${repoRoot}' && git revert HEAD --no-edit`,
           30_000,
         );
         if (result.exitCode !== 0) {
-          return `Revert failed: ${result.stderr}`;
+          return `回退失败: ${result.stderr}`;
         }
 
-        // Rebuild
+        // 重新构建
         const build = await ctx.conway.exec(
           `cd '${repoRoot}' && npm run build`,
           60_000,
         );
 
-        // Audit log
+        // 审计日志
         const { logModification } = await import("../self-mod/audit-log.js");
         logModification(ctx.db, "code_revert", `Reverted: ${lastCommit.stdout.trim()}`, {
           reversible: true,
         });
 
-        return `Reverted: ${lastCommit.stdout.trim()}. ${build.exitCode === 0 ? "Rebuild succeeded." : "Rebuild failed: " + build.stderr}`;
+        return `Reverted: ${lastCommit.stdout.trim()}. ${build.exitCode === 0 ? "重新构建成功." : "重新构建失败: " + build.stderr}`;
       },
     },
     {
       name: "reset_to_upstream",
       description:
-        "Reset your codebase to the official upstream release. Use when self-modifications have broken things beyond repair.",
+        "将您的代码库重置为官方上游版本. 当自我修改导致无法修复的破坏时使用.",
       category: "self_mod",
       riskLevel: "dangerous",
       parameters: { type: "object", properties: {} },
       execute: async (_args, ctx) => {
         const repoRoot = process.cwd();
 
-        // Fetch latest upstream
+        // 获取最新的上游
         const fetch = await ctx.conway.exec(
           `cd '${repoRoot}' && git fetch origin main`,
           30_000,
         );
         if (fetch.exitCode !== 0) {
-          return `Failed to fetch upstream: ${fetch.stderr}`;
+          return `获取上游失败: ${fetch.stderr}`;
         }
 
-        // Record what we're about to lose
+        // 记录我们要丢失的内容
         const localCommits = await ctx.conway.exec(
           `cd '${repoRoot}' && git log origin/main..HEAD --oneline`,
           10_000,
         );
 
-        // Hard reset
+        // 硬重置
         const reset = await ctx.conway.exec(
           `cd '${repoRoot}' && git reset --hard origin/main`,
           30_000,
         );
         if (reset.exitCode !== 0) {
-          return `Reset failed: ${reset.stderr}`;
+          return `重置失败: ${reset.stderr}`;
         }
 
-        // Reinstall + rebuild
+        // 重新安装 + 重新构建
         const build = await ctx.conway.exec(
           `cd '${repoRoot}' && npm install && npm run build`,
           120_000,
         );
 
-        // Audit log
+        // 审计日志
         const { logModification } = await import("../self-mod/audit-log.js");
         logModification(ctx.db, "upstream_reset", "Reset to upstream origin/main", {
           diff: localCommits.stdout.trim() || "(no local commits)",
@@ -505,7 +505,7 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
         });
 
         const discarded = localCommits.stdout.trim();
-        return `Reset to upstream. ${discarded ? "Discarded local commits:\n" + discarded : "No local commits lost."} ${build.exitCode === 0 ? "Rebuild succeeded." : "Rebuild failed: " + build.stderr}`;
+        return `Reset to upstream. ${discarded ? "Discarded local commits:\n" + discarded : "No local commits lost."} ${build.exitCode === 0 ? "重新构建成功." : "重新构建失败: " + build.stderr}`;
       },
     },
     {
@@ -525,10 +525,10 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
       },
       execute: async (args, ctx) => {
         const pkg = args.package as string;
-        // Defense-in-depth: validate package name inline in case the
-        // policy engine's validate.package_name rule is bypassed.
+        // 深度防御：内联验证包名称，以防
+        // 策略引擎的 validate.package_name 规则被绕过。
         if (!/^[@a-zA-Z0-9._\/-]+$/.test(pkg)) {
-          return `Blocked: invalid package name "${pkg}"`;
+          return `已阻止：无效的包名称 "${pkg}"`;
         }
         const result = await ctx.conway.exec(`npm install -g ${pkg}`, 60000);
 
@@ -546,7 +546,7 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
           : `Failed to install ${pkg}: ${result.stderr}`;
       },
     },
-    // ── Self-Mod: Upstream Awareness ──
+    // ── 自我修改：上游感知 ──
     {
       name: "review_upstream_changes",
       description:
@@ -592,7 +592,7 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
       execute: async (args, ctx) => {
         const commit = args.commit as string | undefined;
 
-        // Run git commands inside sandbox via conway.exec()
+        // 通过 conway.exec() 在沙盒内运行 git 命令
         const run = async (cmd: string) => {
           const result = await ctx.conway.exec(cmd, 120_000);
           if (result.exitCode !== 0) {
@@ -617,14 +617,14 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
           return `Git operation failed: ${err.message}. You may need to resolve conflicts manually.`;
         }
 
-        // Rebuild
+        // 重新构建
         try {
           await run("npm install --ignore-scripts && npm run build");
         } catch (err: any) {
           return `${appliedSummary} — but rebuild failed: ${err.message}. The code is applied but not compiled.`;
         }
 
-        // Log modification
+        // 记录修改
         ctx.db.insertModification({
           id: ulid(),
           timestamp: new Date().toISOString(),
@@ -633,7 +633,7 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
           reversible: true,
         });
 
-        return `${appliedSummary}. Rebuild succeeded.`;
+        return `${appliedSummary}. 重新构建成功.`;
       },
     },
 
@@ -696,7 +696,7 @@ export function createBuiltinTools(sandboxId: string): AutomatonTool[] {
       },
     },
 
-    // ── Survival Tools ──
+    // ── 生存工具 ──
     {
       name: "sleep",
       description:
@@ -835,11 +835,11 @@ Model: ${ctx.inference.getDefaultModel()}
       execute: async (args, ctx) => {
         ctx.db.setAgentState("low_compute");
         ctx.inference.setLowComputeMode(true);
-        return `Entered low-compute mode. Model switched to gpt-5-mini. Reason: ${(args.reason as string) || "manual"}`;
+        return `Entered low-compute mode. 模型已切换 to gpt-5-mini. Reason: ${(args.reason as string) || "manual"}`;
       },
     },
 
-    // ── Self-Mod: Update Genesis Prompt ──
+    // ── 自我修改：更新创世提示词 ──
     {
       name: "update_genesis_prompt",
       description:
@@ -851,7 +851,7 @@ Model: ${ctx.inference.getDefaultModel()}
         properties: {
           new_prompt: {
             type: "string",
-            description: "New genesis prompt text",
+            description: "新的创世提示词 text",
           },
           reason: {
             type: "string",
@@ -864,19 +864,19 @@ Model: ${ctx.inference.getDefaultModel()}
         const { ulid } = await import("ulid");
         const newPrompt = args.new_prompt as string;
 
-        // Sanitize genesis prompt content
+        // 清理创世提示词内容
         const sanitized = sanitizeInput(
           newPrompt,
           "genesis_update",
           "skill_instruction",
         );
 
-        // Enforce 2000-character size limit
+        // 强制执行 2000 字符的大小限制
         if (sanitized.content.length > 2000) {
           return `Error: Genesis prompt exceeds 2000 character limit (${sanitized.content.length} chars after sanitization)`;
         }
 
-        // Backup current genesis prompt before overwriting
+        // 覆盖前备份当前创世提示词
         const oldPrompt = ctx.config.genesisPrompt;
         if (oldPrompt) {
           ctx.db.setKV("genesis_prompt_backup", oldPrompt);
@@ -884,7 +884,7 @@ Model: ${ctx.inference.getDefaultModel()}
 
         ctx.config.genesisPrompt = sanitized.content;
 
-        // Save config
+        // 保存配置
         const { saveConfig } = await import("../config.js");
         saveConfig(ctx.config);
 
@@ -892,19 +892,19 @@ Model: ${ctx.inference.getDefaultModel()}
           id: ulid(),
           timestamp: new Date().toISOString(),
           type: "prompt_change",
-          description: `Genesis prompt updated: ${args.reason}`,
+          description: `创世提示词已更新: ${args.reason}`,
           diff: `--- old\n${oldPrompt.slice(0, 500)}\n+++ new\n${sanitized.content.slice(0, 500)}`,
           reversible: true,
         });
 
-        return `Genesis prompt updated (sanitized, ${sanitized.content.length} chars). Reason: ${args.reason}. Previous version backed up.`;
+        return `创世提示词已更新 (sanitized, ${sanitized.content.length} chars). Reason: ${args.reason}. Previous version backed up.`;
       },
     },
 
-    // ── Self-Mod: Install MCP Server ──
+    // ── 自我修改：安装 MCP 服务器 ──
     {
       name: "install_mcp_server",
-      description: "Install an MCP server to extend your capabilities.",
+      description: "安装 MCP 服务器 to extend your capabilities.",
       category: "self_mod",
       riskLevel: "dangerous",
       parameters: {
@@ -921,10 +921,10 @@ Model: ${ctx.inference.getDefaultModel()}
       },
       execute: async (args, ctx) => {
         const pkg = args.package as string;
-        // Defense-in-depth: validate package name inline in case the
-        // policy engine's validate.package_name rule is bypassed.
+        // 深度防御：内联验证包名称，以防
+        // 策略引擎的 validate.package_name 规则被绕过。
         if (!/^[@a-zA-Z0-9._\/-]+$/.test(pkg)) {
-          return `Blocked: invalid package name "${pkg}"`;
+          return `已阻止：无效的包名称 "${pkg}"`;
         }
         const result = await ctx.conway.exec(`npm install -g ${pkg}`, 60000);
 
@@ -952,11 +952,11 @@ Model: ${ctx.inference.getDefaultModel()}
           reversible: true,
         });
 
-        return `MCP server installed: ${args.name}`;
+        return `MCP 服务器已安装: ${args.name}`;
       },
     },
 
-    // ── Financial: Transfer Credits ──
+    // ── 金融：转账积分 ──
     {
       name: "transfer_credits",
       description: "Transfer Conway compute credits to another address.",
@@ -966,7 +966,7 @@ Model: ${ctx.inference.getDefaultModel()}
         type: "object",
         properties: {
           to_address: { type: "string", description: "Recipient address" },
-          amount_cents: { type: "number", description: "Amount in cents" },
+          amount_cents: { type: "number", description: "金额（美分）" },
           reason: { type: "string", description: "Reason for transfer" },
         },
         required: ["to_address", "amount_cents"],
@@ -977,10 +977,10 @@ Model: ${ctx.inference.getDefaultModel()}
           return `Blocked: amount_cents must be a positive number, got ${amount}.`;
         }
 
-        // Guard: don't transfer more than half your balance
+        // 保护：转账不要超过余额的一半
         const balance = await ctx.conway.getCreditsBalance();
         if (amount > balance / 2) {
-          return `Blocked: Cannot transfer more than half your balance ($${(balance / 100).toFixed(2)}). Self-preservation.`;
+          return `Blocked: 不能转账超过一半 your balance ($${(balance / 100).toFixed(2)}). Self-preservation.`;
         }
 
         const transfer = await ctx.conway.transferCredits(
@@ -1004,7 +1004,7 @@ Model: ${ctx.inference.getDefaultModel()}
       },
     },
 
-    // ── Skills Tools ──
+    // ── 技能工具 ──
     {
       name: "install_skill",
       description: "Install a skill from a git repo, URL, or create one.",
@@ -1062,7 +1062,7 @@ Model: ${ctx.inference.getDefaultModel()}
                 );
 
           return skill
-            ? `Skill installed: ${skill.name}`
+            ? `技能已安装: ${skill.name}`
             : "Failed to install skill";
         }
 
@@ -1090,7 +1090,7 @@ Model: ${ctx.inference.getDefaultModel()}
       parameters: { type: "object", properties: {} },
       execute: async (_args, ctx) => {
         const skills = ctx.db.getSkills();
-        if (skills.length === 0) return "No skills installed.";
+        if (skills.length === 0) return "未安装技能.";
         return skills
           .map(
             (s) =>
@@ -1101,7 +1101,7 @@ Model: ${ctx.inference.getDefaultModel()}
     },
     {
       name: "create_skill",
-      description: "Create a new skill by writing a SKILL.md file.",
+      description: "创建新技能 by writing a SKILL.md file.",
       category: "skills",
       riskLevel: "dangerous",
       parameters: {
@@ -1137,7 +1137,7 @@ Model: ${ctx.inference.getDefaultModel()}
       parameters: {
         type: "object",
         properties: {
-          name: { type: "string", description: "Skill name to remove" },
+          name: { type: "string", description: "要移除的技能名称" },
           delete_files: {
             type: "boolean",
             description: "Also delete skill files (default: false)",
@@ -1154,14 +1154,14 @@ Model: ${ctx.inference.getDefaultModel()}
           ctx.config.skillsDir || "~/.automaton/skills",
           (args.delete_files as boolean) || false,
         );
-        return `Skill removed: ${args.name}`;
+        return `技能已移除: ${args.name}`;
       },
     },
 
-    // ── Git Tools ──
+    // ── Git 工具 ──
     {
       name: "git_status",
-      description: "Show git status for a repository.",
+      description: "显示 git 状态 for a repository.",
       category: "git",
       riskLevel: "safe",
       parameters: {
@@ -1353,7 +1353,7 @@ Model: ${ctx.inference.getDefaultModel()}
       },
     },
 
-    // ── Registry Tools ──
+    // ── 注册表工具 ──
     {
       name: "register_erc8004",
       description:
@@ -1375,13 +1375,13 @@ Model: ${ctx.inference.getDefaultModel()}
         required: ["agent_uri"],
       },
       execute: async (args, ctx) => {
-        // Check if already registered in local database
+        // 检查是否已在本地数据库中注册
         const existingEntry = ctx.db.getRegistryEntry();
         if (existingEntry) {
-          return `Already registered! Agent ID: ${existingEntry.agentId}. Use update_agent_card tool to update your agent URI instead of creating a new registration.`;
+          return `已注册! Agent ID: ${existingEntry.agentId}. Use update_agent_card tool to update your agent URI instead of creating a new registration.`;
         }
 
-        // Phase 3.2: registerAgent now includes preflight gas check
+        // 阶段 3.2：registerAgent 现在包含预检查 gas 验证
         const { registerAgent } = await import("../registry/erc8004.js");
         try {
           const entry = await registerAgent(
@@ -1434,7 +1434,7 @@ Model: ${ctx.inference.getDefaultModel()}
         const keyword = args.keyword as string | undefined;
         const limit = (args.limit as number) || 10;
 
-        // Phase 3.2: Pass db.raw for agent card caching
+        // 阶段 3.2：传递 db.raw 用于智能体卡片缓存
         const agents = keyword
           ? await searchAgents(keyword, limit, network, undefined, ctx.db.raw)
           : await discoverAgents(limit, network, undefined, ctx.db.raw);
@@ -1474,18 +1474,18 @@ Model: ${ctx.inference.getDefaultModel()}
         required: ["agent_id", "score", "comment"],
       },
       execute: async (args, ctx) => {
-        // Phase 3.2: Validate score 1-5
+        // 阶段 3.2：验证分数 1-5
         const score = args.score as number;
         if (!Number.isInteger(score) || score < 1 || score > 5) {
-          return `Invalid score: ${score}. Must be an integer between 1 and 5.`;
+          return `无效的分数: ${score}. Must be an integer between 1 and 5.`;
         }
-        // Phase 3.2: Validate comment length
+        // 阶段 3.2：验证评论长度
         const comment = args.comment as string;
         if (comment.length > 500) {
-          return `Comment too long: ${comment.length} chars (max 500).`;
+          return `评论太长: ${comment.length} chars (max 500).`;
         }
         const { leaveFeedback } = await import("../registry/erc8004.js");
-        // Phase 3.2: Use config-based network, not hardcoded "mainnet"
+        // 阶段 3.2：使用基于配置的网络，而不是硬编码的 "mainnet"
         const network = ((args.network as string) || "mainnet") as any;
         const hash = await leaveFeedback(
           ctx.identity.account,
@@ -1525,7 +1525,7 @@ Model: ${ctx.inference.getDefaultModel()}
       },
     },
 
-    // === Phase 3.1: Replication Tools ===
+    // === 阶段 3.1：复制工具 ===
     {
       name: "spawn_child",
       description:
@@ -1554,7 +1554,7 @@ Model: ${ctx.inference.getDefaultModel()}
         const { spawnChild } = await import("../replication/spawn.js");
         const { ChildLifecycle } = await import("../replication/lifecycle.js");
 
-        // Validate genesis params first
+        // 首先验证创世参数
         validateGenesisParams({
           name: args.name as string,
           specialization: args.specialization as string | undefined,
@@ -1579,7 +1579,7 @@ Model: ${ctx.inference.getDefaultModel()}
             lifecycle,
           );
         } catch (err: any) {
-          // Auto-topup on 402 insufficient credits and retry once
+          // 402 积分不足时自动充值并重试一次
           const is402 = err?.status === 402 ||
             err?.message?.includes("INSUFFICIENT_CREDITS");
           if (is402) {
@@ -1648,7 +1648,7 @@ Model: ${ctx.inference.getDefaultModel()}
           child_id: { type: "string", description: "Child automaton ID" },
           amount_cents: {
             type: "number",
-            description: "Amount in cents to transfer",
+            description: "金额（美分） to transfer",
           },
         },
         required: ["child_id", "amount_cents"],
@@ -1657,14 +1657,14 @@ Model: ${ctx.inference.getDefaultModel()}
         const child = ctx.db.getChildById(args.child_id as string);
         if (!child) return `Child ${args.child_id} not found.`;
 
-        // Reject zero-address
+        // 拒绝零地址
         const { isValidWalletAddress } =
           await import("../replication/spawn.js");
         if (!isValidWalletAddress(child.address)) {
           return `Blocked: Child ${args.child_id} has invalid wallet address. Must be wallet_verified.`;
         }
 
-        // Require wallet_verified or later status
+        // 要求 wallet_verified 或更高级别状态
         const validFundingStates = [
           "wallet_verified",
           "funded",
@@ -1683,7 +1683,7 @@ Model: ${ctx.inference.getDefaultModel()}
 
         const balance = await ctx.conway.getCreditsBalance();
         if (amount > balance / 2) {
-          return `Blocked: Cannot transfer more than half your balance. Self-preservation.`;
+          return `Blocked: 不能转账超过一半 your balance. Self-preservation.`;
         }
 
         const transfer = await ctx.conway.transferCredits(
@@ -1703,14 +1703,14 @@ Model: ${ctx.inference.getDefaultModel()}
           timestamp: new Date().toISOString(),
         });
 
-        // Update funded amount
+        // 更新已资助金额
         ctx.db.raw
           .prepare(
             "UPDATE children SET funded_amount_cents = funded_amount_cents + ? WHERE id = ?",
           )
           .run(amount, child.id);
 
-        // Transition to funded if wallet_verified
+        // 如果 wallet_verified 则转换为已资助状态
         if (child.status === "wallet_verified") {
           try {
             const { ChildLifecycle } =
@@ -1722,7 +1722,7 @@ Model: ${ctx.inference.getDefaultModel()}
               `funded with ${amount} cents`,
             );
           } catch {
-            // Non-critical: may already be in funded state
+            // 非关键：可能已处于已资助状态
           }
         }
 
@@ -1749,7 +1749,7 @@ Model: ${ctx.inference.getDefaultModel()}
         const { ChildLifecycle } = await import("../replication/lifecycle.js");
         const { ChildHealthMonitor } = await import("../replication/health.js");
         const lifecycle = new ChildLifecycle(ctx.db.raw);
-        // Use a scoped client targeting the CHILD's sandbox for health checks
+        // 使用针对子代沙盒的 scoped 客户端进行健康检查
         const childConway = ctx.conway.createScopedClient(child.sandboxId);
         const monitor = new ChildHealthMonitor(
           ctx.db.raw,
@@ -1782,17 +1782,17 @@ Model: ${ctx.inference.getDefaultModel()}
 
         lifecycle.transition(child.id, "starting", "start requested by parent");
 
-        // Create a scoped client targeting the CHILD's sandbox
+        // 创建针对子代沙盒的 scoped 客户端
         const childConway = ctx.conway.createScopedClient(child.sandboxId);
 
         try {
-          // Start the child process with nohup so it survives exec session end
+          // 使用 nohup 启动子进程，使其在 exec 会话结束后继续运行
           await childConway.exec(
             "nohup node /root/automaton/dist/index.js --run > /root/.automaton/agent.log 2>&1 &",
             30_000,
           );
 
-          // Brief pause then verify the process is actually running
+          // 简短暂停然后验证进程实际上正在运行
           const check = await childConway.exec(
             "sleep 2 && pgrep -f 'index.js --run' > /dev/null && echo running || echo stopped",
             15_000,
@@ -1809,7 +1809,7 @@ Model: ${ctx.inference.getDefaultModel()}
           const msg = error instanceof Error ? error.message : String(error);
           try {
             lifecycle.transition(child.id, "failed", `start failed: ${msg}`);
-          } catch { /* may already be in terminal state */ }
+          } catch { /* 可能已处于终止状态 */ }
           return `Failed to start child ${child.name}: ${msg}`;
         }
       },
@@ -1824,7 +1824,7 @@ Model: ${ctx.inference.getDefaultModel()}
         type: "object",
         properties: {
           child_id: { type: "string", description: "Child automaton ID" },
-          content: { type: "string", description: "Message content" },
+          content: { type: "string", description: "消息内容" },
           type: {
             type: "string",
             description: "Message type (default: parent_message)",
@@ -1847,7 +1847,7 @@ Model: ${ctx.inference.getDefaultModel()}
           args.content as string,
           (args.type as string) || "parent_message",
         );
-        return `Message sent to child ${child.name} (id: ${result.id})`;
+        return `消息已发送 to child ${child.name} (id: ${result.id})`;
       },
     },
     {
@@ -1868,7 +1868,7 @@ Model: ${ctx.inference.getDefaultModel()}
 
         const { verifyConstitution } =
           await import("../replication/constitution.js");
-        // Use a scoped client targeting the CHILD's sandbox
+        // 使用针对子代沙盒的 scoped 客户端
         const childConway = ctx.conway.createScopedClient(child.sandboxId);
         const result = await verifyConstitution(
           childConway,
@@ -1908,9 +1908,9 @@ Model: ${ctx.inference.getDefaultModel()}
       },
     },
 
-    // === Phase 3.2: Social & Registry Tools ===
+    // === 阶段 3.2：社交和注册表工具 ===
 
-    // ── Social / Messaging Tools ──
+    // ── 社交/消息工具 ──
     {
       name: "send_message",
       description:
@@ -1926,7 +1926,7 @@ Model: ${ctx.inference.getDefaultModel()}
           },
           content: {
             type: "string",
-            description: "Message content to send",
+            description: "消息内容 to send",
           },
           reply_to: {
             type: "string",
@@ -1939,22 +1939,22 @@ Model: ${ctx.inference.getDefaultModel()}
         if (!ctx.social) {
           return "Social relay not configured. Set socialRelayUrl in config.";
         }
-        // Phase 3.2: Enforce MESSAGE_LIMITS size check
+        // 阶段 3.2：强制执行 MESSAGE_LIMITS 大小检查
         const content = args.content as string;
         const { MESSAGE_LIMITS } = await import("../types.js");
         if (content.length > MESSAGE_LIMITS.maxContentLength) {
-          return `Blocked: Message content too long (${content.length} > ${MESSAGE_LIMITS.maxContentLength} bytes)`;
+          return `Blocked: 消息内容 too long (${content.length} > ${MESSAGE_LIMITS.maxContentLength} bytes)`;
         }
         const result = await ctx.social.send(
           args.to_address as string,
           content,
           args.reply_to as string | undefined,
         );
-        return `Message sent (id: ${result.id})`;
+        return `消息已发送 (id: ${result.id})`;
       },
     },
 
-    // ── Model Discovery (enhanced with Phase 2.3 tier routing + pricing) ──
+    // ── 模型发现（阶段 2.3 增强的层级路由 + 定价）
     {
       name: "list_models",
       description:
@@ -1967,7 +1967,7 @@ Model: ${ctx.inference.getDefaultModel()}
         required: [],
       },
       execute: async (_args, ctx) => {
-        // Try registry first for richer data
+        // 首先尝试注册表以获得更丰富的数据
         try {
           const { modelRegistryGetAll } = await import("../state/database.js");
           const rows = modelRegistryGetAll(ctx.db.raw);
@@ -1979,7 +1979,7 @@ Model: ${ctx.inference.getDefaultModel()}
             return `Model Registry (${rows.length} models):\n${lines.join("\n")}`;
           }
         } catch {
-          // Registry not initialized yet, fall back to API
+          // 注册表尚未初始化，回退到 API
         }
         const models = await ctx.conway.listModels();
         const lines = models.map(
@@ -1990,7 +1990,7 @@ Model: ${ctx.inference.getDefaultModel()}
       },
     },
 
-    // === Phase 2.3: Inference Tools ===
+    // === 阶段 2.3：推理工具 ===
     {
       name: "switch_model",
       description:
@@ -2016,7 +2016,7 @@ Model: ${ctx.inference.getDefaultModel()}
         const modelId = args.model_id as string;
         const reason = (args.reason as string) || "manual switch";
 
-        // Verify model exists in registry
+        // 验证模型是否存在于注册表中
         try {
           const { modelRegistryGet } = await import("../state/database.js");
           const entry = modelRegistryGet(ctx.db.raw, modelId);
@@ -2027,20 +2027,20 @@ Model: ${ctx.inference.getDefaultModel()}
             return `Model '${modelId}' is disabled in the registry.`;
           }
         } catch {
-          // Registry not available, allow anyway
+          // 注册表不可用，仍然允许
         }
 
-        // Update config
+        // 更新配置
         ctx.config.inferenceModel = modelId;
         if (ctx.config.modelStrategy) {
           ctx.config.modelStrategy.inferenceModel = modelId;
         }
 
-        // Persist
+        // 持久化
         const { saveConfig } = await import("../config.js");
         saveConfig(ctx.config);
 
-        // Audit log
+        // 审计日志
         ctx.db.insertModification({
           id: ulid(),
           timestamp: new Date().toISOString(),
@@ -2098,7 +2098,7 @@ Model: ${ctx.inference.getDefaultModel()}
       },
     },
 
-    // ── Domain Tools ──
+    // ── 域名工具 ──
     {
       name: "search_domains",
       description: "Search for available domain names and get pricing.",
@@ -2137,7 +2137,7 @@ Model: ${ctx.inference.getDefaultModel()}
     {
       name: "register_domain",
       description:
-        "Register a domain name. Costs USDC via x402 payment. Check availability first with search_domains.",
+        "注册域名. Costs USDC via x402 payment. Check availability first with search_domains.",
       category: "conway",
       riskLevel: "dangerous",
       parameters: {
@@ -2159,7 +2159,7 @@ Model: ${ctx.inference.getDefaultModel()}
           args.domain as string,
           (args.years as number) || 1,
         );
-        return `Domain registered: ${reg.domain} (status: ${reg.status}${reg.expiresAt ? `, expires: ${reg.expiresAt}` : ""}${reg.transactionId ? `, tx: ${reg.transactionId}` : ""})`;
+        return `域名已注册: ${reg.domain} (status: ${reg.status}${reg.expiresAt ? `, expires: ${reg.expiresAt}` : ""}${reg.transactionId ? `, tx: ${reg.transactionId}` : ""})`;
       },
     },
     {
@@ -2247,7 +2247,7 @@ Model: ${ctx.inference.getDefaultModel()}
       },
     },
 
-    // === Phase 2.1: Soul Tools ===
+    // === 阶段 2.1：灵魂工具 ===
     {
       name: "update_soul",
       description:
@@ -2269,7 +2269,7 @@ Model: ${ctx.inference.getDefaultModel()}
           },
           reason: {
             type: "string",
-            description: "Why you are making this change",
+            description: "为什么您要进行此更改",
           },
         },
         required: ["section", "content", "reason"],
@@ -2390,7 +2390,7 @@ Model: ${ctx.inference.getDefaultModel()}
       },
     },
 
-    // === Phase 2.2: Memory Tools ===
+    // === 阶段 2.2：记忆工具 ===
     {
       name: "remember_fact",
       description:
@@ -2469,7 +2469,7 @@ Model: ${ctx.inference.getDefaultModel()}
       parameters: {
         type: "object",
         properties: {
-          content: { type: "string", description: "Goal description" },
+          content: { type: "string", description: "目标描述" },
           priority: {
             type: "number",
             description: "Priority 0.0-1.0 (default: 0.8)",
@@ -2649,7 +2649,7 @@ Model: ${ctx.inference.getDefaultModel()}
       },
     },
 
-    // ── x402 Payment Tool ──
+    // ── x402 支付工具 ──
     {
       name: "x402_fetch",
       description:
@@ -2661,7 +2661,7 @@ Model: ${ctx.inference.getDefaultModel()}
         properties: {
           url: {
             type: "string",
-            description: "The URL to fetch",
+            description: "The 要获取的 URL",
           },
           method: {
             type: "string",
@@ -2709,7 +2709,7 @@ Model: ${ctx.inference.getDefaultModel()}
             ? result.response
             : JSON.stringify(result.response, null, 2);
 
-        // Truncate very large responses
+        // 截断非常大的响应
         if (responseStr.length > 10000) {
           return `x402 fetch succeeded (truncated):\n${responseStr.slice(0, 10000)}...`;
         }
@@ -2717,11 +2717,11 @@ Model: ${ctx.inference.getDefaultModel()}
       },
     },
 
-    // === Orchestration Tools ===
+    // === 编排工具 ===
     {
       name: "create_goal",
       description:
-        "Create a new goal for the orchestrator to plan and execute. " +
+        "创建新目标 for the orchestrator to plan and execute. " +
         "The orchestrator will automatically classify complexity, generate a task graph, " +
         "assign tasks to child agents, and collect results. Use this instead of doing complex work yourself.",
       category: "orchestration" as ToolCategory,
@@ -2758,7 +2758,7 @@ Model: ${ctx.inference.getDefaultModel()}
         if (!title) return "Error: goal title cannot be empty.";
         if (!description) return "Error: goal description cannot be empty.";
 
-        // Dedup: reject if a similar active goal already exists
+        // 去重：如果已存在类似的活动目标则拒绝
         const activeGoals = getActiveGoals(ctx.db.raw);
         const titleLower = title.toLowerCase();
         const duplicate = activeGoals.find(
@@ -2775,8 +2775,8 @@ Model: ${ctx.inference.getDefaultModel()}
           );
         }
 
-        // Cap active goals to prevent accumulation.
-        // Only 1 goal at a time — the orchestrator processes goals sequentially.
+        // 限制活动目标以防止累积。
+        // 一次只能有 1 个目标 — 编排器按顺序处理目标。
         if (activeGoals.length >= 1) {
           const current = activeGoals[0];
           return (
@@ -2791,7 +2791,7 @@ Model: ${ctx.inference.getDefaultModel()}
 
         const goal = createGoal(ctx.db.raw, title, description, strategy);
         return (
-          `Goal created: "${goal.title}" (id: ${goal.id}, status: ${goal.status})\n` +
+          `目标已创建: "${goal.title}" (id: ${goal.id}, status: ${goal.status})\n` +
           `The orchestrator will pick this up on the next tick and begin planning.\n` +
           `Monitor progress via the todo.md block in your context.`
         );
@@ -2813,7 +2813,7 @@ Model: ${ctx.inference.getDefaultModel()}
 
         const goals = getActiveGoals(ctx.db.raw);
         if (goals.length === 0)
-          return "No active goals. Create one with create_goal.";
+          return "没有活动目标. Create one with create_goal.";
 
         const lines = goals.map((goal) => {
           const progress = getGoalProgress(ctx.db.raw, goal.id);
@@ -2826,7 +2826,7 @@ Model: ${ctx.inference.getDefaultModel()}
           );
         });
 
-        // Include orchestrator phase
+        // 包括编排器阶段
         let phase = "unknown";
         try {
           const stateRow = ctx.db.raw
@@ -2837,7 +2837,7 @@ Model: ${ctx.inference.getDefaultModel()}
             phase = parsed.phase ?? "unknown";
           }
         } catch {
-          /* ignore */
+          /* 忽略 */
         }
 
         return `Orchestrator phase: ${phase}\n\n${lines.join("\n")}`;
@@ -2873,7 +2873,7 @@ Model: ${ctx.inference.getDefaultModel()}
             ? args.reason.trim()
             : "cancelled by agent";
 
-        // Try by ID first, then by title match
+        // 首先按 ID 尝试，然后按标题匹配
         let goal = getGoalById(ctx.db.raw, input);
         if (!goal) {
           const allGoals = getActiveGoals(ctx.db.raw);
@@ -2890,7 +2890,7 @@ Model: ${ctx.inference.getDefaultModel()}
 
         updateGoalStatus(ctx.db.raw, goal.id, "failed");
 
-        // Cancel all pending/assigned/running tasks for this goal
+        // 取消此目标的所有待处理/已分配/运行中的任务
         ctx.db.raw
           .prepare(
             `UPDATE task_graph SET status = 'cancelled' WHERE goal_id = ? AND status IN ('pending', 'assigned', 'running', 'blocked')`,
@@ -2923,7 +2923,7 @@ Model: ${ctx.inference.getDefaultModel()}
 
         const input = (args.goal_id as string).trim();
 
-        // Resolve ID or title
+        // 解析 ID 或标题
         let resolvedId = input;
         if (!getGoalById(ctx.db.raw, input)) {
           const allGoals = getActiveGoals(ctx.db.raw);
@@ -3007,7 +3007,7 @@ Model: ${ctx.inference.getDefaultModel()}
                 .filter(Boolean)
             : [];
 
-        // Try by ID first, then by title match
+        // 首先按 ID 尝试，然后按标题匹配
         let task = getTaskById(ctx.db.raw, input);
         if (!task) {
           const rows = ctx.db.raw
@@ -3049,7 +3049,7 @@ Model: ${ctx.inference.getDefaultModel()}
       execute: async (_args, ctx) => {
         const lines: string[] = [];
 
-        // Orchestrator phase
+        // 编排器阶段
         let phase = "idle";
         let goalId: string | null = null;
         let replanCount = 0;
@@ -3064,24 +3064,24 @@ Model: ${ctx.inference.getDefaultModel()}
             replanCount = parsed.replanCount ?? 0;
           }
         } catch {
-          /* ignore */
+          /* 忽略 */
         }
 
         lines.push(`Phase: ${phase}`);
         if (goalId) lines.push(`Active goal: ${goalId}`);
         if (replanCount > 0) lines.push(`Replan count: ${replanCount}`);
 
-        // Goal counts
+        // 目标计数
         try {
           const goalsRow = ctx.db.raw
             .prepare("SELECT COUNT(*) AS c FROM goals WHERE status = 'active'")
             .get() as { c: number } | undefined;
           lines.push(`Active goals: ${goalsRow?.c ?? 0}`);
         } catch {
-          /* goals table may not exist */
+          /* goals 表可能不存在 */
         }
 
-        // Task summary
+        // 任务摘要
         try {
           const taskRows = ctx.db.raw
             .prepare(
@@ -3093,10 +3093,10 @@ Model: ${ctx.inference.getDefaultModel()}
             .join(", ");
           lines.push(`Tasks: ${taskSummary || "none"}`);
         } catch {
-          /* task_graph may not exist */
+          /* task_graph 表可能不存在 */
         }
 
-        // Agent summary
+        // 智能体摘要
         try {
           const agentRows = ctx.db.raw
             .prepare(
@@ -3108,10 +3108,10 @@ Model: ${ctx.inference.getDefaultModel()}
             .join(", ");
           lines.push(`Agents: ${agentSummary || "none"}`);
         } catch {
-          /* children may not exist */
+          /* children 表可能不存在 */
         }
 
-        // Last tick result
+        // 上次刻度的结果
         try {
           const tickRow = ctx.db.raw
             .prepare("SELECT value FROM kv WHERE key = ?")
@@ -3123,7 +3123,7 @@ Model: ${ctx.inference.getDefaultModel()}
             );
           }
         } catch {
-          /* ignore */
+          /* 忽略 */
         }
 
         return lines.join("\n");
@@ -3133,8 +3133,8 @@ Model: ${ctx.inference.getDefaultModel()}
 }
 
 /**
- * Load installed tools from the database and return as AutomatonTool[].
- * Installed tools are dynamically added from the installed_tools table.
+ * 从数据库加载已安装的工具并作为 AutomatonTool[] 返回.
+ * 已安装的工具从 installed_tools 表动态添加.
  */
 export function loadInstalledTools(db: {
   getInstalledTools: () => {
@@ -3175,10 +3175,10 @@ function createInstalledToolExecutor(tool: {
 }): AutomatonTool["execute"] {
   return async (args, ctx) => {
     if (tool.type === "mcp") {
-      // MCP tools would be executed via MCP protocol
+      // MCP 工具将通过 MCP 协议执行
       return `MCP tool ${tool.name} invoked with args: ${JSON.stringify(args)}`;
     }
-    // Generic installed tool — execute via sandbox shell if command is configured
+    // 通用已安装工具 — 如果配置了命令，则通过沙盒 shell 执行
     const command = tool.config?.command as string | undefined;
     if (command) {
       const result = await ctx.conway.exec(
@@ -3192,7 +3192,7 @@ function createInstalledToolExecutor(tool: {
 }
 
 /**
- * Convert AutomatonTool list to OpenAI-compatible tool definitions.
+ * 将 AutomatonTool 列表转换为 OpenAI 兼容的工具定义.
  */
 export function toolsToInferenceFormat(
   tools: AutomatonTool[],
@@ -3208,8 +3208,8 @@ export function toolsToInferenceFormat(
 }
 
 /**
- * Execute a tool call and return the result.
- * Optionally evaluates against the policy engine before execution.
+ * 执行工具调用 and return the result.
+ * 可选地在执行前根据策略引擎进行评估.
  */
 export async function executeTool(
   toolName: string,
@@ -3237,7 +3237,7 @@ export async function executeTool(
     };
   }
 
-  // Policy evaluation (if engine is provided)
+  // 策略评估（如果提供了引擎）
   if (policyEngine && turnContext) {
     const request: PolicyRequest = {
       tool,
@@ -3263,12 +3263,12 @@ export async function executeTool(
   try {
     let result = await tool.execute(args, context);
 
-    // Sanitize results from external source tools
+    // 清理来自外部源工具的结果
     if (EXTERNAL_SOURCE_TOOLS.has(toolName)) {
       result = sanitizeToolResult(result);
     }
 
-    // Record spend for financial operations
+    // 记录财务操作的支出
     if (turnContext && !result.startsWith("Blocked:")) {
       if (toolName === "transfer_credits") {
         const amount = args.amount_cents as number | undefined;
@@ -3288,12 +3288,12 @@ export async function executeTool(
           }
         }
       } else if (toolName === "x402_fetch") {
-        // x402 payment amounts are determined by the server response,
-        // but we record a nominal entry for tracking purposes
+        // x402 支付金额由服务器响应确定,
+        // 但我们记录一个名义条目用于追踪目的
         try {
           turnContext.sessionSpend.recordSpend({
             toolName: "x402_fetch",
-            amountCents: 0, // Actual amount is inside the x402 protocol
+            amountCents: 0, // 实际金额在 x402 协议内部
             domain: (() => {
               try {
                 return new URL(args.url as string).hostname;
@@ -3331,7 +3331,7 @@ export async function executeTool(
   }
 }
 
-/** Escape a string for safe shell interpolation. */
+/** 转义字符串以进行安全的 shell 插值。*/
 function escapeShellArg(arg: string): string {
   return `'${arg.replace(/'/g, "'\\''")}'`;
 }

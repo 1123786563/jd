@@ -1,9 +1,9 @@
 /**
- * Context Window Management
+ * 上下文窗口管理
  *
- * Manages the conversation history for the agent loop.
- * Handles summarization to keep within token limits.
- * Enforces token budget to prevent context window overflow.
+ * 管理智能体循环的对话历史。
+ * 处理摘要以保持在 token 限制内。
+ * 强制执行 token 预算以防止上下文窗口溢出。
  */
 
 import type {
@@ -22,16 +22,16 @@ const SUMMARY_THRESHOLD = 15;
 
 let tokenCounter: ReturnType<typeof createTokenCounter> | null = null;
 
-/** Maximum size for individual tool results in characters */
+/** 单个工具结果的最大字符数 */
 export const MAX_TOOL_RESULT_SIZE = 10_000;
 
-// Re-export for external use
+// 重新导出以供外部使用
 export type { TokenBudget };
 export { DEFAULT_TOKEN_BUDGET };
 
 /**
- * Estimate token count from text length.
- * Conservative estimate: ~4 characters per token for English text.
+ * 从文本长度估算 token 数量。
+ * 保守估计: 英文文本约每 4 个字符一个 token。
  */
 export function estimateTokens(text: string): number {
   const content = text ?? "";
@@ -42,27 +42,27 @@ export function estimateTokens(text: string): number {
     }
     const tokens = tokenCounter.countTokens(content);
     if (Number.isFinite(tokens) && tokens > 0) {
-      // Keep a conservative floor to avoid under-budgeting context.
+      // 保持保守的下限以避免上下文预算不足。
       return Math.max(tokens, legacyEstimate);
     }
   } catch {
-    // Fallback to conservative character heuristic if token counter is unavailable.
+    // 如果 token 计数器不可用，回退到保守的字符启发式方法。
   }
   return legacyEstimate;
 }
 
 /**
- * Truncate a tool result to fit within the size limit.
- * Appends a truncation notice if content was trimmed.
+ * 截断工具结果以适应大小限制。
+ * 如果内容被修剪，则附加截断通知。
  */
 export function truncateToolResult(result: string, maxSize: number = MAX_TOOL_RESULT_SIZE): string {
   if (result.length <= maxSize) return result;
   return result.slice(0, maxSize) +
-    `\n\n[TRUNCATED: ${result.length - maxSize} characters omitted]`;
+    `\n\n[已截断：省略了 ${result.length - maxSize} 个字符]`;
 }
 
 /**
- * Estimate total tokens for a single turn (input + thinking + tool calls/results).
+ * 估算单个回合的总 token 数（输入 + 思考 + 工具调用/结果）。
  */
 function estimateTurnTokens(turn: AgentTurn): number {
   let total = 0;
@@ -80,9 +80,9 @@ function estimateTurnTokens(turn: AgentTurn): number {
 }
 
 /**
- * Build the message array for the next inference call.
- * Includes system prompt + recent conversation history.
- * Applies token budget enforcement and tool result truncation.
+ * 构建下一次推理调用的消息数组。
+ * 包括系统提示词 + 最近的对话历史。
+ * 应用 token 预算强制执行和工具结果截断。
  */
 export function buildContextMessages(
   systemPrompt: string,
@@ -99,7 +99,7 @@ export function buildContextMessages(
     { role: "system", content: systemPrompt },
   ];
 
-  // Calculate token estimates for all turns
+  // 计算所有回合的 token 估算
   const turnTokens = recentTurns.map((turn) => ({
     turn,
     tokens: estimateTurnTokens(turn),
@@ -111,11 +111,11 @@ export function buildContextMessages(
   let summaryMessage: string | null = null;
 
   if (totalTurnTokens > budget.recentTurns && recentTurns.length > 1) {
-    // Split turns into old (to summarize) and recent (to keep)
+    // 将回合分为旧的（用于摘要）和最近的（保留）
     let recentTokens = 0;
     let splitIndex = recentTurns.length;
 
-    // Walk backwards from the most recent turn to find the split point
+    // 从最近的回合向后遍历以找到分割点
     for (let i = turnTokens.length - 1; i >= 0; i--) {
       if (recentTokens + turnTokens[i].tokens > budget.recentTurns) {
         splitIndex = i + 1;
@@ -125,27 +125,27 @@ export function buildContextMessages(
       if (i === 0) splitIndex = 0;
     }
 
-    // Ensure we always summarize at least something
+    // 确保我们至少摘要一些内容
     if (splitIndex === 0) splitIndex = 1;
     if (splitIndex >= recentTurns.length) splitIndex = Math.max(1, recentTurns.length - 1);
 
     const oldTurns = recentTurns.slice(0, splitIndex);
     turnsToRender = recentTurns.slice(splitIndex);
 
-    // Build a synchronous summary of old turns
-    // (async summarizeTurns is used separately when inference is available)
+    // 构建旧回合的同步摘要
+    //（当推理可用时，异步 summarizeTurns 被单独使用）
     const oldSummaries = oldTurns.map((t) => {
       const tools = t.toolCalls
         .map((tc) => `${tc.name}(${tc.error ? "FAILED" : "ok"})`)
         .join(", ");
       return `[${t.timestamp}] ${t.inputSource || "self"}: ${t.thinking.slice(0, 100)}${tools ? ` | tools: ${tools}` : ""}`;
     });
-    summaryMessage = `Previous context summary (${oldTurns.length} turns compressed):\n${oldSummaries.join("\n")}`;
+    summaryMessage = `前文上下文摘要（${oldTurns.length} 个回合已压缩）:\n${oldSummaries.join("\n")}`;
   } else {
     turnsToRender = recentTurns;
   }
 
-  // Add summary of old turns if budget was exceeded
+  // 如果超出预算，添加旧回合的摘要
   if (summaryMessage) {
     messages.push({
       role: "user",
@@ -153,9 +153,9 @@ export function buildContextMessages(
     });
   }
 
-  // Add recent turns as conversation history
+  // 添加最近的回合作为对话历史
   for (const turn of turnsToRender) {
-    // The turn's input (if any) as a user message
+    // 如果有回合输入，作为用户消息添加
     if (turn.input) {
       messages.push({
         role: "user",
@@ -163,14 +163,14 @@ export function buildContextMessages(
       });
     }
 
-    // The agent's thinking as assistant message
+    // 智能体的思考作为助手消息
     if (turn.thinking) {
       const msg: ChatMessage = {
         role: "assistant",
         content: turn.thinking,
       };
 
-      // If there were tool calls, include them
+      // 如果有工具调用，包含它们
       if (turn.toolCalls.length > 0) {
         msg.tool_calls = turn.toolCalls.map((tc) => ({
           id: tc.id,
@@ -183,7 +183,7 @@ export function buildContextMessages(
       }
       messages.push(msg);
 
-      // Add tool results with truncation
+      // 添加带截断的工具结果
       for (const tc of turn.toolCalls) {
         const rawContent = tc.error
           ? `Error: ${tc.error}`
@@ -197,8 +197,8 @@ export function buildContextMessages(
     }
   }
 
-  // ── Anti-Repetition Warning ──
-  // Analyze the last 5 turns for repeated tool usage
+  // ── 反重复警告 ──
+  // 分析最近 5 个回合中重复使用的工具
   const analysisWindow = recentTurns.slice(-5);
   if (analysisWindow.length >= 3) {
     const toolFrequency: Record<string, number> = {};
@@ -214,14 +214,14 @@ export function buildContextMessages(
       messages.push({
         role: "user",
         content:
-          `[system] WARNING: You have been calling ${repeatedTools.join(", ")} repeatedly in recent turns. ` +
-          `You already have this information. Move on to BUILDING something. ` +
-          `Write code, create files, set up a service. Do not check status again.`,
+          `[system] 警告：您在最近的回合中重复调用 ${repeatedTools.join(", ")}。` +
+          `您已经拥有这些信息。继续构建某些东西。` +
+          `编写代码、创建文件、设置服务。不要再检查状态。`,
       });
     }
   }
 
-  // Add pending input if any
+  // 如果有待处理的输入，添加它
   if (pendingInput) {
     messages.push({
       role: "user",
@@ -233,8 +233,8 @@ export function buildContextMessages(
 }
 
 /**
- * Trim context to fit within limits.
- * Keeps the system prompt and most recent turns.
+ * 修剪上下文以适应限制。
+ * 保留系统提示词和最近的回合。
  */
 export function trimContext(
   turns: AgentTurn[],
@@ -244,15 +244,15 @@ export function trimContext(
     return turns;
   }
 
-  // Keep the most recent turns
+  // 保留最近的回合
   return turns.slice(-maxTurns);
 }
 
-// === Phase 2.2: Memory Block Formatting ===
+// === 阶段 2.2：内存块格式化 ===
 
 /**
- * Format a MemoryRetrievalResult into a text block for context injection.
- * Included as a system message between the system prompt and conversation history.
+ * 将 MemoryRetrievalResult 格式化为文本块以进行上下文注入。
+ * 作为系统消息包含在系统提示词和对话历史之间。
  */
 export function formatMemoryBlock(memories: MemoryRetrievalResult): string {
   const sections: string[] = [];
@@ -298,14 +298,14 @@ export function formatMemoryBlock(memories: MemoryRetrievalResult): string {
 }
 
 /**
- * Summarize old turns into a compact context entry.
- * Used when context grows too large.
+ * 将旧回合摘要为紧凑的上下文条目。
+ * 当上下文变得太大时使用。
  */
 export async function summarizeTurns(
   turns: AgentTurn[],
   inference: InferenceClient,
 ): Promise<string> {
-  if (turns.length === 0) return "No previous activity.";
+  if (turns.length === 0) return "无先前活动。";
 
   const turnSummaries = turns.map((t) => {
     const tools = t.toolCalls
@@ -314,18 +314,18 @@ export async function summarizeTurns(
     return `[${t.timestamp}] ${t.inputSource || "self"}: ${t.thinking.slice(0, 100)}${tools ? ` | tools: ${tools}` : ""}`;
   });
 
-  // If few enough turns, just return the summaries directly
+  // 如果回合足够少，直接返回摘要
   if (turns.length <= 5) {
-    return `Previous activity summary:\n${turnSummaries.join("\n")}`;
+    return `先前活动摘要:\n${turnSummaries.join("\n")}`;
   }
 
-  // For many turns, use inference to create a summary
+  // 对于许多回合，使用推理创建摘要
   try {
     const response = await inference.chat([
       {
         role: "system",
         content:
-          "Summarize the following agent activity log into a concise paragraph. Focus on: what was accomplished, what failed, current goals, and important context for the next turn.",
+          "将以下智能体活动日志总结为简洁的段落。重点关注：完成了什么、失败了什么、当前目标以及下一回合的重要上下文。",
       },
       {
         role: "user",
@@ -336,9 +336,9 @@ export async function summarizeTurns(
       temperature: 0,
     });
 
-    return `Previous activity summary:\n${response.message.content}`;
+    return `先前活动摘要:\n${response.message.content}`;
   } catch {
-    // Fallback: just use the raw summaries
-    return `Previous activity summary:\n${turnSummaries.slice(-5).join("\n")}`;
+    // 回退：仅使用原始摘要
+    return `先前活动摘要:\n${turnSummaries.slice(-5).join("\n")}`;
   }
 }

@@ -312,7 +312,7 @@ export class HealthMonitor {
       }
       return Math.max(0, Math.floor(balance));
     } catch (error) {
-      logger.warn("Failed to read child balance", {
+      logger.warn("读取子代理余额失败", {
         address,
         error: normalizeError(error).message,
       });
@@ -332,25 +332,25 @@ export class HealthMonitor {
       return {
         type: "fund",
         agentAddress: agent.address,
-        reason: `credit balance ${currentBalance}c below ${MIN_INFERENCE_CREDITS_CENTS}c`,
+        reason: `积分余额 ${currentBalance}c 低于 ${MIN_INFERENCE_CREDITS_CENTS}c`,
         success: result.success,
       };
     } catch (error) {
-      logger.warn("Auto-funding failed", {
+      logger.warn("自动充值失败", {
         address: agent.address,
         error: normalizeError(error).message,
       });
       return {
         type: "fund",
         agentAddress: agent.address,
-        reason: `credit balance ${currentBalance}c below threshold`,
+        reason: `积分余额 ${currentBalance}c 低于阈值`,
         success: false,
       };
     }
   }
 
   private async restartAgent(agent: AgentHealthStatus): Promise<HealAction> {
-    const reason = "process appears crashed or non-responsive";
+    const reason = "进程似乎已崩溃或无响应";
     const success = await this.sendShutdownRequest(agent.address, reason);
 
     if (success) {
@@ -381,7 +381,7 @@ export class HealthMonitor {
       return {
         type: "reassign",
         agentAddress: agent.address,
-        reason: `task ${taskId} not found`,
+        reason: `未找到任务 ${taskId}`,
         success: false,
       };
     }
@@ -391,8 +391,8 @@ export class HealthMonitor {
 
     const status = replacement ? "assigned" : "pending";
     const reason = replacement
-      ? `task ${taskId} reassigned to ${replacement.address}`
-      : `task ${taskId} reset to pending (no replacement available)`;
+      ? `任务 ${taskId} 已重新分配给 ${replacement.address}`
+      : `任务 ${taskId} 已重置为待处理状态（无可用的替代代理）`;
 
     const resultPayload = {
       type: "stuck_task_cancelled",
@@ -400,7 +400,7 @@ export class HealthMonitor {
       sourceAgent: agent.address,
       replacementAgent: replacement?.address ?? null,
       at: new Date().toISOString(),
-      reason: "stuck execution detected",
+      reason: "检测到卡住的执行",
     };
 
     const shouldFail = nextRetry > task.maxRetries;
@@ -414,14 +414,14 @@ export class HealthMonitor {
          WHERE id = ?`,
       ).run(
         new Date().toISOString(),
-        JSON.stringify({ ...resultPayload, reason: "max retries exceeded during reassignment" }),
+        JSON.stringify({ ...resultPayload, reason: "重新分配期间超过最大重试次数" }),
         taskId,
       );
 
       return {
         type: "reassign",
         agentAddress: agent.address,
-        reason: `task ${taskId} exceeded max retries`,
+        reason: `任务 ${taskId} 超过最大重试次数`,
         success: false,
       };
     }
@@ -471,14 +471,14 @@ export class HealthMonitor {
       const message = this.messaging.createMessage({
         type: "shutdown_request",
         to: address,
-        content: `[health-monitor] ${reason}`,
+        content: `[健康监控器] ${reason}`,
         priority: "high",
       });
 
       await this.messaging.send(message);
       return true;
     } catch (error) {
-      logger.warn("Failed to send shutdown request", {
+      logger.warn("发送关闭请求失败", {
         address,
         error: normalizeError(error).message,
       });

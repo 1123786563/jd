@@ -53,7 +53,7 @@ afterEach(() => {
 });
 
 describe("EventStream", () => {
-  it("append creates event with ULID and timestamp", () => {
+  it("append创建带有ULID和时间戳的事件", () => {
     const id = stream.append({
       type: "action",
       agentAddress: "agent-1",
@@ -74,7 +74,7 @@ describe("EventStream", () => {
     expect(() => new Date(row.createdAt)).not.toThrow();
   });
 
-  it("append estimates token count when input tokenCount is 0", () => {
+  it("append在输入tokenCount为0时估算token计数", () => {
     const id = stream.append({
       type: "observation",
       agentAddress: "agent-1",
@@ -91,7 +91,7 @@ describe("EventStream", () => {
     expect(row.tokenCount).toBe(estimateTokens("1234567890"));
   });
 
-  it("append keeps explicit tokenCount when non-zero", () => {
+  it("append在非零时保留显式tokenCount", () => {
     const id = stream.append({
       type: "observation",
       agentAddress: "agent-1",
@@ -108,7 +108,7 @@ describe("EventStream", () => {
     expect(row.tokenCount).toBe(42);
   });
 
-  it("getRecent returns events in chronological order", () => {
+  it("getRecent按时间顺序返回事件", () => {
     appendAt({ createdAt: "2026-01-01T00:00:01.000Z", content: "one" });
     appendAt({ createdAt: "2026-01-01T00:00:03.000Z", content: "three" });
     appendAt({ createdAt: "2026-01-01T00:00:02.000Z", content: "two" });
@@ -117,7 +117,7 @@ describe("EventStream", () => {
     expect(events.map((event) => event.content)).toEqual(["one", "two", "three"]);
   });
 
-  it("getRecent applies limit", () => {
+  it("getRecent应用限制", () => {
     appendAt({ createdAt: "2026-01-01T00:00:01.000Z", content: "one" });
     appendAt({ createdAt: "2026-01-01T00:00:02.000Z", content: "two" });
     appendAt({ createdAt: "2026-01-01T00:00:03.000Z", content: "three" });
@@ -126,7 +126,7 @@ describe("EventStream", () => {
     expect(events.map((event) => event.content)).toEqual(["two", "three"]);
   });
 
-  it("getRecent filters by agent address", () => {
+  it("getRecent按代理地址过滤", () => {
     appendAt({ createdAt: "2026-01-01T00:00:01.000Z", content: "a1", agentAddress: "a" });
     appendAt({ createdAt: "2026-01-01T00:00:02.000Z", content: "b1", agentAddress: "b" });
     appendAt({ createdAt: "2026-01-01T00:00:03.000Z", content: "a2", agentAddress: "a" });
@@ -135,7 +135,7 @@ describe("EventStream", () => {
     expect(events.map((event) => event.content)).toEqual(["a1", "a2"]);
   });
 
-  it("getByGoal filters correctly", () => {
+  it("getByGoal正确过滤", () => {
     appendAt({ createdAt: "2026-01-01T00:00:01.000Z", goalId: "goal-1", content: "g1" });
     appendAt({ createdAt: "2026-01-01T00:00:02.000Z", goalId: "goal-2", content: "g2" });
 
@@ -144,7 +144,7 @@ describe("EventStream", () => {
     expect(events[0].content).toBe("g1");
   });
 
-  it("getByGoal is ordered ascending by created_at", () => {
+  it("getByGoal按created_at升序排列", () => {
     appendAt({ createdAt: "2026-01-01T00:00:03.000Z", goalId: "goal-1", content: "three" });
     appendAt({ createdAt: "2026-01-01T00:00:01.000Z", goalId: "goal-1", content: "one" });
     appendAt({ createdAt: "2026-01-01T00:00:02.000Z", goalId: "goal-1", content: "two" });
@@ -153,7 +153,7 @@ describe("EventStream", () => {
     expect(events.map((event) => event.content)).toEqual(["one", "two", "three"]);
   });
 
-  it("getByType returns events by type", () => {
+  it("getByType按类型返回事件", () => {
     appendAt({ createdAt: "2026-01-01T00:00:01.000Z", type: "inference", content: "i1" });
     appendAt({ createdAt: "2026-01-01T00:00:02.000Z", type: "action", content: "a1" });
     appendAt({ createdAt: "2026-01-01T00:00:03.000Z", type: "inference", content: "i2" });
@@ -162,7 +162,7 @@ describe("EventStream", () => {
     expect(events.map((event) => event.content)).toEqual(["i1", "i2"]);
   });
 
-  it("getByType supports since filter", () => {
+  it("getByType支持since过滤器", () => {
     appendAt({ createdAt: "2026-01-01T00:00:01.000Z", type: "inference", content: "old" });
     appendAt({ createdAt: "2026-01-01T00:00:02.000Z", type: "inference", content: "new" });
 
@@ -170,7 +170,7 @@ describe("EventStream", () => {
     expect(events.map((event) => event.content)).toEqual(["new"]);
   });
 
-  it("getByType since filter is inclusive", () => {
+  it("getByType的since过滤器包含边界值", () => {
     appendAt({ createdAt: "2026-01-01T00:00:01.000Z", type: "inference", content: "included" });
     appendAt({ createdAt: "2026-01-01T00:00:02.000Z", type: "inference", content: "later" });
 
@@ -178,7 +178,7 @@ describe("EventStream", () => {
     expect(events.map((event) => event.content)).toEqual(["included", "later"]);
   });
 
-  it("compact with reference strategy sets compacted_to field", () => {
+  it("compact使用引用策略设置compacted_to字段", () => {
     const id = appendAt({ createdAt: "2026-01-01T00:00:01.000Z", content: "compact me", tokenCount: 100 });
 
     const result = stream.compact("2026-01-01T00:00:02.000Z", "reference");
@@ -190,7 +190,7 @@ describe("EventStream", () => {
     expect(row.compactedTo).toMatch(/^ref:/);
   });
 
-  it("compact with summarize strategy stores summary marker", () => {
+  it("compact使用摘要策略存储摘要标记", () => {
     const id = appendAt({
       createdAt: "2026-01-01T00:00:01.000Z",
       type: "action",
@@ -206,14 +206,14 @@ describe("EventStream", () => {
     expect(row.compactedTo).toMatch(/^summary:action:/);
   });
 
-  it("compact returns zero when no rows qualify", () => {
+  it("compact在没有符合条件的行时返回零", () => {
     appendAt({ createdAt: "2026-01-01T00:00:03.000Z", content: "new" });
 
     const result = stream.compact("2026-01-01T00:00:01.000Z", "reference");
     expect(result).toEqual({ compactedCount: 0, tokensSaved: 0, strategy: "reference" });
   });
 
-  it("compact does not touch already compacted rows", () => {
+  it("compact不触及已压缩的行", () => {
     const id = appendAt({
       createdAt: "2026-01-01T00:00:01.000Z",
       content: "already compacted",
@@ -229,14 +229,14 @@ describe("EventStream", () => {
     expect(row.compactedTo).toBe("ref:existing");
   });
 
-  it("compact reports non-negative tokens saved", () => {
+  it("compact报告非负的已保存token", () => {
     appendAt({ createdAt: "2026-01-01T00:00:01.000Z", tokenCount: 10, content: "tiny" });
 
     const result = stream.compact("2026-01-01T00:00:02.000Z", "reference");
     expect(result.tokensSaved).toBeGreaterThanOrEqual(0);
   });
 
-  it("getTokenCount sums all tokens for an agent", () => {
+  it("getTokenCount汇总代理的所有token", () => {
     appendAt({ createdAt: "2026-01-01T00:00:01.000Z", agentAddress: "a", tokenCount: 10 });
     appendAt({ createdAt: "2026-01-01T00:00:02.000Z", agentAddress: "a", tokenCount: 20 });
     appendAt({ createdAt: "2026-01-01T00:00:03.000Z", agentAddress: "b", tokenCount: 50 });
@@ -244,14 +244,14 @@ describe("EventStream", () => {
     expect(stream.getTokenCount("a")).toBe(30);
   });
 
-  it("getTokenCount respects since filter", () => {
+  it("getTokenCount尊重since过滤器", () => {
     appendAt({ createdAt: "2026-01-01T00:00:01.000Z", agentAddress: "a", tokenCount: 10 });
     appendAt({ createdAt: "2026-01-01T00:00:02.000Z", agentAddress: "a", tokenCount: 20 });
 
     expect(stream.getTokenCount("a", "2026-01-01T00:00:01.500Z")).toBe(20);
   });
 
-  it("prune deletes old events", () => {
+  it("prune删除旧事件", () => {
     appendAt({ createdAt: "2026-01-01T00:00:01.000Z", content: "old" });
     appendAt({ createdAt: "2026-01-01T00:00:03.000Z", content: "new" });
 
@@ -262,12 +262,12 @@ describe("EventStream", () => {
     expect(remaining.count).toBe(1);
   });
 
-  it("prune returns zero when nothing is removed", () => {
+  it("prune在没有任何删除时返回零", () => {
     appendAt({ createdAt: "2026-01-01T00:00:03.000Z", content: "new" });
     expect(stream.prune("2026-01-01T00:00:01.000Z")).toBe(0);
   });
 
-  it("estimateTokens uses a 3.5 chars/token heuristic", () => {
+  it("estimateTokens使用3.5字符/token的启发式方法", () => {
     expect(estimateTokens("")).toBe(0);
     expect(estimateTokens("1234567")).toBe(2);
     expect(estimateTokens("12345678901234")).toBe(4);

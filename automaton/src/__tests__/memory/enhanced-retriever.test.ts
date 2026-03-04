@@ -77,34 +77,34 @@ afterEach(() => {
 });
 
 describe("calculateMemoryBudget", () => {
-  it("calculateMemoryBudget returns 10% base", () => {
+  it("calculateMemoryBudget返回10%基础值", () => {
     const result = mod.calculateMemoryBudget(utilization(60), 100_000);
     expect(result).toBe(10_000);
   });
 
-  it("Budget reduces to 5% above 70% utilization", () => {
+  it("利用率超过70%时预算减少至5%", () => {
     const result = mod.calculateMemoryBudget(utilization(75), 100_000);
     expect(result).toBe(5_000);
   });
 
-  it("budget increases to 15% below 50% utilization", () => {
+  it("利用率低于50%时预算增加至15%", () => {
     const result = mod.calculateMemoryBudget(utilization(40), 100_000);
     expect(result).toBe(15_000);
   });
 
-  it("budget clamps to minimum 2000 tokens", () => {
+  it("预算最小限制为2000 tokens", () => {
     const result = mod.calculateMemoryBudget(utilization(75), 10_000);
     expect(result).toBe(2_000);
   });
 
-  it("budget clamps to maximum 20000 tokens", () => {
+  it("预算最大限制为20000 tokens", () => {
     const result = mod.calculateMemoryBudget(utilization(40), 500_000);
     expect(result).toBe(20_000);
   });
 });
 
 describe("enhanceQuery", () => {
-  it("enhanceQuery extracts terms from input", () => {
+  it("enhanceQuery从输入中提取术语", () => {
     const query = mod.enhanceQuery({
       currentInput: "Fix API timeout in deployment pipeline",
     });
@@ -114,7 +114,7 @@ describe("enhanceQuery", () => {
     expect(query.terms).toContain("timeout");
   });
 
-  it("enhanceQuery keeps quoted phrases", () => {
+  it("enhanceQuery保留引用短语", () => {
     const query = mod.enhanceQuery({
       currentInput: "Investigate \"incident response\" process",
     });
@@ -122,7 +122,7 @@ describe("enhanceQuery", () => {
     expect(query.terms).toContain("incident response");
   });
 
-  it("enhanceQuery expands abbreviations", () => {
+  it("enhanceQuery展开缩写", () => {
     const query = mod.enhanceQuery({
       currentInput: "Need API docs for CI",
     });
@@ -131,7 +131,7 @@ describe("enhanceQuery", () => {
     expect(query.terms).toContain("continuous integration");
   });
 
-  it("enhanceQuery infers categories from role and text", () => {
+  it("enhanceQuery从角色和文本推断类别", () => {
     const query = mod.enhanceQuery({
       currentInput: "infra deploy workflow",
       agentRole: "senior engineer",
@@ -141,7 +141,7 @@ describe("enhanceQuery", () => {
     expect(query.categories).toContain("operational");
   });
 
-  it("enhanceQuery infers time range from recency words", () => {
+  it("enhanceQuery从最近性词汇推断时间范围", () => {
     const query = mod.enhanceQuery({
       currentInput: "latest revenue trend",
     });
@@ -152,7 +152,7 @@ describe("enhanceQuery", () => {
 });
 
 describe("EnhancedRetriever", () => {
-  it("retrieveScored returns empty result when no candidates", () => {
+  it("retrieveScored在没有候选时返回空结果", () => {
     const retriever = new mod.EnhancedRetriever(db);
 
     const result = retriever.retrieveScored({
@@ -165,7 +165,7 @@ describe("EnhancedRetriever", () => {
     expect(result.totalTokens).toBe(0);
   });
 
-  it("searches by query and category", () => {
+  it("按查询和类别搜索", () => {
     addKnowledge({ category: "technical", key: "api-timeout", content: "retry strategy", tokenCount: 20 });
     addKnowledge({ category: "financial", key: "api-budget", content: "monthly spend", tokenCount: 20 });
 
@@ -181,7 +181,7 @@ describe("EnhancedRetriever", () => {
     expect(result.entries[0].entry.category).toBe("technical");
   });
 
-  it("respects budget and reports truncation", () => {
+  it("遵守预算并报告截断", () => {
     addKnowledge({ key: "k1", content: "high relevance api timeout", tokenCount: 60 });
     addKnowledge({ key: "k2", content: "high relevance api timeout", tokenCount: 60 });
 
@@ -196,7 +196,7 @@ describe("EnhancedRetriever", () => {
     expect(result.truncated).toBe(true);
   });
 
-  it("Scoring weights are applied correctly", () => {
+  it("正确应用评分权重", () => {
     const id = addKnowledge({
       key: "deploy-api",
       content: "api deploy workflow",
@@ -235,7 +235,7 @@ describe("EnhancedRetriever", () => {
     expect(scored!.relevanceScore).toBeCloseTo(expected, 6);
   });
 
-  it("sorts entries by descending relevance", () => {
+  it("按相关性降序排序条目", () => {
     const freshHigh = addKnowledge({
       key: "deploy-api",
       content: "api deploy",
@@ -267,7 +267,7 @@ describe("EnhancedRetriever", () => {
     expect(result.entries[0].entry.id).toBe(freshHigh);
   });
 
-  it("filters entries by inferred time range", () => {
+  it("按推断的时间范围过滤条目", () => {
     addKnowledge({
       category: "market",
       key: "new-entry",
@@ -292,7 +292,7 @@ describe("EnhancedRetriever", () => {
     expect(result.entries.some((entry) => entry.entry.key === "old-entry")).toBe(false);
   });
 
-  it("recordRetrievalFeedback tracks precision", () => {
+  it("recordRetrievalFeedback跟踪精度", () => {
     const retriever = new mod.EnhancedRetriever(db);
     retriever.recordRetrievalFeedback({
       turnId: "turn-1",
@@ -311,7 +311,7 @@ describe("EnhancedRetriever", () => {
     expect(result.retrievalPrecision).toBeCloseTo(0.5, 6);
   });
 
-  it("recordRetrievalFeedback rolling precision updates across turns", () => {
+  it("recordRetrievalFeedback滚动精度跨轮次更新", () => {
     const retriever = new mod.EnhancedRetriever(db);
 
     retriever.recordRetrievalFeedback({
@@ -338,7 +338,7 @@ describe("EnhancedRetriever", () => {
     expect(result.retrievalPrecision).toBeCloseTo(0.25, 6);
   });
 
-  it("feedback auto-matches retrieved knowledge from turn response", () => {
+  it("反馈自动从轮次响应中匹配检索的知识", () => {
     const knowledgeId = addKnowledge({
       key: "incident-runbook",
       content: "restart service and clear cache",
@@ -366,7 +366,7 @@ describe("EnhancedRetriever", () => {
     expect(row.accessCount).toBe(1);
   });
 
-  it("retrieveScored includes precision metadata once feedback exists", () => {
+  it("retrieveScored在反馈存在时包含精度元数据", () => {
     addKnowledge({ key: "api-reliability", content: "api reliability practices", tokenCount: 20 });
 
     const retriever = new mod.EnhancedRetriever(db);
@@ -388,7 +388,7 @@ describe("EnhancedRetriever", () => {
     expect(result.retrievalPrecision).toBeGreaterThan(0);
   });
 
-  it("taskStore context influences query and retrieval", () => {
+  it("taskStore上下文影响查询和检索", () => {
     addKnowledge({ category: "operational", key: "deploy-checklist", content: "deployment workflow", tokenCount: 20 });
 
     const taskStore = {

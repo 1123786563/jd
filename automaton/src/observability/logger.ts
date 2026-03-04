@@ -1,9 +1,9 @@
 /**
- * Structured Logger
+ * 结构化日志记录器
  *
- * JSON-formatted structured logging with levels, context, and child loggers.
- * Uses process.stdout.write to avoid console.log recursion.
- * Never throws — all errors are handled gracefully.
+ * JSON 格式的结构化日志，支持日志级别、上下文和子日志记录器。
+ * 使用 process.stdout.write 避免 console.log 递归。
+ * 永不抛出异常 — 所有错误都被优雅处理。
  */
 
 import type { LogLevel, LogEntry } from "../types.js";
@@ -102,11 +102,11 @@ export class StructuredLogger {
       const json = JSON.stringify(entry);
       process.stdout.write(json + "\n");
     } catch {
-      // Fallback if JSON serialization fails
+      // 如果 JSON 序列化失败，使用回退方案
       try {
         process.stderr.write(`[logger-fallback] ${message}\n`);
       } catch {
-        // Completely silent — never throw from logger
+        // 完全静默 — 永不从日志记录器抛出异常
       }
     }
   }

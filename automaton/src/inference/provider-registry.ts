@@ -51,6 +51,7 @@ interface ProviderConfigFile {
   };
 }
 
+// 默认紧急停止积分阈值
 const DEFAULT_EMERGENCY_STOP_CREDITS = 100;
 
 const DEFAULT_TIER_DEFAULTS: Record<ModelTier, TierDefault> = {
@@ -422,6 +423,9 @@ export class ProviderRegistry {
     this.emergencyStopCredits = emergencyStopCredits;
   }
 
+  /**
+   * 覆盖提供商的基础 URL。
+   */
   overrideBaseUrl(providerId: string, baseUrl: string): void {
     const provider = this.providers.find((p) => p.id === providerId);
     if (provider) {
@@ -429,6 +433,9 @@ export class ProviderRegistry {
     }
   }
 
+  /**
+   * 从配置文件创建提供商注册表。
+   */
   static fromConfig(configPath: string): ProviderRegistry {
     let providers = DEFAULT_PROVIDERS.map((provider) => deepCloneProvider(provider));
     let tierDefaults = DEFAULT_TIER_DEFAULTS;
@@ -458,12 +465,15 @@ export class ProviderRegistry {
         emergencyStopCredits = configuredEmergencyStop;
       }
     } catch {
-      // Keep defaults if config is invalid.
+      // 如果配置无效，则保留默认值。
     }
 
     return new ProviderRegistry(providers, tierDefaults, emergencyStopCredits);
   }
 
+  /**
+   * 解析指定层级的模型。
+   */
   resolveModel(tier: ModelTier, survivalMode = false): ResolvedModel {
     const candidates = this.resolveCandidates(tier, survivalMode);
     if (candidates.length === 0) {
@@ -472,6 +482,9 @@ export class ProviderRegistry {
     return candidates[0];
   }
 
+  /**
+   * 解析指定层级的所有候选项。
+   */
   resolveCandidates(tier: ModelTier, survivalMode = false): ResolvedModel[] {
     this.assertEmergencyPolicy();
 
@@ -514,6 +527,9 @@ export class ProviderRegistry {
     return results;
   }
 
+  /**
+   * 获取指定的提供商和模型。
+   */
   getModel(providerId: string, modelId: string): ResolvedModel {
     const provider = this.providers.find((candidate) => candidate.id === providerId);
     if (!provider) {
@@ -532,6 +548,9 @@ export class ProviderRegistry {
     return this.buildResolvedModel(provider, model);
   }
 
+  /**
+   * 获取所有提供商配置。
+   */
   getProviders(): ProviderConfig[] {
     return this.providers
       .slice()
@@ -542,6 +561,9 @@ export class ProviderRegistry {
       }));
   }
 
+  /**
+   * 禁用提供商。
+   */
   disableProvider(id: string, reason: string, durationMs: number): void {
     const provider = this.providers.find((candidate) => candidate.id === id);
     if (!provider) {
@@ -554,10 +576,16 @@ export class ProviderRegistry {
     });
   }
 
+  /**
+   * 启用提供商。
+   */
   enableProvider(id: string): void {
     this.disablements.delete(id);
   }
 
+  /**
+   * 获取指定层级的提供商顺序。
+   */
   private getProviderOrderForTier(tier: ModelTier): ProviderConfig[] {
     const preferred = this.tierDefaults[tier];
     const orderedIds = [
@@ -589,6 +617,9 @@ export class ProviderRegistry {
     return orderedProviders;
   }
 
+  /**
+   * 构建已解析的模型。
+   */
   private buildResolvedModel(provider: ProviderConfig, model: ModelConfig): ResolvedModel {
     const apiKey = this.resolveApiKey(provider);
     const client = new OpenAI({
@@ -603,6 +634,9 @@ export class ProviderRegistry {
     };
   }
 
+  /**
+   * 解析提供商的 API 密钥。
+   */
   private resolveApiKey(provider: ProviderConfig): string {
     const configured = process.env[provider.apiKeyEnvVar];
     if (typeof configured === "string" && configured.length > 0) {
@@ -616,6 +650,9 @@ export class ProviderRegistry {
     return `missing-${provider.apiKeyEnvVar.toLowerCase()}`;
   }
 
+  /**
+   * 检查提供商是否处于活动状态。
+   */
   private isProviderActive(provider: ProviderConfig): boolean {
     if (!provider.enabled) {
       return false;
@@ -634,6 +671,9 @@ export class ProviderRegistry {
     return false;
   }
 
+  /**
+   * 应用生存模式层级调整。
+   */
   private applySurvivalTier(tier: ModelTier, survivalMode: boolean): ModelTier {
     if (!survivalMode) {
       return tier;
@@ -650,6 +690,9 @@ export class ProviderRegistry {
     return tier;
   }
 
+  /**
+   * 断言紧急停止策略。
+   */
   private assertEmergencyPolicy(): void {
     const rawCredits = process.env.AUTOMATON_CREDITS_BALANCE;
     if (!rawCredits) {
@@ -666,7 +709,7 @@ export class ProviderRegistry {
 
     if (!plannerCall) {
       throw new Error(
-        `Emergency stop active (${credits} credits < ${this.emergencyStopCredits}); only planner calls are allowed`,
+        `紧急停止已激活（${credits} 积分 < ${this.emergencyStopCredits}）；仅允许规划器调用`,
       );
     }
   }

@@ -1,8 +1,8 @@
 /**
- * Memory Tool Implementations
+ * 记忆工具实现
  *
- * Provides the execute functions for agent-accessible memory tools.
- * Each function operates on the database directly via memory managers.
+ * 为 Agent 可访问的记忆工具提供执行函数。
+ * 每个函数通过记忆管理器直接操作数据库。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -16,7 +16,7 @@ import type { SemanticCategory, ProceduralStep } from "../types.js";
 type Database = BetterSqlite3.Database;
 
 /**
- * Store a semantic memory (fact).
+ * 存储语义记忆（事实）。
  */
 export function rememberFact(
   db: Database,
@@ -31,14 +31,14 @@ export function rememberFact(
       confidence: args.confidence ?? 1.0,
       source: args.source ?? "agent",
     });
-    return `Fact stored: [${args.category}/${args.key}] = ${args.value} (id: ${id})`;
+    return `事实已存储：[${args.category}/${args.key}] = ${args.value} (id: ${id})`;
   } catch (error) {
-    return `Failed to store fact: ${error instanceof Error ? error.message : error}`;
+    return `存储事实失败：${error instanceof Error ? error.message : error}`;
   }
 }
 
 /**
- * Search semantic memory by category and/or query.
+ * 按类别和/或查询搜索语义记忆。
  */
 export function recallFacts(
   db: Database,
@@ -49,7 +49,7 @@ export function recallFacts(
 
     if (args.query) {
       const results = semantic.search(args.query, args.category as SemanticCategory | undefined);
-      if (results.length === 0) return "No matching facts found.";
+      if (results.length === 0) return "未找到匹配的事实。";
       return results
         .map((r) => `[${r.category}/${r.key}] = ${r.value} (confidence: ${r.confidence})`)
         .join("\n");
@@ -57,20 +57,20 @@ export function recallFacts(
 
     if (args.category) {
       const results = semantic.getByCategory(args.category as SemanticCategory);
-      if (results.length === 0) return `No facts in category: ${args.category}`;
+      if (results.length === 0) return `类别中没有事实：${args.category}`;
       return results
         .map((r) => `[${r.key}] = ${r.value} (confidence: ${r.confidence})`)
         .join("\n");
     }
 
-    return "Please provide a category or query to search.";
+    return "请提供类别或查询进行搜索。";
   } catch (error) {
-    return `Failed to recall facts: ${error instanceof Error ? error.message : error}`;
+    return `回忆事实失败：${error instanceof Error ? error.message : error}`;
   }
 }
 
 /**
- * Create or update a working memory goal.
+ * 创建或更新工作记忆目标。
  */
 export function setGoal(
   db: Database,
@@ -84,14 +84,14 @@ export function setGoal(
       contentType: "goal",
       priority: args.priority ?? 0.8,
     });
-    return `Goal set: "${args.content}" (id: ${id}, priority: ${args.priority ?? 0.8})`;
+    return `目标已设置："${args.content}" (id: ${id}, priority: ${args.priority ?? 0.8})`;
   } catch (error) {
-    return `Failed to set goal: ${error instanceof Error ? error.message : error}`;
+    return `设置目标失败：${error instanceof Error ? error.message : error}`;
   }
 }
 
 /**
- * Mark a goal as completed and archive to episodic memory.
+ * 将目标标记为已完成并归档到情景记忆。
  */
 export function completeGoal(
   db: Database,
@@ -101,36 +101,36 @@ export function completeGoal(
     const working = new WorkingMemoryManager(db);
     const episodic = new EpisodicMemoryManager(db);
 
-    // Get goal content before deleting
+    // 删除前获取目标内容
     const entries = working.getBySession(args.sessionId);
     const goal = entries.find((e) => e.id === args.goalId);
 
     if (!goal) {
-      return `Goal not found: ${args.goalId}`;
+      return `未找到目标：${args.goalId}`;
     }
 
-    // Archive to episodic
+    // 归档到情景记忆
     episodic.record({
       sessionId: args.sessionId,
       eventType: "goal_completed",
-      summary: `Goal completed: ${goal.content}`,
+      summary: `目标已完成：${goal.content}`,
       detail: args.outcome ?? null,
       outcome: "success",
       importance: goal.priority,
       classification: "productive",
     });
 
-    // Remove from working memory
+    // 从工作记忆中删除
     working.delete(args.goalId);
 
-    return `Goal completed and archived: "${goal.content}"`;
+    return `目标已完成并归档："${goal.content}"`;
   } catch (error) {
-    return `Failed to complete goal: ${error instanceof Error ? error.message : error}`;
+    return `完成目标失败：${error instanceof Error ? error.message : error}`;
   }
 }
 
 /**
- * Store a learned procedure.
+ * 存储学习的程序。
  */
 export function saveProcedure(
   db: Database,
@@ -149,14 +149,14 @@ export function saveProcedure(
       description: args.description,
       steps,
     });
-    return `Procedure saved: "${args.name}" with ${steps.length} step(s) (id: ${id})`;
+    return `程序已保存："${args.name}" 包含 ${steps.length} 个步骤 (id: ${id})`;
   } catch (error) {
-    return `Failed to save procedure: ${error instanceof Error ? error.message : error}`;
+    return `保存程序失败：${error instanceof Error ? error.message : error}`;
   }
 }
 
 /**
- * Retrieve a stored procedure by name or search query.
+ * 按名称或搜索查询检索存储的程序。
  */
 export function recallProcedure(
   db: Database,
@@ -167,29 +167,29 @@ export function recallProcedure(
 
     if (args.name) {
       const proc = procedural.get(args.name);
-      if (!proc) return `Procedure not found: ${args.name}`;
+      if (!proc) return `未找到程序：${args.name}`;
       const stepsStr = proc.steps
         .map((s) => `  ${s.order}. ${s.description}${s.tool ? ` [tool: ${s.tool}]` : ""}`)
         .join("\n");
-      return `Procedure: ${proc.name}\nDescription: ${proc.description}\nSuccess: ${proc.successCount}, Failure: ${proc.failureCount}\nSteps:\n${stepsStr}`;
+      return `程序：${proc.name}\n描述：${proc.description}\n成功：${proc.successCount}，失败：${proc.failureCount}\n步骤：\n${stepsStr}`;
     }
 
     if (args.query) {
       const results = procedural.search(args.query);
-      if (results.length === 0) return "No matching procedures found.";
+      if (results.length === 0) return "未找到匹配的程序。";
       return results
         .map((r) => `${r.name}: ${r.description} (${r.steps.length} steps, ${r.successCount}/${r.successCount + r.failureCount} success)`)
         .join("\n");
     }
 
-    return "Please provide a name or query to search.";
+    return "请提供名称或查询进行搜索。";
   } catch (error) {
-    return `Failed to recall procedure: ${error instanceof Error ? error.message : error}`;
+    return `回忆程序失败：${error instanceof Error ? error.message : error}`;
   }
 }
 
 /**
- * Record a note about another agent/entity.
+ * 记录关于另一个 Agent/实体的笔记。
  */
 export function noteAboutAgent(
   db: Database,
@@ -204,14 +204,14 @@ export function noteAboutAgent(
       trustScore: args.trustScore ?? 0.5,
       notes: args.notes ?? null,
     });
-    return `Relationship noted: ${args.entityAddress} (${args.relationshipType}, trust: ${args.trustScore ?? 0.5})`;
+    return `关系已记录：${args.entityAddress} (${args.relationshipType}, trust: ${args.trustScore ?? 0.5})`;
   } catch (error) {
-    return `Failed to note about agent: ${error instanceof Error ? error.message : error}`;
+    return `记录 Agent 笔记失败：${error instanceof Error ? error.message : error}`;
   }
 }
 
 /**
- * Review current working memory and recent episodic memory.
+ * 查看当前工作记忆和最近的情景记忆。
  */
 export function reviewMemory(
   db: Database,
@@ -246,13 +246,13 @@ export function reviewMemory(
 
     return sections.join("\n");
   } catch (error) {
-    return `Failed to review memory: ${error instanceof Error ? error.message : error}`;
+    return `审查记忆失败：${error instanceof Error ? error.message : error}`;
   }
 }
 
 /**
- * Forget (remove) a memory entry by id and type.
- * Does not allow removing entries that contain creator-level data.
+ * 按 id 和类型遗忘（删除）记忆条目。
+ * 不允许删除包含创建者级别数据的条目。
  */
 export function forget(
   db: Database,
@@ -269,25 +269,25 @@ export function forget(
 
     const table = typeToTable[args.memoryType];
     if (!table) {
-      return `Unknown memory type: ${args.memoryType}. Use: working, episodic, semantic, procedural, relationship.`;
+      return `未知的记忆类型：${args.memoryType}。请使用：working、episodic、semantic、procedural、relationship。`;
     }
 
-    // Check for creator-protected entries (semantic category "creator")
+    // 检查创建者保护的条目（语义类别 "creator"）
     if (args.memoryType === "semantic") {
       const row = db.prepare(
         "SELECT category FROM semantic_memory WHERE id = ?",
       ).get(args.id) as { category: string } | undefined;
       if (row?.category === "creator") {
-        return "Cannot forget creator-level memories. These are protected.";
+        return "无法遗忘创建者级别的记忆。这些是受保护的。";
       }
     }
 
     const result = db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(args.id);
     if (result.changes === 0) {
-      return `Memory entry not found: ${args.id}`;
+      return `未找到记忆条目：${args.id}`;
     }
-    return `Memory entry forgotten: ${args.id} (${args.memoryType})`;
+    return `记忆条目已遗忘：${args.id} (${args.memoryType})`;
   } catch (error) {
-    return `Failed to forget: ${error instanceof Error ? error.message : error}`;
+    return `遗忘失败：${error instanceof Error ? error.message : error}`;
   }
 }

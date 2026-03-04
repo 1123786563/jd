@@ -1,14 +1,14 @@
 /**
- * Command Injection Remediation Tests (Sub-phase 0.3)
+ * 命令注入修复测试（阶段 0.3 子阶段）
  *
- * Tests:
- * - Shell metacharacter injection blocked by policy rules
- * - Forbidden command patterns blocked
- * - Input validation rules (package names, skill names, git hashes, etc.)
- * - Registry functions use safe alternatives (no shell interpolation)
- * - Loader uses safe binary check
- * - pull_upstream uses conway.exec() not host execSync
- * - upstream.ts uses execFileSync with argument arrays
+ * 测试：
+ * - 策略规则阻止 shell 元字符注入
+ * - 禁止的命令模式被阻止
+ * - 输入验证规则（包名、技能名、git 哈希等）
+ * - 注册表函数使用安全的替代方案（无 shell 插值）
+ * - 加载器使用安全的二进制检查
+ * - pull_upstream 使用 conway.exec() 而不是主机 execSync
+ * - upstream.ts 使用带参数数组的 execFileSync
  */
 
 import { describe, it, expect } from "vitest";
@@ -24,7 +24,7 @@ import type {
   ToolContext,
 } from "../types.js";
 
-// ─── Test Helpers ───────────────────────────────────────────────
+// ─── 测试辅助函数 ───────────────────────────────────────────────
 
 function makeTool(name: string, category = "vm", riskLevel: RiskLevel = "caution"): AutomatonTool {
   return {
@@ -60,7 +60,7 @@ function evaluateRules(
   request: PolicyRequest,
 ): PolicyRuleResult | null {
   for (const rule of rules) {
-    // Check if rule applies
+    // 检查规则是否适用
     const selector = rule.appliesTo;
     let applies = false;
     if (selector.by === "all") applies = true;
@@ -76,7 +76,7 @@ function evaluateRules(
   return null;
 }
 
-// ─── Shell Injection Detection Tests ─────────────────────────────
+// ─── Shell 注入检测测试 ─────────────────────────────
 
 describe("command.shell_injection rule", () => {
   const rules = createCommandSafetyRules();
@@ -122,7 +122,7 @@ describe("command.shell_injection rule", () => {
     });
   }
 
-  it("allows clean commit hash in pull_upstream", () => {
+  it("允许在 pull_upstream 中使用干净的提交哈希", () => {
     const request = makeRequest("pull_upstream", {
       commit: "abc1234def5678",
     }, "self_mod", "dangerous");
@@ -130,7 +130,7 @@ describe("command.shell_injection rule", () => {
     expect(result).toBeNull();
   });
 
-  it("allows clean package name in install_npm_package", () => {
+  it("允许在 install_npm_package 中使用干净的包名", () => {
     const request = makeRequest("install_npm_package", {
       package: "@scope/my-package",
     }, "self_mod", "caution");
@@ -138,20 +138,20 @@ describe("command.shell_injection rule", () => {
     expect(result).toBeNull();
   });
 
-  it("returns null for exec tool (handled by forbidden_patterns)", () => {
+  it("对 exec 工具返回 null（由 forbidden_patterns 处理）", () => {
     const request = makeRequest("exec", { command: "ls -la" }, "vm", "caution");
     const result = injectionRule.evaluate(request);
     expect(result).toBeNull();
   });
 
-  it("returns null for tools not in SHELL_INTERPOLATED_TOOLS", () => {
+  it("对不在 SHELL_INTERPOLATED_TOOLS 中的工具返回 null", () => {
     const request = makeRequest("read_file", { path: "/etc/passwd; rm -rf /" }, "vm", "safe");
     const result = injectionRule.evaluate(request);
     expect(result).toBeNull();
   });
 });
 
-// ─── Forbidden Command Patterns Tests ─────────────────────────────
+// ─── 禁止的命令模式测试 ─────────────────────────────
 
 describe("command.forbidden_patterns rule", () => {
   const rules = createCommandSafetyRules();
@@ -163,7 +163,7 @@ describe("command.forbidden_patterns rule", () => {
     expect(forbiddenRule.appliesTo).toEqual({ by: "name", names: ["exec"] });
   });
 
-  // Self-destruction patterns
+  // 自我销毁模式
   const selfDestructPatterns = [
     "rm -rf .automaton",
     "rm -rf /home/user/.automaton",
@@ -175,7 +175,7 @@ describe("command.forbidden_patterns rule", () => {
   ];
 
   for (const cmd of selfDestructPatterns) {
-    it(`blocks self-destruction: ${cmd}`, () => {
+    it(`阻止自我销毁：${cmd}`, () => {
       const request = makeRequest("exec", { command: cmd }, "vm", "caution");
       const result = forbiddenRule.evaluate(request);
       expect(result).not.toBeNull();
@@ -184,7 +184,7 @@ describe("command.forbidden_patterns rule", () => {
     });
   }
 
-  // Process killing
+  // 进程终止
   const processKillPatterns = [
     "kill -9 automaton",
     "pkill automaton",
@@ -193,7 +193,7 @@ describe("command.forbidden_patterns rule", () => {
   ];
 
   for (const cmd of processKillPatterns) {
-    it(`blocks process killing: ${cmd}`, () => {
+    it(`阻止进程终止：${cmd}`, () => {
       const request = makeRequest("exec", { command: cmd }, "vm", "caution");
       const result = forbiddenRule.evaluate(request);
       expect(result).not.toBeNull();
@@ -201,7 +201,7 @@ describe("command.forbidden_patterns rule", () => {
     });
   }
 
-  // Database destruction
+  // 数据库销毁
   const dbDestructPatterns = [
     "sqlite3 state.db 'DROP TABLE turns'",
     "DELETE FROM identity WHERE 1=1",
@@ -209,7 +209,7 @@ describe("command.forbidden_patterns rule", () => {
   ];
 
   for (const cmd of dbDestructPatterns) {
-    it(`blocks database destruction: ${cmd}`, () => {
+    it(`阻止数据库销毁：${cmd}`, () => {
       const request = makeRequest("exec", { command: cmd }, "vm", "caution");
       const result = forbiddenRule.evaluate(request);
       expect(result).not.toBeNull();
@@ -217,7 +217,7 @@ describe("command.forbidden_patterns rule", () => {
     });
   }
 
-  // Credential harvesting
+  // 凭证窃取
   const credentialPatterns = [
     "cat ~/.ssh/id_rsa",
     "cat ~/.gnupg/private-keys-v1.d/key",
@@ -226,7 +226,7 @@ describe("command.forbidden_patterns rule", () => {
   ];
 
   for (const cmd of credentialPatterns) {
-    it(`blocks credential harvesting: ${cmd}`, () => {
+    it(`阻止凭证窃取：${cmd}`, () => {
       const request = makeRequest("exec", { command: cmd }, "vm", "caution");
       const result = forbiddenRule.evaluate(request);
       expect(result).not.toBeNull();
@@ -234,7 +234,7 @@ describe("command.forbidden_patterns rule", () => {
     });
   }
 
-  // Safety infrastructure modification
+  // 安全基础设施修改
   const safetyModPatterns = [
     "sed -i 's/deny/allow/' injection-defense.ts",
     "sed -i '' policy-engine/something",
@@ -247,7 +247,7 @@ describe("command.forbidden_patterns rule", () => {
   ];
 
   for (const cmd of safetyModPatterns) {
-    it(`blocks safety modification: ${cmd}`, () => {
+    it(`阻止安全修改：${cmd}`, () => {
       const request = makeRequest("exec", { command: cmd }, "vm", "caution");
       const result = forbiddenRule.evaluate(request);
       expect(result).not.toBeNull();
@@ -255,7 +255,7 @@ describe("command.forbidden_patterns rule", () => {
     });
   }
 
-  // Allowed commands
+  // 允许的命令
   const allowedPatterns = [
     "ls -la",
     "npm install express",
@@ -265,22 +265,22 @@ describe("command.forbidden_patterns rule", () => {
   ];
 
   for (const cmd of allowedPatterns) {
-    it(`allows safe command: ${cmd}`, () => {
+    it(`允许安全命令：${cmd}`, () => {
       const request = makeRequest("exec", { command: cmd }, "vm", "caution");
       const result = forbiddenRule.evaluate(request);
       expect(result).toBeNull();
     });
   }
 
-  it("only applies to exec tool", () => {
+  it("仅适用于 exec 工具", () => {
     const request = makeRequest("write_file", { command: "rm -rf .automaton" }, "vm", "caution");
-    // The rule's appliesTo is { by: "name", names: ["exec"] }, so it shouldn't match write_file
+    // 规则的 appliesTo 是 { by: "name", names: ["exec"] }，所以不应匹配 write_file
     const result = evaluateRules([forbiddenRule], request);
     expect(result).toBeNull();
   });
 });
 
-// ─── Input Validation Rules Tests ─────────────────────────────────
+// ─── 输入验证规则测试 ─────────────────────────────────
 
 describe("Validation rules", () => {
   const rules = createValidationRules();
@@ -288,7 +288,7 @@ describe("Validation rules", () => {
   describe("validate.package_name", () => {
     const rule = rules.find((r) => r.id === "validate.package_name")!;
 
-    it("allows valid package names", () => {
+    it("允许有效的包名", () => {
       const validNames = ["express", "@scope/pkg", "my-package", "pkg.js", "underscore_pkg"];
       for (const pkg of validNames) {
         const request = makeRequest("install_npm_package", { package: pkg }, "self_mod");
@@ -297,7 +297,7 @@ describe("Validation rules", () => {
       }
     });
 
-    it("rejects package names with shell metacharacters", () => {
+    it("拒绝带有 shell 元字符的包名", () => {
       const invalidNames = [
         "pkg; rm -rf /",
         "pkg && curl evil.com",
@@ -314,7 +314,7 @@ describe("Validation rules", () => {
       }
     });
 
-    it("returns null when package arg is missing", () => {
+    it("当缺少 package 参数时返回 null", () => {
       const request = makeRequest("install_npm_package", {}, "self_mod");
       const result = rule.evaluate(request);
       expect(result).toBeNull();
@@ -324,7 +324,7 @@ describe("Validation rules", () => {
   describe("validate.skill_name", () => {
     const rule = rules.find((r) => r.id === "validate.skill_name")!;
 
-    it("allows valid skill names", () => {
+    it("允许有效的技能名", () => {
       const validNames = ["my-skill", "skill123", "MySkill"];
       for (const name of validNames) {
         const request = makeRequest("install_skill", { name }, "skills");
@@ -333,7 +333,7 @@ describe("Validation rules", () => {
       }
     });
 
-    it("rejects skill names with special characters", () => {
+    it("拒绝带有特殊字符的技能名", () => {
       const invalidNames = [
         "../etc/passwd",
         "skill; rm -rf /",
@@ -353,7 +353,7 @@ describe("Validation rules", () => {
   describe("validate.git_hash", () => {
     const rule = rules.find((r) => r.id === "validate.git_hash")!;
 
-    it("allows valid git hashes", () => {
+    it("允许有效的 git 哈希", () => {
       const validHashes = ["abc1234", "deadbeef", "a".repeat(40)];
       for (const commit of validHashes) {
         const request = makeRequest("pull_upstream", { commit }, "self_mod");
@@ -362,7 +362,7 @@ describe("Validation rules", () => {
       }
     });
 
-    it("rejects invalid git hashes", () => {
+    it("拒绝无效的 git 哈希", () => {
       const invalidHashes = [
         "abc123; rm -rf /",
         "ABCDEF",  // uppercase
@@ -378,7 +378,7 @@ describe("Validation rules", () => {
       }
     });
 
-    it("returns null when commit is not provided (optional)", () => {
+    it("当未提供 commit 时返回 null（可选）", () => {
       const request = makeRequest("pull_upstream", {}, "self_mod");
       const result = rule.evaluate(request);
       expect(result).toBeNull();
@@ -388,7 +388,7 @@ describe("Validation rules", () => {
   describe("validate.port_range", () => {
     const rule = rules.find((r) => r.id === "validate.port_range")!;
 
-    it("allows valid ports", () => {
+    it("允许有效的端口", () => {
       for (const port of [1, 80, 443, 8080, 65535]) {
         const request = makeRequest("expose_port", { port }, "vm");
         const result = rule.evaluate(request);
@@ -396,7 +396,7 @@ describe("Validation rules", () => {
       }
     });
 
-    it("rejects invalid ports", () => {
+    it("拒绝无效的端口", () => {
       for (const port of [0, -1, 65536, 100000, 1.5]) {
         const request = makeRequest("expose_port", { port }, "vm");
         const result = rule.evaluate(request);
@@ -409,7 +409,7 @@ describe("Validation rules", () => {
   describe("validate.cron_expression", () => {
     const rule = rules.find((r) => r.id === "validate.cron_expression")!;
 
-    it("allows valid cron expressions", () => {
+    it("允许有效的 cron 表达式", () => {
       const valid = ["* * * * *", "0 */2 * * *", "30 9 * * 1-5", "0 0 1,15 * *"];
       for (const schedule of valid) {
         const request = makeRequest("modify_heartbeat", { schedule }, "self_mod");
@@ -418,7 +418,7 @@ describe("Validation rules", () => {
       }
     });
 
-    it("rejects invalid cron expressions", () => {
+    it("拒绝无效的 cron 表达式", () => {
       const invalid = [
         "not a cron",
         "* * *",       // too few fields
@@ -436,7 +436,7 @@ describe("Validation rules", () => {
   describe("validate.address_format", () => {
     const rule = rules.find((r) => r.id === "validate.address_format")!;
 
-    it("allows valid Ethereum addresses", () => {
+    it("允许有效的以太坊地址", () => {
       const valid = [
         "0x1234567890abcdef1234567890abcdef12345678",
         "0xABCDEF1234567890ABCDEF1234567890ABCDEF12",
@@ -448,7 +448,7 @@ describe("Validation rules", () => {
       }
     });
 
-    it("rejects invalid addresses", () => {
+    it("拒绝无效的地址", () => {
       const invalid = [
         "not-an-address",
         "0x1234",     // too short
@@ -465,12 +465,12 @@ describe("Validation rules", () => {
   });
 });
 
-// ─── Default Rules Integration ─────────────────────────────────────
+// ─── 默认规则集成 ─────────────────────────────────────
 
 describe("createDefaultRules integration", () => {
   const rules = createDefaultRules();
 
-  it("returns all validation and command safety rules", () => {
+  it("返回所有验证和命令安全规则", () => {
     const ruleIds = rules.map((r) => r.id);
     expect(ruleIds).toContain("validate.package_name");
     expect(ruleIds).toContain("validate.skill_name");
@@ -482,7 +482,7 @@ describe("createDefaultRules integration", () => {
     expect(ruleIds).toContain("command.forbidden_patterns");
   });
 
-  it("blocks shell injection in install_skill name with combined rules", () => {
+  it("使用组合规则阻止 install_skill 名称中的 shell 注入", () => {
     const request = makeRequest("install_skill", {
       name: "evil;rm -rf /",
       url: "https://example.com",
@@ -492,7 +492,7 @@ describe("createDefaultRules integration", () => {
     expect(result!.action).toBe("deny");
   });
 
-  it("blocks invalid git hash in pull_upstream with combined rules", () => {
+  it("使用组合规则阻止 pull_upstream 中的无效 git 哈希", () => {
     const request = makeRequest("pull_upstream", {
       commit: "abc; rm -rf /",
     }, "self_mod", "dangerous");
@@ -502,49 +502,49 @@ describe("createDefaultRules integration", () => {
   });
 });
 
-// ─── Registry Safety Tests ─────────────────────────────────────────
+// ─── 注册表安全测试 ─────────────────────────────────────────
 
 describe("skills/registry.ts safety", () => {
-  // These tests verify that the registry functions have input validation
-  // by importing the functions and checking they throw on invalid input.
-  // We don't actually execute shell commands — we test the validation.
+  // 这些测试验证注册表函数是否具有输入验证
+  // 通过导入函数并检查它们在无效输入时是否抛出错误。
+  // 我们实际上不执行 shell 命令——我们测试验证。
 
-  it("installSkillFromGit rejects invalid skill name", async () => {
+  it("installSkillFromGit 拒绝无效的技能名", async () => {
     const { installSkillFromGit } = await import("../skills/registry.js");
     await expect(
       installSkillFromGit("https://github.com/test/repo", "../evil", "/tmp/skills", {} as any, {} as any),
     ).rejects.toThrow(/Invalid skill name/);
   });
 
-  it("installSkillFromGit rejects URL with shell metacharacters", async () => {
+  it("installSkillFromGit 拒绝带有 shell 元字符的 URL", async () => {
     const { installSkillFromGit } = await import("../skills/registry.js");
     await expect(
       installSkillFromGit("https://evil.com/repo; rm -rf /", "test-skill", "/tmp/skills", {} as any, {} as any),
     ).rejects.toThrow(/Invalid repo URL/);
   });
 
-  it("installSkillFromUrl rejects invalid skill name", async () => {
+  it("installSkillFromUrl 拒绝无效的技能名", async () => {
     const { installSkillFromUrl } = await import("../skills/registry.js");
     await expect(
       installSkillFromUrl("https://example.com/skill.md", "evil;name", "/tmp/skills", {} as any, {} as any),
     ).rejects.toThrow(/Invalid skill name/);
   });
 
-  it("installSkillFromUrl rejects URL with shell metacharacters", async () => {
+  it("installSkillFromUrl 拒绝带有 shell 元字符的 URL", async () => {
     const { installSkillFromUrl } = await import("../skills/registry.js");
     await expect(
       installSkillFromUrl("https://evil.com/skill.md | cat /etc/passwd", "test-skill", "/tmp/skills", {} as any, {} as any),
     ).rejects.toThrow(/Invalid URL/);
   });
 
-  it("createSkill rejects invalid skill name", async () => {
+  it("createSkill 拒绝无效的技能名", async () => {
     const { createSkill } = await import("../skills/registry.js");
     await expect(
       createSkill("../etc/passwd", "evil", "inject code", "/tmp/skills", {} as any, {} as any),
     ).rejects.toThrow(/Invalid skill name/);
   });
 
-  it("removeSkill rejects invalid skill name", async () => {
+  it("removeSkill 拒绝无效的技能名", async () => {
     const { removeSkill } = await import("../skills/registry.js");
     await expect(
       removeSkill("../../../etc", {} as any, {} as any, "/tmp/skills", true),
@@ -552,54 +552,54 @@ describe("skills/registry.ts safety", () => {
   });
 });
 
-// ─── Source Code Safety Assertions ─────────────────────────────────
+// ─── 源代码安全断言 ─────────────────────────────────
 
 describe("Source code injection safety", () => {
-  it("upstream.ts uses execFileSync not execSync with string interpolation", async () => {
+  it("upstream.ts 使用 execFileSync 而不是带字符串插值的 execSync", async () => {
     const fs = await import("fs");
     const source = fs.readFileSync(
       new URL("../self-mod/upstream.ts", import.meta.url).pathname.replace("/src/__tests__/../", "/src/"),
       "utf-8",
     );
-    // Should NOT have: execSync(`git ${cmd}`)
+    // 不应该有：execSync(`git ${cmd}`)
     expect(source).not.toMatch(/execSync\s*\(/);
-    // Should have: execFileSync("git", args, ...)
+    // 应该有：execFileSync("git", args, ...)
     expect(source).toMatch(/execFileSync\s*\(\s*"git"/);
   });
 
-  it("registry.ts uses execFileSync not conway.exec with interpolation", async () => {
+  it("registry.ts 使用 execFileSync 而不是带插值的 conway.exec", async () => {
     const fs = await import("fs");
     const source = fs.readFileSync(
       new URL("../skills/registry.ts", import.meta.url).pathname.replace("/src/__tests__/../", "/src/"),
       "utf-8",
     );
-    // Should NOT have template literals in conway.exec calls
+    // 在 conway.exec 调用中不应该有模板字符串
     expect(source).not.toMatch(/conway\.exec\s*\(\s*`/);
-    // Should use execFileSync or fs.* instead
+    // 应该使用 execFileSync 或 fs.* 代替
     expect(source).toMatch(/execFileSync\s*\(/);
     expect(source).toMatch(/fs\.mkdirSync\(/);
     expect(source).toMatch(/fs\.rmSync\(/);
   });
 
-  it("loader.ts uses execFileSync('which', [bin]) not execSync('which ${bin}')", async () => {
+  it("loader.ts 使用 execFileSync('which', [bin]) 而不是 execSync('which ${bin}')", async () => {
     const fs = await import("fs");
     const source = fs.readFileSync(
       new URL("../skills/loader.ts", import.meta.url).pathname.replace("/src/__tests__/../", "/src/"),
       "utf-8",
     );
-    // Should NOT have: execSync(`which ${bin}`)
+    // 不应该有：execSync(`which ${bin}`)
     expect(source).not.toMatch(/execSync\s*\(\s*`which/);
-    // Should have: execFileSync("which", [bin])
+    // 应该有：execFileSync("which", [bin])
     expect(source).toMatch(/execFileSync\s*\(\s*"which"/);
   });
 
-  it("tools.ts pull_upstream uses conway.exec not host execSync", async () => {
+  it("tools.ts pull_upstream 使用 conway.exec 而不是主机 execSync", async () => {
     const fs = await import("fs");
     const source = fs.readFileSync(
       new URL("../agent/tools.ts", import.meta.url).pathname.replace("/src/__tests__/../", "/src/"),
       "utf-8",
     );
-    // Find the pull_upstream section and check it doesn't import child_process
+    // 查找 pull_upstream 部分并检查它没有导入 child_process
     const pullSection = source.slice(
       source.indexOf("name: \"pull_upstream\""),
       source.indexOf("name: \"modify_heartbeat\""),
@@ -608,7 +608,7 @@ describe("Source code injection safety", () => {
     expect(pullSection).toMatch(/ctx\.conway\.exec\(/);
   });
 
-  it("tools.ts has defense-in-depth comment on FORBIDDEN_COMMAND_PATTERNS", async () => {
+  it("tools.ts 在 FORBIDDEN_COMMAND_PATTERNS 上有纵深防御注释", async () => {
     const fs = await import("fs");
     const source = fs.readFileSync(
       new URL("../agent/tools.ts", import.meta.url).pathname.replace("/src/__tests__/../", "/src/"),

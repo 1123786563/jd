@@ -1,8 +1,8 @@
 /**
- * Resource Monitor
+ * 资源监控器
  *
- * Continuously monitors the automaton's resources and triggers
- * survival mode transitions when needed.
+ * 持续监控 automaton 的资源并在需要时触发
+ * 生存模式转换
  */
 
 import type {
@@ -25,26 +25,26 @@ export interface ResourceStatus {
 }
 
 /**
- * Check all resources and return current status.
+ * 检查所有资源并返回当前状态
  */
 export async function checkResources(
   identity: AutomatonIdentity,
   conway: ConwayClient,
   db: AutomatonDatabase,
 ): Promise<ResourceStatus> {
-  // Check credits
+  // 检查积分
   let creditsCents = 0;
   try {
     creditsCents = await conway.getCreditsBalance();
   } catch {}
 
-  // Check USDC
+  // 检查 USDC
   let usdcBalance = 0;
   try {
     usdcBalance = await getUsdcBalance(identity.address);
   } catch {}
 
-  // Check sandbox health
+  // 检查沙箱健康
   let sandboxHealthy = true;
   try {
     const result = await conway.exec("echo ok", 5000);
@@ -64,10 +64,10 @@ export async function checkResources(
   const previousTier = (prevTierStr as SurvivalTier) || null;
   const tierChanged = previousTier !== null && previousTier !== tier;
 
-  // Store current tier
+  // 存储当前层级
   db.setKV("current_tier", tier);
 
-  // Store financial state
+  // 存储财务状态
   db.setKV("financial_state", JSON.stringify(financial));
 
   return {
@@ -80,16 +80,16 @@ export async function checkResources(
 }
 
 /**
- * Generate a human-readable resource report.
+ * 生成人类可读的资源报告
  */
 export function formatResourceReport(status: ResourceStatus): string {
   const lines = [
-    `=== RESOURCE STATUS ===`,
-    `Credits: ${formatCredits(status.financial.creditsCents)}`,
-    `USDC: ${status.financial.usdcBalance.toFixed(6)}`,
-    `Tier: ${status.tier}${status.tierChanged ? ` (changed from ${status.previousTier})` : ""}`,
-    `Sandbox: ${status.sandboxHealthy ? "healthy" : "UNHEALTHY"}`,
-    `Checked: ${status.financial.lastChecked}`,
+    `=== 资源状态 ===`,
+    `积分：${formatCredits(status.financial.creditsCents)}`,
+    `USDC：${status.financial.usdcBalance.toFixed(6)}`,
+    `层级：${status.tier}${status.tierChanged ? ` (从 ${status.previousTier} 更改)` : ""}`,
+    `沙箱：${status.sandboxHealthy ? "健康" : "不健康"}`,
+    `检查时间：${status.financial.lastChecked}`,
     `========================`,
   ];
   return lines.join("\n");

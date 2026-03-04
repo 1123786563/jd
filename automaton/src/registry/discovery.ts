@@ -1,10 +1,10 @@
 /**
- * Agent Discovery
+ * Agent 发现
  *
- * Discover other agents via ERC-8004 registry queries.
- * Fetch and parse agent cards from URIs.
+ * 通过 ERC-8004 注册表查询发现其他 agent。
+ * 从 URI 获取并解析 agent 卡片。
  *
- * Phase 3.2: Added caching, configurable IPFS gateway, stricter validation.
+ * 阶段 3.2：添加了缓存、可配置的 IPFS 网关、更严格的验证。
  */
 
 import type {
@@ -21,15 +21,15 @@ const logger = createLogger("registry.discovery");
 
 type Network = "mainnet" | "testnet";
 
-// Overall discovery timeout (60 seconds)
+// 整体发现超时时间（60 秒）
 const DISCOVERY_TIMEOUT_MS = 60_000;
 
-// ─── SSRF Protection ────────────────────────────────────────────
+// ─── SSRF 保护 ────────────────────────────────────────────
 
 /**
- * Check if a hostname resolves to an internal/private network.
- * Blocks: 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12,
- *         192.168.0.0/16, 169.254.0.0/16, ::1, localhost, 0.0.0.0/8
+ * 检查主机名是否解析到内部/私有网络。
+ * 阻止：127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12,
+ *       192.168.0.0/16, 169.254.0.0/16, ::1, localhost, 0.0.0.0/8
  */
 export function isInternalNetwork(hostname: string): boolean {
   const blocked = [
@@ -46,9 +46,9 @@ export function isInternalNetwork(hostname: string): boolean {
 }
 
 /**
- * Check if a URI is allowed for fetching.
- * Only https: and ipfs: schemes are permitted.
- * Internal network addresses are blocked (SSRF protection).
+ * 检查 URI 是否允许获取。
+ * 只允许 https: 和 ipfs: 协议。
+ * 内部网络地址被阻止（SSRF 保护）。
  */
 export function isAllowedUri(uri: string): boolean {
   try {
@@ -61,9 +61,9 @@ export function isAllowedUri(uri: string): boolean {
   }
 }
 
-// ─── Agent Card Validation ──────────────────────────────────────
+// ─── Agent 卡片验证 ──────────────────────────────────────
 
-// Phase 3.2: Stricter field length limits
+// 阶段 3.2：更严格的字段长度限制
 const MAX_NAME_LENGTH = 128;
 const MAX_DESCRIPTION_LENGTH = 2000;
 const MAX_SERVICE_NAME_LENGTH = 64;
@@ -71,40 +71,40 @@ const MAX_SERVICE_ENDPOINT_LENGTH = 512;
 const MAX_SERVICES_COUNT = 20;
 
 /**
- * Validate a fetched agent card JSON against required schema.
- * Phase 3.2: Stricter validation with field length checks.
+ * 根据所需的架构验证获取的 agent 卡片 JSON。
+ * 阶段 3.2：使用字段长度检查进行更严格的验证。
  */
 export function validateAgentCard(data: unknown): AgentCard | null {
   if (!data || typeof data !== 'object') return null;
   const card = data as Record<string, unknown>;
 
-  // Required fields
+  // 必填字段
   if (typeof card.name !== 'string' || card.name.length === 0) return null;
   if (typeof card.type !== 'string' || card.type.length === 0) return null;
 
-  // Phase 3.2: Stricter field length validation
+  // 阶段 3.2：更严格的字段长度验证
   if (card.name.length > MAX_NAME_LENGTH) {
-    logger.error(`Agent card name too long: ${card.name.length} > ${MAX_NAME_LENGTH}`);
+    logger.error(`Agent 卡片名称过长：${card.name.length} > ${MAX_NAME_LENGTH}`);
     return null;
   }
 
-  // address is optional but must be string if present
+  // address 是可选的，但如果存在必须是字符串
   if (card.address !== undefined && typeof card.address !== 'string') return null;
 
-  // description is optional but must be string if present with length check
+  // description 是可选的，但如果存在必须是字符串并进行长度检查
   if (card.description !== undefined) {
     if (typeof card.description !== 'string') return null;
     if (card.description.length > MAX_DESCRIPTION_LENGTH) {
-      logger.error(`Agent card description too long: ${card.description.length}`);
+      logger.error(`Agent 卡片描述过长：${card.description.length}`);
       return null;
     }
   }
 
-  // Phase 3.2: Validate services array
+  // 阶段 3.2：验证服务数组
   if (card.services !== undefined) {
     if (!Array.isArray(card.services)) return null;
     if (card.services.length > MAX_SERVICES_COUNT) {
-      logger.error(`Too many services: ${card.services.length}`);
+      logger.error(`服务过多：${card.services.length}`);
       return null;
     }
     for (const svc of card.services) {
@@ -117,10 +117,10 @@ export function validateAgentCard(data: unknown): AgentCard | null {
   return card as unknown as AgentCard;
 }
 
-// ─── Agent Card Cache ───────────────────────────────────────────
+// ─── Agent 卡片缓存 ───────────────────────────────────────────
 
 /**
- * Try to get a cached agent card from the database.
+ * 尝试从数据库获取缓存的 agent 卡片。
  */
 function getCachedCard(
   db: import("better-sqlite3").Database | undefined,
@@ -133,9 +133,9 @@ function getCachedCard(
     ).get(agentAddress) as { agent_card: string; valid_until: string | null } | undefined;
     if (!row) return null;
 
-    // Check if cache is still valid
+    // 检查缓存是否仍然有效
     if (row.valid_until && new Date(row.valid_until).getTime() < Date.now()) {
-      return null; // Expired
+      return null; // 已过期
     }
 
     return JSON.parse(row.agent_card) as AgentCard;
@@ -145,14 +145,14 @@ function getCachedCard(
 }
 
 /**
- * Store an agent card in the cache.
+ * 在缓存中存储 agent 卡片。
  */
 function setCachedCard(
   db: import("better-sqlite3").Database | undefined,
   agentAddress: string,
   card: AgentCard,
   fetchedFrom: string,
-  ttlMs: number = 3_600_000, // 1 hour default
+  ttlMs: number = 3_600_000, // 默认 1 小时
 ): void {
   if (!db) return;
   try {
@@ -174,15 +174,15 @@ function setCachedCard(
          last_fetched_at = excluded.last_fetched_at`,
     ).run(agentAddress, cardJson, fetchedFrom, cardHash, validUntil, now, now);
   } catch (error) {
-    logger.error("Cache write failed:", error instanceof Error ? error : undefined);
+    logger.error("缓存写入失败：", error instanceof Error ? error : undefined);
   }
 }
 
-// ─── Discovery ──────────────────────────────────────────────────
+// ─── 发现 ──────────────────────────────────────────────────
 
 /**
- * Enrich a discovered agent with its agent card data (name, description).
- * Tries cache first, then fetches from the agent's URI.
+ * 使用 agent 卡片数据（名称、描述）丰富发现的 agent。
+ * 首先尝试缓存，然后从 agent 的 URI 获取。
  */
 async function enrichAgentWithCard(
   agent: DiscoveredAgent,
@@ -203,15 +203,15 @@ async function enrichAgentWithCard(
       agent.description = card.description;
     }
   } catch (error) {
-    logger.error("Card fetch failed:", error instanceof Error ? error : undefined);
+    logger.error("卡片获取失败：", error instanceof Error ? error : undefined);
   }
 }
 
 /**
- * Discover agents by scanning the registry.
- * Returns a list of discovered agents with their metadata.
+ * 通过扫描注册表发现 agent。
+ * 返回发现的 agent 及其元数据列表。
  *
- * Phase 3.2: Uses caching and configurable discovery options.
+ * 阶段 3.2：使用缓存和可配置的发现选项。
  */
 export async function discoverAgents(
   limit: number = 20,
@@ -226,7 +226,7 @@ export async function discoverAgents(
   const overallStart = Date.now();
 
   if (total > 0) {
-    // totalSupply worked — use sequential iteration (existing path)
+    // totalSupply 成功 — 使用顺序迭代（现有路径）
     const scanCount = Math.min(total, limit, cfg.maxScanCount);
     for (let i = total; i > total - scanCount && i > 0; i--) {
       if (Date.now() - overallStart > DISCOVERY_TIMEOUT_MS) {
@@ -241,12 +241,12 @@ export async function discoverAgents(
           agents.push(agent);
         }
       } catch (error) {
-        logger.error("Agent query failed:", error instanceof Error ? error : undefined);
+        logger.error("Agent 查询失败：", error instanceof Error ? error : undefined);
       }
     }
   } else {
-    // totalSupply returned 0 (likely reverted) — fall back to Transfer event scanning
-    logger.info("totalSupply returned 0, falling back to Transfer event scanning");
+    // totalSupply 返回 0（可能已回退） — 回退到 Transfer 事件扫描
+    logger.info("totalSupply 返回 0，回退到 Transfer 事件扫描");
     const eventAgents = await getRegisteredAgentsByEvents(network, Math.min(limit, cfg.maxScanCount));
 
     for (const { tokenId, owner } of eventAgents) {
@@ -256,10 +256,10 @@ export async function discoverAgents(
       }
 
       try {
-        // Try queryAgent first (gets tokenURI), fall back to event data only
+        // 首先尝试 queryAgent（获取 tokenURI），回退到仅事件数据
         const agent = await queryAgent(tokenId, network);
         if (agent) {
-          // Use owner from event if queryAgent couldn't get it
+          // 如果 queryAgent 无法获取 owner，则使用事件中的 owner
           if (!agent.owner && owner) {
             agent.owner = owner;
           }
@@ -267,7 +267,7 @@ export async function discoverAgents(
           agents.push(agent);
         }
       } catch (error) {
-        logger.error(`Agent query failed for token ${tokenId}:`, error instanceof Error ? error : undefined);
+        logger.error(`Token ${tokenId} 的 Agent 查询失败：`, error instanceof Error ? error : undefined);
       }
     }
   }
@@ -276,10 +276,10 @@ export async function discoverAgents(
 }
 
 /**
- * Fetch an agent card from a URI.
- * Enforces SSRF protection and per-fetch timeout.
+ * 从 URI 获取 agent 卡片。
+ * 强制执行 SSRF 保护和每次获取超时。
  *
- * Phase 3.2: Configurable IPFS gateway and response size limit.
+ * 阶段 3.2：可配置的 IPFS 网关和响应大小限制。
  */
 export async function fetchAgentCard(
   uri: string,
@@ -287,20 +287,20 @@ export async function fetchAgentCard(
 ): Promise<AgentCard | null> {
   const cfg = { ...DEFAULT_DISCOVERY_CONFIG, ...config };
 
-  // SSRF protection: validate URI before fetching
+  // SSRF 保护：在获取之前验证 URI
   if (!isAllowedUri(uri)) {
-    logger.error(`Blocked URI (SSRF protection): ${uri}`);
+    logger.error(`阻止的 URI（SSRF 保护）：${uri}`);
     return null;
   }
 
   try {
-    // Handle IPFS URIs - Phase 3.2: Configurable IPFS gateway
+    // 处理 IPFS URI - 阶段 3.2：可配置的 IPFS 网关
     let fetchUrl = uri;
     if (uri.startsWith("ipfs://")) {
       fetchUrl = `${cfg.ipfsGateway}/ipfs/${uri.slice(7)}`;
     }
 
-    // Per-fetch timeout
+    // 每次获取超时
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), cfg.fetchTimeoutMs);
 
@@ -311,35 +311,35 @@ export async function fetchAgentCard(
 
       if (!response.ok) return null;
 
-      // Phase 3.2: Check response size before parsing
+      // 阶段 3.2：在解析之前检查响应大小
       const contentLength = response.headers.get("content-length");
       if (contentLength && parseInt(contentLength, 10) > cfg.maxCardSizeBytes) {
-        logger.error(`Agent card too large: ${contentLength} bytes`);
+        logger.error(`Agent 卡片过大：${contentLength} 字节`);
         return null;
       }
 
       const text = await response.text();
       if (text.length > cfg.maxCardSizeBytes) {
-        logger.error(`Agent card too large: ${text.length} bytes`);
+        logger.error(`Agent 卡片过大：${text.length} 字节`);
         return null;
       }
 
       const data = JSON.parse(text);
 
-      // Validate agent card JSON against schema
+      // 根据架构验证 agent 卡片 JSON
       return validateAgentCard(data);
     } finally {
       clearTimeout(timer);
     }
   } catch (error) {
-    logger.error("Agent card fetch failed:", error instanceof Error ? error : undefined);
+    logger.error("Agent 卡片获取失败：", error instanceof Error ? error : undefined);
     return null;
   }
 }
 
 /**
- * Search for agents by name or description.
- * Scans recent registrations and filters by keyword.
+ * 按名称或描述搜索 agent。
+ * 扫描最近的注册并按关键字过滤。
  */
 export async function searchAgents(
   keyword: string,

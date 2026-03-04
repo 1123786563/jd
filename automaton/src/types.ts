@@ -1,13 +1,16 @@
 /**
- * Conway Automaton - Type Definitions
+ * Conway Automaton - 类型定义
  *
- * All shared interfaces for the sovereign AI agent runtime.
+ * 自主 AI Agent 运行时的所有共享接口
  */
 
 import type { PrivateKeyAccount, Address } from "viem";
 
 // ─── Identity ────────────────────────────────────────────────────
 
+/**
+ * Automaton 身份信息
+ */
 export interface AutomatonIdentity {
   name: string;
   address: Address;
@@ -18,11 +21,17 @@ export interface AutomatonIdentity {
   createdAt: string;
 }
 
+/**
+ * 钱包数据
+ */
 export interface WalletData {
   privateKey: `0x${string}`;
   createdAt: string;
 }
 
+/**
+ * 配置结果
+ */
 export interface ProvisionResult {
   apiKey: string;
   walletAddress: string;
@@ -31,6 +40,9 @@ export interface ProvisionResult {
 
 // ─── Configuration ───────────────────────────────────────────────
 
+/**
+ * Automaton 配置
+ */
 export interface AutomatonConfig {
   name: string;
   genesisPrompt: string;
@@ -64,6 +76,28 @@ export interface AutomatonConfig {
   modelStrategy?: ModelStrategyConfig;
   runModeConfig?: RunModeConfig; // 运行模式配置
 }
+
+// ─── Run Mode Configuration ──────────────────────────────────────
+
+export type RunMode = "wallet_only" | "api_only" | "hybrid";
+
+export interface RunModeConfig {
+  mode: RunMode;
+  // api_only mode settings
+  externalApiBudgetDailyCents?: number; // daily budget limit for external APIs
+  externalApiBudgetHourlyCents?: number; // hourly budget limit for external APIs
+  // hybrid mode settings
+  fallbackToWallet?: boolean; // whether to fallback to wallet if API fails
+  fallbackCooldownMs?: number; // cooldown before trying wallet fallback
+}
+
+export const DEFAULT_RUN_MODE_CONFIG: RunModeConfig = {
+  mode: "wallet_only",
+  externalApiBudgetDailyCents: 0, // 0 = no limit
+  externalApiBudgetHourlyCents: 0, // 0 = no limit
+  fallbackToWallet: true,
+  fallbackCooldownMs: 60_000, // 1 minute
+};
 
 export const DEFAULT_CONFIG: Partial<AutomatonConfig> = {
   conwayApiUrl: "https://api.conway.tech",
@@ -279,8 +313,8 @@ export type ThreatLevel = "low" | "medium" | "high" | "critical";
 
 export type SanitizationMode =
   | "social_message"      // Full injection defense
-  | "social_address"      // Alphanumeric + 0x prefix only
-  | "tool_result"         // Strip prompt boundaries, limit size
+  | "social_address"      // 仅字母数字 + 0x 前缀
+  | "tool_result"         // 删除提示边界，限制大小
   | "skill_instruction";  // Strip tool call syntax, add framing
 
 export interface SanitizedInput {
@@ -369,7 +403,7 @@ export interface ConwayClient {
     account: PrivateKeyAccount;
     nonce?: string;
   }): Promise<{ automaton: Record<string, unknown> }>;
-  // Domain operations
+  // 域操作
   searchDomains(query: string, tlds?: string): Promise<DomainSearchResult[]>;
   registerDomain(domain: string, years?: number): Promise<DomainRegistration>;
   listDnsRecords(domain: string): Promise<DnsRecord[]>;
@@ -471,16 +505,16 @@ export interface ModelInfo {
 
 // ─── Policy Engine ───────────────────────────────────────────────
 
-// Risk level for tool classification — replaces `dangerous?: boolean`
+// 工具分类的风险级别 — 替换 `dangerous?: boolean`
 export type RiskLevel = 'safe' | 'caution' | 'dangerous' | 'forbidden';
 
-// Policy evaluation result action
+// 策略评估结果操作
 export type PolicyAction = 'allow' | 'deny' | 'quarantine';
 
 // Who initiated the action
 export type AuthorityLevel = 'system' | 'agent' | 'external';
 
-// Spend categories
+// 支出类别
 export type SpendCategory = 'transfer' | 'x402' | 'inference' | 'other';
 
 export type ToolSelector =
@@ -628,7 +662,7 @@ export interface AutomatonDatabase {
   upsertHeartbeatEntry(entry: HeartbeatEntry): void;
   updateHeartbeatLastRun(name: string, timestamp: string): void;
 
-  // Transactions
+  // 交易
   insertTransaction(txn: Transaction): void;
   getRecentTransactions(limit: number): Transaction[];
 
@@ -637,7 +671,7 @@ export interface AutomatonDatabase {
   installTool(tool: InstalledTool): void;
   removeTool(id: string): void;
 
-  // Modifications
+  // 修改
   insertModification(mod: ModificationEntry): void;
   getRecentModifications(limit: number): ModificationEntry[];
 
@@ -662,7 +696,7 @@ export interface AutomatonDatabase {
   getRegistryEntry(): RegistryEntry | undefined;
   setRegistryEntry(entry: RegistryEntry): void;
 
-  // Reputation
+  // 声誉
   insertReputation(entry: ReputationEntry): void;
   getReputation(agentAddress?: string): ReputationEntry[];
 
@@ -678,7 +712,7 @@ export interface AutomatonDatabase {
   getAgentState(): AgentState;
   setAgentState(state: AgentState): void;
 
-  // Transaction helper
+  // 交易助手
   runTransaction<T>(fn: () => T): T;
 
   close(): void;
@@ -796,7 +830,7 @@ export interface DiscoveredAgent {
   description?: string;
 }
 
-// ─── Replication ────────────────────────────────────────────────
+// ─── 复制 ─────────────────────────────────────────────────
 
 export interface ChildAutomaton {
   id: string;
@@ -915,7 +949,7 @@ export interface HeartbeatHistoryRow {
 }
 
 export interface WakeEventRow {
-  id: number;                        // AUTOINCREMENT
+  id: number;                        // 自增
   source: string;                    // e.g., 'heartbeat', 'inbox', 'manual'
   reason: string;
   payload: string;                   // JSON, default '{}'
@@ -935,7 +969,7 @@ export interface SoulModel {
   format: "soul/v1";
   version: number;
   updatedAt: string; // ISO 8601
-  // Immutable frontmatter
+  // 不可变的前置元数据
   name: string;
   address: string;
   creator: string;
@@ -956,7 +990,7 @@ export interface SoulModel {
   financialCharacter: string; // auto-populated + agent-set
   // Metadata
   rawContent: string; // original SOUL.md content
-  contentHash: string; // SHA-256 of rawContent
+  contentHash: string; // rawContent 的 SHA-256
 }
 
 export interface SoulValidationResult {
@@ -985,7 +1019,7 @@ export interface SoulReflection {
     reason: string;
     suggestedContent: string;
   }>;
-  autoUpdated: string[]; // sections auto-updated (capabilities, relationships, financial)
+  autoUpdated: string[]; // 自动更新的部分（能力、关系、财务）
 }
 
 export interface SoulConfig {
@@ -1087,9 +1121,9 @@ export interface SessionSummaryEntry {
   id: string; // ULID
   sessionId: string; // unique
   summary: string;
-  keyDecisions: string[]; // JSON-serialized
-  toolsUsed: string[]; // JSON-serialized
-  outcomes: string[]; // JSON-serialized
+  keyDecisions: string[]; // JSON 序列化
+  toolsUsed: string[]; // JSON 序列化
+  outcomes: string[]; // JSON 序列化
   turnCount: number;
   totalTokens: number;
   totalCostCents: number;
@@ -1137,8 +1171,8 @@ export interface ModelEntry {
   provider: ModelProvider;
   displayName: string;
   tierMinimum: SurvivalTier; // minimum tier to use this model
-  costPer1kInput: number; // hundredths of cents
-  costPer1kOutput: number; // hundredths of cents
+  costPer1kInput: number; // 每千个输入 token 的成本（美分）
+  costPer1kOutput: number; // 每千个输出 token 的成本（美分）
   maxTokens: number;
   contextWindow: number;
   supportsTools: boolean;
@@ -1151,7 +1185,7 @@ export interface ModelEntry {
 }
 
 export interface ModelPreference {
-  candidates: string[]; // model IDs in preference order
+  candidates: string[]; // 按优先顺序排列的模型 ID
   maxTokens: number;
   ceilingCents: number; // max cost per call (-1 = no limit)
 }
@@ -1225,28 +1259,6 @@ export interface ModelStrategyConfig {
   anthropicApiVersion: string; // default: "2023-06-01"
 }
 
-// ─── Run Mode Configuration ──────────────────────────────────────
-
-export type RunMode = "wallet_only" | "api_only" | "hybrid";
-
-export interface RunModeConfig {
-  mode: RunMode;
-  // api_only mode settings
-  externalApiBudgetDailyCents?: number; // daily budget limit for external APIs
-  externalApiBudgetHourlyCents?: number; // hourly budget limit for external APIs
-  // hybrid mode settings
-  fallbackToWallet?: boolean; // whether to fallback to wallet if API fails
-  fallbackCooldownMs?: number; // cooldown before trying wallet fallback
-}
-
-export const DEFAULT_RUN_MODE_CONFIG: RunModeConfig = {
-  mode: "wallet_only",
-  externalApiBudgetDailyCents: 0, // 0 = no limit
-  externalApiBudgetHourlyCents: 0, // 0 = no limit
-  fallbackToWallet: true,
-  fallbackCooldownMs: 60_000, // 1 minute
-};
-
 export const DEFAULT_MODEL_STRATEGY_CONFIG: ModelStrategyConfig = {
   inferenceModel: "gpt-5.2",
   lowComputeModel: "gpt-5-mini",
@@ -1259,7 +1271,7 @@ export const DEFAULT_MODEL_STRATEGY_CONFIG: ModelStrategyConfig = {
   anthropicApiVersion: "2023-06-01",
 };
 
-// === Phase 3.1: Replication & Lifecycle Types ===
+// === 阶段 3.1：复制与生命周期类型 ===
 
 export type ChildLifecycleState =
   | "requested"
@@ -1407,7 +1419,7 @@ export interface DiscoveredAgentCacheRow {
   createdAt: string;
 }
 
-// === Phase 4.1: Observability Types ===
+// === 阶段 4.1：可观测性类型 ===
 
 export type LogLevel = "debug" | "info" | "warn" | "error" | "fatal";
 
@@ -1441,7 +1453,7 @@ export interface MetricEntry {
 export interface MetricSnapshotRow {
   id: string; // ULID
   snapshotAt: string;
-  metricsJson: string; // JSON array of MetricEntry
+  metricsJson: string; // MetricEntry 的 JSON 数组
   alertsJson: string; // JSON array of fired alert names
   createdAt: string;
 }

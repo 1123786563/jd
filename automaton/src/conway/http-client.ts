@@ -1,10 +1,10 @@
 /**
- * Resilient HTTP Client
+ * 弹性 HTTP 客户端
  *
- * Shared HTTP client with timeouts, retries, jittered exponential backoff,
- * and circuit breaker for all outbound Conway API calls.
+ * 共享 HTTP 客户端，具有超时、重试、抖动指数退避和断路器功能，
+ * 用于所有出站 Conway API 调用。
  *
- * Phase 1.3: Network Resilience (P1-8, P1-9)
+ * 阶段 1.3：网络弹性 (P1-8, P1-9)
  */
 
 import type { HttpClientConfig } from "../types.js";
@@ -13,7 +13,7 @@ import { DEFAULT_HTTP_CLIENT_CONFIG } from "../types.js";
 export class CircuitOpenError extends Error {
   constructor(public readonly resetAt: number) {
     super(
-      `Circuit breaker is open until ${new Date(resetAt).toISOString()}`,
+      `断路器已打开，直到 ${new Date(resetAt).toISOString()}`,
     );
     this.name = "CircuitOpenError";
   }
@@ -61,9 +61,9 @@ export class ResilientHttpClient {
         });
         clearTimeout(timer);
 
-        // Count retryable HTTP errors toward circuit breaker, regardless of
-        // whether we will actually retry. A server consistently returning 502
-        // should eventually trip the circuit breaker.
+        // 将可重试的 HTTP 错误计入断路器，无论我们
+        // 是否会实际重试。持续返回 502 的服务器
+        // 最终应该触发断路器。
         if (this.config.retryableStatuses.includes(response.status)) {
           this.consecutiveFailures++;
           if (this.consecutiveFailures >= this.config.circuitBreakerThreshold) {
@@ -76,7 +76,7 @@ export class ResilientHttpClient {
           return response;
         }
 
-        // Only reset failure counter on truly successful responses
+        // 仅在真正成功的响应上重置失败计数器
         this.consecutiveFailures = 0;
         return response;
       } catch (error) {
@@ -93,7 +93,7 @@ export class ResilientHttpClient {
       }
     }
 
-    throw new Error("Unreachable");
+    throw new Error("不可达");
   }
 
   private async backoff(attempt: number): Promise<void> {

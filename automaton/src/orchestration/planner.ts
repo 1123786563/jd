@@ -55,6 +55,9 @@ export interface PlannerContext {
 
 const MODEL_TIERS: readonly ModelTier[] = ["reasoning", "fast", "cheap"];
 
+/**
+ * Plan a goal
+ */
 export async function planGoal(
   goal: Goal,
   context: PlannerContext,
@@ -79,6 +82,9 @@ export async function planGoal(
   return validatePlannerOutput(parsed);
 }
 
+/**
+ * Replan after a failure
+ */
 export async function replanAfterFailure(
   goal: Goal,
   failedTask: TaskNode,
@@ -465,21 +471,21 @@ function buildPlannerUserPrompt(params: {
         result: params.failedTask.result,
         metadata: params.failedTask.metadata,
       },
-      note: "Replan around this failure. Preserve successful work where possible.",
+      note: "Replan to work around this failure. Preserve successful work where possible.",
     };
   }
 
   return [
-    "Plan this goal using the planner rules in the system prompt.",
-    "Return only a valid JSON object matching PlannerOutput.",
-    "Input:",
+    "使用系统提示词中的规划器规则规划此目标。",
+    "仅返回与 PlannerOutput 匹配的有效 JSON 对象。",
+    "输入：",
     JSON.stringify(payload, null, 2),
   ].join("\n");
 }
 
 function parsePlannerResponse(content: string): unknown {
   if (content.trim().length === 0) {
-    throw new Error("Planner returned an empty response");
+    throw new Error("Planner returned empty response");
   }
 
   try {

@@ -1,9 +1,9 @@
 /**
- * Memory Retriever
+ * 记忆检索器
  *
- * Retrieves relevant memories across all tiers within a token budget.
- * Priority order: working > episodic > semantic > procedural > relationships.
- * Unused budget from one tier rolls to the next.
+ * 在 Token 预算内从所有层级检索相关记忆。
+ * 优先级顺序: 工作 > 情景 > 语义 > 程序 > 关系。
+ * 未使用的预算会滚动到下一层级。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -39,18 +39,18 @@ export class MemoryRetriever {
   }
 
   /**
-   * Retrieve relevant memories for a session, within token budget.
-   * Priority: working > episodic > semantic > procedural > relationships.
-   * Unused tokens from a tier roll to the next tier.
+   * 在 Token 预算内检索会话的相关记忆。
+   * 优先级：工作 > 情景 > 语义 > 程序 > 关系。
+   * 未使用的 Token 会滚动到下一层级（用于下一层级的检索）。
    */
   retrieve(sessionId: string, currentInput?: string): MemoryRetrievalResult {
     try {
-      // Fetch raw memories from each tier
+      // 从每个层级获取原始记忆（工作、情景、语义、程序、关系）
       const workingEntries = this.working.getBySession(sessionId);
 
       const episodicEntries = this.episodic.getRecent(sessionId, 20);
 
-      // For semantic and procedural, use current input as search query if available
+      // 对于语义和程序记忆，如果可用则使用当前输入作为搜索查询（提高相关性）
       const semanticEntries = currentInput
         ? this.semantic.search(currentInput)
         : this.semantic.getByCategory("self");
@@ -61,7 +61,7 @@ export class MemoryRetriever {
 
       const relationshipEntries = this.relationships.getTrusted(0.3);
 
-      // Build raw result
+      // 构建原始结果（包含所有层级的记忆）
       const raw: MemoryRetrievalResult = {
         workingMemory: workingEntries,
         episodicMemory: episodicEntries,
@@ -71,10 +71,10 @@ export class MemoryRetriever {
         totalTokens: 0,
       };
 
-      // Apply budget allocation
+      // 应用预算分配（按优先级分配 token 预算）
       return this.budgetManager.allocate(raw);
     } catch (error) {
-      logger.error("Retrieval failed", error instanceof Error ? error : undefined);
+      logger.error("检索失败", error instanceof Error ? error : undefined);
       return {
         workingMemory: [],
         episodicMemory: [],

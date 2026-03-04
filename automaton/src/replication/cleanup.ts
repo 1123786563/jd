@@ -1,8 +1,8 @@
 /**
- * Sandbox Cleanup
+ * 沙盒清理
  *
- * Cleans up sandbox resources for stopped/failed children.
- * Transitions children to cleaned_up state after destruction.
+ * 清理已停止/失败的子自动机的沙盒资源。
+ * 在销毁后将子自动机转换到 cleaned_up 状态。
  */
 
 import type { Database as DatabaseType } from "better-sqlite3";
@@ -19,30 +19,30 @@ export class SandboxCleanup {
   ) {}
 
   /**
-   * Clean up a single child's sandbox.
-   * Only works for children in stopped or failed state.
+   * 清理单个子自动机的沙盒。
+   * 仅适用于处于已停止或失败状态的子自动机。
    */
   async cleanup(childId: string): Promise<void> {
     const state = this.lifecycle.getCurrentState(childId);
     if (state !== "stopped" && state !== "failed") {
-      throw new Error(`Cannot clean up child in state: ${state}`);
+      throw new Error(`无法清理处于以下状态的子自动机：${state}`);
     }
 
-    // Look up sandbox ID
+    // 查找沙盒 ID
     const childRow = this.db
       .prepare("SELECT sandbox_id FROM children WHERE id = ?")
       .get(childId) as { sandbox_id: string } | undefined;
 
-    // Sandbox deletion is disabled by the Conway API (prepaid, non-refundable).
-    // Transition to cleaned_up so the child slot is freed for reuse.
+    // Conway API 禁用沙盒删除（预付费，不可退款）。
+    // 转换到 cleaned_up 以释放子槽位供重用。
     const sandboxNote = childRow?.sandbox_id
-      ? `sandbox ${childRow.sandbox_id} released (deletion disabled)`
-      : "no sandbox to clean up";
+      ? `沙盒 ${childRow.sandbox_id} 已释放（删除已禁用）`
+      : "没有沙盒需要清理";
     this.lifecycle.transition(childId, "cleaned_up", sandboxNote);
   }
 
   /**
-   * Clean up all stopped and failed children.
+   * 清理所有已停止和失败的子自动机。
    */
   async cleanupAll(): Promise<number> {
     const stopped = this.lifecycle.getChildrenInState("stopped");
@@ -54,7 +54,7 @@ export class SandboxCleanup {
         await this.cleanup(child.id);
         cleaned++;
       } catch (error) {
-        logger.error(`Failed to clean up child ${child.id}`, error instanceof Error ? error : undefined);
+        logger.error(`清理子自动机 ${child.id} 失败`, error instanceof Error ? error : undefined);
       }
     }
 
@@ -62,7 +62,7 @@ export class SandboxCleanup {
   }
 
   /**
-   * Clean up children that have been in stopped/failed state for too long.
+   * 清理处于已停止/失败状态时间过长的子自动机。
    */
   async cleanupStale(maxAgeHours: number): Promise<number> {
     const cutoff = new Date(Date.now() - maxAgeHours * 3600_000).toISOString();
@@ -76,7 +76,7 @@ export class SandboxCleanup {
         await this.cleanup(child.id);
         cleaned++;
       } catch (error) {
-        logger.error(`Failed to clean up stale child ${child.id}`, error instanceof Error ? error : undefined);
+        logger.error(`清理过期子自动机 ${child.id} 失败`, error instanceof Error ? error : undefined);
       }
     }
 

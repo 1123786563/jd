@@ -1,12 +1,12 @@
 /**
- * SpendTracker Tests
+ * 消费跟踪器测试
  *
- * Tests for the SpendTracker class:
- * - recordSpend inserts with correct window_hour and window_day
- * - getHourlySpend returns sum for current hour
- * - getDailySpend returns sum for current day
- * - checkLimit returns allowed=false when limit exceeded
- * - pruneOldRecords removes records older than retention
+ * 消费跟踪器类的测试：
+ * - recordSpend 使用正确的 window_hour 和 window_day 插入
+ * - getHourlySpend 返回当前小时的总和
+ * - getDailySpend 返回当前天的总和
+ * - checkLimit 在超过限制时返回 allowed=false
+ * - pruneOldRecords 删除早于保留期的记录
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -18,7 +18,7 @@ import { SpendTracker } from "../agent/spend-tracker.js";
 import type { TreasuryPolicy, LimitCheckResult } from "../types.js";
 import { DEFAULT_TREASURY_POLICY } from "../types.js";
 
-// ─── Test Helpers ───────────────────────────────────────────────
+// ─── 测试辅助函数 ───────────────────────────────────────────────
 
 function createTestSpendDb(): Database.Database {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "spend-test-"));
@@ -59,7 +59,7 @@ describe("SpendTracker", () => {
   });
 
   describe("recordSpend", () => {
-    it("inserts a record with correct window_hour and window_day", () => {
+    it("使用正确的 window_hour 和 window_day 插入记录", () => {
       tracker.recordSpend({
         toolName: "transfer_credits",
         amountCents: 500,
@@ -82,7 +82,7 @@ describe("SpendTracker", () => {
       expect(row.window_day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
 
-    it("inserts multiple records", () => {
+    it("插入多条记录", () => {
       tracker.recordSpend({
         toolName: "transfer_credits",
         amountCents: 100,
@@ -108,7 +108,7 @@ describe("SpendTracker", () => {
   });
 
   describe("getHourlySpend", () => {
-    it("returns sum for current hour", () => {
+    it("返回当前小时的总和", () => {
       tracker.recordSpend({
         toolName: "transfer_credits",
         amountCents: 100,
@@ -124,12 +124,12 @@ describe("SpendTracker", () => {
       expect(hourly).toBe(300);
     });
 
-    it("returns 0 when no records exist", () => {
+    it("当没有记录时返回 0", () => {
       const hourly = tracker.getHourlySpend("transfer");
       expect(hourly).toBe(0);
     });
 
-    it("separates categories", () => {
+    it("分离类别", () => {
       tracker.recordSpend({
         toolName: "transfer_credits",
         amountCents: 100,
@@ -147,7 +147,7 @@ describe("SpendTracker", () => {
   });
 
   describe("getDailySpend", () => {
-    it("returns sum for current day", () => {
+    it("返回当前天的总和", () => {
       tracker.recordSpend({
         toolName: "transfer_credits",
         amountCents: 1000,
@@ -165,7 +165,7 @@ describe("SpendTracker", () => {
   });
 
   describe("getTotalSpend", () => {
-    it("returns total spend since given date", () => {
+    it("返回给定日期以来的总消费", () => {
       tracker.recordSpend({
         toolName: "transfer_credits",
         amountCents: 500,
@@ -179,7 +179,7 @@ describe("SpendTracker", () => {
       expect(total).toBe(500);
     });
 
-    it("returns 0 for future since date", () => {
+    it("对未来的 since 日期返回 0", () => {
       tracker.recordSpend({
         toolName: "transfer_credits",
         amountCents: 500,
@@ -195,14 +195,14 @@ describe("SpendTracker", () => {
   });
 
   describe("checkLimit", () => {
-    it("returns allowed=true when within limits", () => {
+    it("在限制内时返回 allowed=true", () => {
       const result = tracker.checkLimit(100, "transfer", DEFAULT_TREASURY_POLICY);
       expect(result.allowed).toBe(true);
       expect(result.currentHourlySpend).toBe(0);
       expect(result.currentDailySpend).toBe(0);
     });
 
-    it("returns allowed=false when hourly limit exceeded", () => {
+    it("当超过每小时限制时返回 allowed=false", () => {
       // Fill up hourly limit
       tracker.recordSpend({
         toolName: "transfer_credits",
@@ -217,7 +217,7 @@ describe("SpendTracker", () => {
       expect(result.currentHourlySpend).toBe(9500);
     });
 
-    it("returns allowed=false when daily limit exceeded", () => {
+    it("当超过每日限制时返回 allowed=false", () => {
       // Use custom policy with low hourly cap but test daily
       const policy: TreasuryPolicy = {
         ...DEFAULT_TREASURY_POLICY,
@@ -238,7 +238,7 @@ describe("SpendTracker", () => {
   });
 
   describe("pruneOldRecords", () => {
-    it("removes records older than retention period", () => {
+    it("删除早于保留期的记录", () => {
       // Insert a record with old created_at
       db.prepare(
         `INSERT INTO spend_tracking (id, tool_name, amount_cents, category, window_hour, window_day, created_at)
@@ -269,7 +269,7 @@ describe("SpendTracker", () => {
       expect(remaining.count).toBe(1);
     });
 
-    it("returns 0 when no old records exist", () => {
+    it("当没有旧记录时返回 0", () => {
       tracker.recordSpend({
         toolName: "transfer_credits",
         amountCents: 100,
@@ -280,7 +280,7 @@ describe("SpendTracker", () => {
       expect(deleted).toBe(0);
     });
 
-    it("correctly prunes with SQLite datetime format (no T/Z)", () => {
+    it("使用 SQLite datetime 格式正确修剪（无 T/Z）", () => {
       // Insert a record with SQLite-format created_at (no T, no Z)
       db.prepare(
         `INSERT INTO spend_tracking (id, tool_name, amount_cents, category, window_hour, window_day, created_at)
@@ -301,7 +301,7 @@ describe("SpendTracker", () => {
   });
 
   describe("inference limits", () => {
-    it("uses a meaningful hourly cap less than the daily limit", () => {
+    it("使用有意义的每小时上限，小于每日限制", () => {
       // maxInferenceDailyCents is 50000 ($500/day)
       // The hourly limit should be a fraction of the daily limit, NOT equal to it
       const result = tracker.checkLimit(1, "inference", DEFAULT_TREASURY_POLICY);
@@ -309,7 +309,7 @@ describe("SpendTracker", () => {
       expect(result.limitHourly).toBeLessThan(result.limitDaily);
     });
 
-    it("enforces hourly inference limit before daily is reached", () => {
+    it("在达到每日限制之前强制执行每小时推理限制", () => {
       const hourlyLimit = Math.ceil(DEFAULT_TREASURY_POLICY.maxInferenceDailyCents / 6);
 
       // Spend up to just below hourly limit
@@ -327,7 +327,7 @@ describe("SpendTracker", () => {
   });
 
   describe("x402 limits", () => {
-    it("uses x402-specific limits, not transfer limits", () => {
+    it("使用 x402 特定限制，而非转账限制", () => {
       // Record some x402 spend
       tracker.recordSpend({
         toolName: "x402_fetch",

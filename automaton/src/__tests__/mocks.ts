@@ -1,5 +1,5 @@
 /**
- * Mock infrastructure for deterministic automaton tests.
+ * 确定性自动机测试的模拟基础设施。
  */
 
 import { createDatabase } from "../state/database.js";
@@ -30,7 +30,7 @@ import path from "path";
 import os from "os";
 import fs from "fs";
 
-// ─── Mock Inference Client ──────────────────────────────────────
+// ─── 模拟推理客户端 ──────────────────────────────────────
 
 export class MockInferenceClient implements InferenceClient {
   private responses: InferenceResponse[];
@@ -53,8 +53,8 @@ export class MockInferenceClient implements InferenceClient {
 
     if (response) return response;
 
-    // Default: no tool calls, just text
-    return noToolResponse("I have nothing to do.");
+    // 默认: 无工具调用，仅文本
+    return noToolResponse("我无事可做。");
   }
 
   setLowComputeMode(enabled: boolean): void {
@@ -104,11 +104,11 @@ export function toolCallResponse(
   };
 }
 
-// ─── Mock Conway Client ─────────────────────────────────────────
+// ─── 模拟 Conway 客户端 ─────────────────────────────────────────
 
 export class MockConwayClient implements ConwayClient {
   execCalls: { command: string; timeout?: number }[] = [];
-  creditsCents = 10_000; // $100 default
+  creditsCents = 10_000; // 默认 $100
   files: Record<string, string> = {};
 
   async exec(command: string, timeout?: number): Promise<ExecResult> {
@@ -220,12 +220,12 @@ export class MockConwayClient implements ConwayClient {
   }
 
   createScopedClient(_targetSandboxId: string): ConwayClient {
-    // Return self so spies on exec/writeFile propagate to scoped clients
+    // 返回自身以便对 exec/writeFile 的监视传播到作用域客户端
     return this;
   }
 }
 
-// ─── Mock Social Client ─────────────────────────────────────────
+// ─── 模拟社交客户端 ─────────────────────────────────────────
 
 export class MockSocialClient implements SocialClientInterface {
   sentMessages: { to: string; content: string; replyTo?: string }[] = [];
@@ -252,7 +252,7 @@ export class MockSocialClient implements SocialClientInterface {
   }
 }
 
-// ─── Mock Metrics Collector ──────────────────────────────────────
+// ─── 模拟指标收集器 ──────────────────────────────────────
 
 export class MockMetricsCollector {
   recorded: { name: string; value: number; labels?: Record<string, string> }[] = [];
@@ -279,7 +279,7 @@ export class MockMetricsCollector {
   }
 }
 
-// ─── Mock Logger ─────────────────────────────────────────────────
+// ─── 模拟日志记录器 ─────────────────────────────────────────
 
 export class MockLogger {
   logs: { level: string; message: string; context?: Record<string, unknown> }[] = [];
@@ -309,7 +309,7 @@ export class MockLogger {
   }
 }
 
-// ─── Test Helpers ───────────────────────────────────────────────
+// ─── 测试辅助函数 ───────────────────────────────────────────
 
 export function createTestDb(): AutomatonDatabase {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "automaton-test-"));
@@ -321,7 +321,7 @@ export function createTestIdentity(): AutomatonIdentity {
   return {
     name: "test-automaton",
     address: "0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`,
-    account: {} as any, // Placeholder — not used in most tests
+    account: {} as any, // 占位符 - 大多数测试中不使用
     creatorAddress: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd" as `0x${string}`,
     sandboxId: "test-sandbox-id",
     apiKey: "test-api-key",

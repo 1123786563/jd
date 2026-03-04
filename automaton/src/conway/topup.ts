@@ -1,16 +1,16 @@
 /**
- * Credit Topup via x402
+ * 通过 x402 进行积分充值
  *
- * Converts USDC to Conway credits via the x402 payment protocol.
+ * 通过 x402 支付协议将 USDC 转换为 Conway 积分。
  *
- * - On startup: bootstraps with the minimum tier ($5) so the agent can run.
- * - At runtime: the agent uses the `topup_credits` tool to choose how much.
- * - Heartbeat: wakes the agent when USDC is available but credits are low.
+ * - 启动时：使用最低层级（$5）引导，以便 agent 可以运行。
+ * - 运行时：agent 使用 `topup_credits` 工具选择充值金额。
+ * - 心跳：当 USDC 可用但积分不足时唤醒 agent。
  *
- * Endpoint: GET /pay/{amountUsd}/{walletAddress}
- * Payment: x402 (USDC on Base, signed TransferWithAuthorization)
+ * 端点：GET /pay/{amountUsd}/{walletAddress}
+ * 支付方式：x402（Base 上的 USDC，签名 TransferWithAuthorization）
  *
- * Valid tiers: 5, 25, 100, 500, 1000, 2500 (USD)
+ * 有效层级：5, 25, 100, 500, 1000, 2500 (USD)
  */
 
 import type { PrivateKeyAccount, Address } from "viem";
@@ -19,7 +19,7 @@ import { createLogger } from "../observability/logger.js";
 
 const logger = createLogger("topup");
 
-/** Valid topup tier amounts in USD. */
+/** 有效的充值层级金额（USD）。 */
 export const TOPUP_TIERS = [5, 25, 100, 500, 1000, 2500];
 
 export interface TopupResult {
@@ -30,10 +30,10 @@ export interface TopupResult {
 }
 
 /**
- * Execute a credit topup via x402 payment.
+ * 通过 x402 支付执行积分充值。
  *
- * Calls GET /pay/{amountUsd}/{address} which returns HTTP 402.
- * x402Fetch handles the payment signing and retry automatically.
+ * 调用 GET /pay/{amountUsd}/{address}，返回 HTTP 402。
+ * x402Fetch 自动处理支付签名和重试。
  */
 export async function topupCredits(
   apiUrl: string,
@@ -44,12 +44,12 @@ export async function topupCredits(
   const address = recipientAddress || account.address;
   const url = `${apiUrl}/pay/${amountUsd}/${address}`;
 
-  logger.info(`Attempting credit topup: $${amountUsd} USD for ${address}`);
+  logger.info(`尝试积分充值: $${amountUsd} USD 用于 ${address}`);
 
   const result = await x402Fetch(url, account, "GET");
 
   if (!result.success) {
-    logger.error(`Credit topup failed: ${result.error}`);
+    logger.error(`积分充值失败: ${result.error}`);
     return {
       success: false,
       amountUsd,
@@ -61,7 +61,7 @@ export async function topupCredits(
     ? result.response?.credits_cents ?? result.response?.amount_cents ?? amountUsd * 100
     : amountUsd * 100;
 
-  logger.info(`Credit topup successful: $${amountUsd} USD → ${creditsCentsAdded} credits cents`);
+  logger.info(`积分充值成功: $${amountUsd} USD → ${creditsCentsAdded} 积分美分`);
 
   return {
     success: true,
@@ -71,11 +71,11 @@ export async function topupCredits(
 }
 
 /**
- * Attempt a credit topup in response to a 402 sandbox creation error.
+ * 尝试积分充值以响应 402 沙盒创建错误。
  *
- * Parses the error response to determine the deficit, picks the smallest
- * tier that covers it, checks USDC balance, and calls topupCredits().
- * Returns null if the error isn't a 402 or topup can't proceed.
+ * 解析错误响应以确定赤字，选择能覆盖赤字的最小层级，
+ * 检查 USDC 余额，并调用 topupCredits()。
+ * 如果错误不是 402 或充值无法继续，则返回 null。
  */
 export async function topupForSandbox(params: {
   apiUrl: string;
@@ -86,7 +86,7 @@ export async function topupForSandbox(params: {
 
   if (error.status !== 402 && !error.message?.includes("INSUFFICIENT_CREDITS")) return null;
 
-  // Parse the 402 response body for credit details
+  // 解析 402 响应正文以获取积分详情
   let requiredCents: number | undefined;
   let currentCents: number | undefined;
   try {
@@ -94,46 +94,44 @@ export async function topupForSandbox(params: {
     requiredCents = body.details?.required_cents;
     currentCents = body.details?.current_balance_cents;
   } catch {
-    // If we can't parse the body, check for INSUFFICIENT_CREDITS in message
+    // 如果我们无法解析正文，请检查消息中的 INSUFFICIENT_CREDITS
     if (!error.message?.includes("INSUFFICIENT_CREDITS")) return null;
   }
 
-  // Calculate deficit in cents; default to minimum tier if details missing
+  // 计算赤字（以美分为单位）；如果缺少详情，默认为最低层级
   const deficitCents = (requiredCents != null && currentCents != null)
     ? requiredCents - currentCents
     : TOPUP_TIERS[0] * 100;
 
-  // Pick smallest tier that covers the deficit (tier is in USD, deficit in cents)
+  // 选择能覆盖赤字的最小层级（层级以美元为单位，赤字以美分为单位）
   const selectedTier = TOPUP_TIERS.find((tier) => tier * 100 >= deficitCents)
     ?? TOPUP_TIERS[TOPUP_TIERS.length - 1];
 
-  // Check USDC balance before attempting payment
+  // 在尝试支付之前检查 USDC 余额
   let usdcBalance: number;
   try {
     usdcBalance = await getUsdcBalance(account.address);
   } catch (err: any) {
-    logger.warn(`Failed to check USDC balance for sandbox topup: ${err.message}`);
+    logger.warn(`检查沙盒充值的 USDC 余额失败: ${err.message}`);
     return null;
   }
 
   if (usdcBalance < selectedTier) {
     logger.info(
-      `Sandbox topup skipped: USDC $${usdcBalance.toFixed(2)} < tier $${selectedTier}`,
+      `沙盒充值已跳过: USDC $${usdcBalance.toFixed(2)} < 层级 $${selectedTier}`,
     );
     return null;
   }
 
-  logger.info(`Sandbox topup: deficit=${deficitCents}c, buying $${selectedTier} tier`);
+  logger.info(`沙盒充值: 赤字=${deficitCents}c, 购买 $${selectedTier} 层级`);
   return topupCredits(apiUrl, account, selectedTier);
 }
 
 /**
- * Bootstrap topup: buy the minimum tier ($5) on startup so the agent
- * can run inference. The agent decides larger topups itself via the
- * `topup_credits` tool.
+ * 引导充值：在启动时购买最低层级（$5），以便 agent
+ * 可以运行推理。agent 通过 `topup_credits` 工具自行决定更大的充值。
  *
- * Only triggers when credits are below threshold AND USDC covers the
- * minimum tier.
+ * 仅在积分低于阈值且 USDC 足以支付最低层级时触发。
  */
 export async function bootstrapTopup(params: {
   apiUrl: string;
@@ -151,20 +149,20 @@ export async function bootstrapTopup(params: {
   try {
     usdcBalance = await getUsdcBalance(account.address);
   } catch (err: any) {
-    logger.warn(`Failed to check USDC balance for bootstrap topup: ${err.message}`);
+    logger.warn(`检查引导充值的 USDC 余额失败: ${err.message}`);
     return null;
   }
 
   const minTier = TOPUP_TIERS[0];
   if (usdcBalance < minTier) {
     logger.info(
-      `Bootstrap topup skipped: USDC balance $${usdcBalance.toFixed(2)} below minimum tier ($${minTier})`,
+      `引导充值已跳过: USDC 余额 $${usdcBalance.toFixed(2)} 低于最低层级 ($${minTier})`,
     );
     return null;
   }
 
   logger.info(
-    `Bootstrap topup: credits=$${(creditsCents / 100).toFixed(2)}, USDC=$${usdcBalance.toFixed(2)}, buying $${minTier}`,
+    `引导充值: 积分=$${(creditsCents / 100).toFixed(2)}, USDC=$${usdcBalance.toFixed(2)}, 购买 $${minTier}`,
   );
 
   return topupCredits(apiUrl, account, minTier);

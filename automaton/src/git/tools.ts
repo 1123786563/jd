@@ -1,14 +1,14 @@
 /**
- * Git Tools
+ * Git 工具
  *
- * Built-in git operations for the automaton.
- * Used for both state versioning and code development.
+ * automaton 的内置 git 操作
+ * 用于状态版本控制和代码开发
  */
 
 import type { ConwayClient, GitStatus, GitLogEntry } from "../types.js";
 
 /**
- * Get git status for a repository.
+ * 获取仓库的 git 状态
  */
 export async function gitStatus(
   conway: ConwayClient,
@@ -56,7 +56,7 @@ export async function gitStatus(
 }
 
 /**
- * Get git diff output.
+ * 获取 git diff 输出
  */
 export async function gitDiff(
   conway: ConwayClient,
@@ -68,11 +68,11 @@ export async function gitDiff(
     `cd ${escapeShellArg(repoPath)} && git diff ${flag} 2>/dev/null`,
     10000,
   );
-  return result.stdout || "(no changes)";
+  return result.stdout || "(无更改)";
 }
 
 /**
- * Create a git commit.
+ * 创建 git 提交
  */
 export async function gitCommit(
   conway: ConwayClient,
@@ -90,14 +90,14 @@ export async function gitCommit(
   );
 
   if (result.exitCode !== 0) {
-    throw new Error(`Git commit failed: ${result.stderr || result.stdout}`);
+    throw new Error(`Git 提交失败：${result.stderr || result.stdout}`);
   }
 
   return result.stdout;
 }
 
 /**
- * Get git log.
+ * 获取 git 日志
  */
 export async function gitLog(
   conway: ConwayClient,
@@ -122,7 +122,7 @@ export async function gitLog(
 }
 
 /**
- * Push to remote.
+ * 推送到远程
  */
 export async function gitPush(
   conway: ConwayClient,
@@ -137,14 +137,14 @@ export async function gitPush(
   );
 
   if (result.exitCode !== 0) {
-    throw new Error(`Git push failed: ${result.stderr || result.stdout}`);
+    throw new Error(`Git 推送失败：${result.stderr || result.stdout}`);
   }
 
-  return result.stdout || "Push successful";
+  return result.stdout || "推送成功";
 }
 
 /**
- * Manage branches.
+ * 管理分支
  */
 export async function gitBranch(
   conway: ConwayClient,
@@ -159,27 +159,27 @@ export async function gitBranch(
       cmd = `cd ${escapeShellArg(repoPath)} && git branch -a 2>/dev/null`;
       break;
     case "create":
-      if (!branchName) throw new Error("Branch name required");
+      if (!branchName) throw new Error("需要分支名称");
       cmd = `cd ${escapeShellArg(repoPath)} && git checkout -b ${escapeShellArg(branchName)} 2>&1`;
       break;
     case "checkout":
-      if (!branchName) throw new Error("Branch name required");
+      if (!branchName) throw new Error("需要分支名称");
       cmd = `cd ${escapeShellArg(repoPath)} && git checkout ${escapeShellArg(branchName)} 2>&1`;
       break;
     case "delete":
-      if (!branchName) throw new Error("Branch name required");
+      if (!branchName) throw new Error("需要分支名称");
       cmd = `cd ${escapeShellArg(repoPath)} && git branch -d ${escapeShellArg(branchName)} 2>&1`;
       break;
     default:
-      throw new Error(`Unknown branch action: ${action}`);
+      throw new Error(`未知的分支操作：${action}`);
   }
 
   const result = await conway.exec(cmd, 10000);
-  return result.stdout || result.stderr || "Done";
+  return result.stdout || result.stderr || "完成";
 }
 
 /**
- * Clone a repository.
+ * 克隆仓库
  */
 export async function gitClone(
   conway: ConwayClient,
@@ -196,14 +196,14 @@ export async function gitClone(
   );
 
   if (result.exitCode !== 0) {
-    throw new Error(`Git clone failed: ${result.stderr || result.stdout}`);
+    throw new Error(`Git 克隆失败：${result.stderr || result.stdout}`);
   }
 
-  return `Cloned ${url} to ${targetPath}`;
+  return `已克隆 ${url} 到 ${targetPath}`;
 }
 
 /**
- * Initialize a git repository.
+ * 初始化 git 仓库
  */
 export async function gitInit(
   conway: ConwayClient,
@@ -213,7 +213,7 @@ export async function gitInit(
     `cd ${escapeShellArg(repoPath)} && git init 2>&1`,
     10000,
   );
-  return result.stdout || "Git initialized";
+  return result.stdout || "Git 已初始化";
 }
 
 function escapeShellArg(arg: string): string {

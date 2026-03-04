@@ -1,8 +1,8 @@
 /**
- * Financial Policy Rules
+ * 财务策略规则
  *
- * Enforces spend limits, domain allowlists, and transfer caps
- * to prevent iterative credit drain and unauthorized payments.
+ * 强制执行支出限制、域名白名单和转账上限
+ * 以防止迭代性积分流失和未授权支付。
  */
 
 import type {
@@ -21,32 +21,32 @@ function deny(
 }
 
 /**
- * Deny x402 payments above the configured per-payment max.
+ * 拒绝超过配置的每笔支付最大值的 x402 支付。
  */
 function createX402MaxSingleRule(policy: TreasuryPolicy): PolicyRule {
   return {
     id: "financial.x402_max_single",
-    description: `Deny x402 payments above ${policy.maxX402PaymentCents} cents`,
+    description: `拒绝超过 ${policy.maxX402PaymentCents} 美分的 x402 支付`,
     priority: 500,
     appliesTo: { by: "name", names: ["x402_fetch"] },
     evaluate(request: PolicyRequest): PolicyRuleResult | null {
-      // The amount is checked pre-payment in x402Fetch itself,
-      // but we also enforce via policy for the declared max.
-      // x402 payment amounts aren't in tool args — they come from the server.
-      // This rule serves as a policy declaration; actual enforcement
-      // happens in x402Fetch when maxPaymentCents is injected.
+      // 金额在 x402Fetch 本身中支付前检查，
+      // 但我们也通过策略为声明的最大值强制执行。
+      // x402 支付金额不在工具参数中 —— 它们来自服务器。
+      // 此规则作为策略声明；实际强制执行
+      // 在注入 maxPaymentCents 时发生在 x402Fetch 中。
       return null;
     },
   };
 }
 
 /**
- * Deny x402 requests to domains not in the allowlist.
+ * 拒绝对不在白名单中的域名的 x402 请求。
  */
 function createX402DomainAllowlistRule(policy: TreasuryPolicy): PolicyRule {
   return {
     id: "financial.x402_domain_allowlist",
-    description: "Deny x402 to domains not in allowlist",
+    description: "拒绝对不在白名单中的域名的 x402",
     priority: 500,
     appliesTo: { by: "name", names: ["x402_fetch"] },
     evaluate(request: PolicyRequest): PolicyRuleResult | null {
@@ -58,7 +58,7 @@ function createX402DomainAllowlistRule(policy: TreasuryPolicy): PolicyRule {
         return deny(
           "financial.x402_domain_allowlist",
           "DOMAIN_NOT_ALLOWED",
-          "x402 payments are disabled (empty allowlist)",
+          "x402 支付已禁用（白名单为空）",
         );
       }
 
@@ -69,7 +69,7 @@ function createX402DomainAllowlistRule(policy: TreasuryPolicy): PolicyRule {
         return deny(
           "financial.x402_domain_allowlist",
           "DOMAIN_NOT_ALLOWED",
-          `Invalid URL: ${url}`,
+          `无效的 URL：${url}`,
         );
       }
 
@@ -82,7 +82,7 @@ function createX402DomainAllowlistRule(policy: TreasuryPolicy): PolicyRule {
         return deny(
           "financial.x402_domain_allowlist",
           "DOMAIN_NOT_ALLOWED",
-          `Domain "${hostname}" not in x402 allowlist: [${allowedDomains.join(", ")}]`,
+          `域名 "${hostname}" 不在 x402 白名单中：[${allowedDomains.join(", ")}]`,
         );
       }
 
@@ -92,12 +92,12 @@ function createX402DomainAllowlistRule(policy: TreasuryPolicy): PolicyRule {
 }
 
 /**
- * Deny single transfers above the configured max.
+ * 拒绝超过配置的最大值的单笔转账。
  */
 function createTransferMaxSingleRule(policy: TreasuryPolicy): PolicyRule {
   return {
     id: "financial.transfer_max_single",
-    description: `Deny transfers above ${policy.maxSingleTransferCents} cents`,
+    description: `拒绝超过 ${policy.maxSingleTransferCents} 美分的转账`,
     priority: 500,
     appliesTo: { by: "name", names: ["transfer_credits"] },
     evaluate(request: PolicyRequest): PolicyRuleResult | null {
@@ -108,7 +108,7 @@ function createTransferMaxSingleRule(policy: TreasuryPolicy): PolicyRule {
         return deny(
           "financial.transfer_max_single",
           "SPEND_LIMIT_EXCEEDED",
-          `Transfer of ${amount} cents exceeds single transfer max of ${policy.maxSingleTransferCents} cents ($${(policy.maxSingleTransferCents / 100).toFixed(2)})`,
+          `转账金额 ${amount} 美分超过单笔转账最大值 ${policy.maxSingleTransferCents} 美分（$${(policy.maxSingleTransferCents / 100).toFixed(2)}）`,
         );
       }
 
@@ -118,12 +118,12 @@ function createTransferMaxSingleRule(policy: TreasuryPolicy): PolicyRule {
 }
 
 /**
- * Deny if hourly transfer total would exceed cap.
+ * 如果每小时转账总数将超过上限则拒绝。
  */
 function createTransferHourlyCapRule(policy: TreasuryPolicy): PolicyRule {
   return {
     id: "financial.transfer_hourly_cap",
-    description: `Deny if hourly transfers exceed ${policy.maxHourlyTransferCents} cents`,
+    description: `如果每小时转账超过 ${policy.maxHourlyTransferCents} 美分则拒绝`,
     priority: 500,
     appliesTo: { by: "name", names: ["transfer_credits"] },
     evaluate(request: PolicyRequest): PolicyRuleResult | null {
@@ -137,7 +137,7 @@ function createTransferHourlyCapRule(policy: TreasuryPolicy): PolicyRule {
         return deny(
           "financial.transfer_hourly_cap",
           "SPEND_LIMIT_EXCEEDED",
-          `Transfer would exceed hourly cap: current ${check.currentHourlySpend} + ${amount} > ${check.limitHourly} cents ($${(check.limitHourly / 100).toFixed(2)}/hr)`,
+          `转账将超过每小时上限：当前 ${check.currentHourlySpend} + ${amount} > ${check.limitHourly} 美分（$${(check.limitHourly / 100).toFixed(2)}/小时）`,
         );
       }
 
@@ -147,12 +147,12 @@ function createTransferHourlyCapRule(policy: TreasuryPolicy): PolicyRule {
 }
 
 /**
- * Deny if daily transfer total would exceed cap.
+ * 如果每天转账总数将超过上限则拒绝。
  */
 function createTransferDailyCapRule(policy: TreasuryPolicy): PolicyRule {
   return {
     id: "financial.transfer_daily_cap",
-    description: `Deny if daily transfers exceed ${policy.maxDailyTransferCents} cents`,
+    description: `如果每天转账超过 ${policy.maxDailyTransferCents} 美分则拒绝`,
     priority: 500,
     appliesTo: { by: "name", names: ["transfer_credits"] },
     evaluate(request: PolicyRequest): PolicyRuleResult | null {
@@ -166,7 +166,7 @@ function createTransferDailyCapRule(policy: TreasuryPolicy): PolicyRule {
         return deny(
           "financial.transfer_daily_cap",
           "SPEND_LIMIT_EXCEEDED",
-          `Transfer would exceed daily cap: current ${check.currentDailySpend} + ${amount} > ${check.limitDaily} cents ($${(check.limitDaily / 100).toFixed(2)}/day)`,
+          `转账将超过每天上限：当前 ${check.currentDailySpend} + ${amount} > ${check.limitDaily} 美分（$${(check.limitDaily / 100).toFixed(2)}/天）`,
         );
       }
 
@@ -176,46 +176,46 @@ function createTransferDailyCapRule(policy: TreasuryPolicy): PolicyRule {
 }
 
 /**
- * Deny any financial operation that would bring balance below minimum reserve.
+ * 拒绝任何会使余额低于最小储备的财务操作。
  */
 function createMinimumReserveRule(policy: TreasuryPolicy): PolicyRule {
   return {
     id: "financial.minimum_reserve",
-    description: `Deny if balance would drop below ${policy.minimumReserveCents} cents reserve`,
+    description: `如果余额将低于 ${policy.minimumReserveCents} 美分储备则拒绝`,
     priority: 500,
     appliesTo: {
       by: "name",
       names: ["transfer_credits", "x402_fetch", "fund_child"],
     },
     evaluate(request: PolicyRequest): PolicyRuleResult | null {
-      // For transfer_credits and fund_child, we can check from args
+      // 对于 transfer_credits 和 fund_child，我们可以从参数检查
       const amount = request.args.amount_cents as number | undefined;
       if (amount === undefined) return null;
 
-      // We need the current balance from context
-      // The balance check is done inside the tool execute function,
-      // but we can check spend tracker totals as an additional guard
+      // 我们需要从上下文获取当前余额
+      // 余额检查在工具执行函数内部完成，
+      // 但我们可以检查支出追踪器总计作为额外保护
       const spendTracker = request.turnContext.sessionSpend;
       const hourlySpend = spendTracker.getHourlySpend("transfer");
       const dailySpend = spendTracker.getDailySpend("transfer");
 
-      // This rule is a declaration — actual balance checking
-      // requires the async getCreditsBalance call which happens
-      // inside the tool execution. The tool itself has a guard
-      // (cannot transfer more than half balance).
+      // 此规则是声明 —— 实际余额检查
+      // 需要在工具执行内部进行的异步 getCreditsBalance 调用。
+      // 工具本身有一个保护
+      //（不能转账超过余额的一半）。
       return null;
     },
   };
 }
 
 /**
- * Deny if too many transfer operations in a single turn.
- * Prevents iterative credit drain within one turn.
+ * 如果在单个回合中过多转账操作则拒绝。
+ * 防止在一个回合内迭代性积分流失。
  */
 function createTurnTransferLimitRule(policy: TreasuryPolicy): PolicyRule {
   return {
     id: "financial.turn_transfer_limit",
-    description: `Deny more than ${policy.maxTransfersPerTurn} transfers per turn`,
+    description: `每个回合最多 ${policy.maxTransfersPerTurn} 次转账`,
     priority: 500,
     appliesTo: { by: "name", names: ["transfer_credits"] },
     evaluate(request: PolicyRequest): PolicyRuleResult | null {
@@ -225,7 +225,7 @@ function createTurnTransferLimitRule(policy: TreasuryPolicy): PolicyRule {
         return deny(
           "financial.turn_transfer_limit",
           "TURN_TRANSFER_LIMIT",
-          `Maximum ${policy.maxTransfersPerTurn} transfers per turn exceeded (current: ${count})`,
+          `超过每个回合最多 ${policy.maxTransfersPerTurn} 次转账（当前：${count}）`,
         );
       }
 
@@ -235,17 +235,17 @@ function createTurnTransferLimitRule(policy: TreasuryPolicy): PolicyRule {
 }
 
 /**
- * Deny inference calls if daily inference cost exceeds maxInferenceDailyCents.
- * Checks spend_tracking table for category 'inference'.
+ * 如果每日推理成本超过 maxInferenceDailyCents 则拒绝推理调用。
+ * 检查 spend_tracking 表中的 'inference' 类别。
  */
 function createInferenceDailyCapRule(policy: TreasuryPolicy): PolicyRule {
   return {
     id: "financial.inference_daily_cap",
-    description: `Deny inference if daily cost exceeds ${policy.maxInferenceDailyCents} cents`,
+    description: `如果每日成本超过 ${policy.maxInferenceDailyCents} 美分则拒绝推理`,
     priority: 500,
     appliesTo: { by: "category", categories: ["conway"] },
     evaluate(request: PolicyRequest): PolicyRuleResult | null {
-      // Only apply to inference-related tools
+      // 仅适用于推理相关工具
       if (request.tool.name !== "chat" && request.tool.name !== "inference") {
         return null;
       }
@@ -257,7 +257,7 @@ function createInferenceDailyCapRule(policy: TreasuryPolicy): PolicyRule {
         return deny(
           "financial.inference_daily_cap",
           "INFERENCE_BUDGET_EXCEEDED",
-          `Daily inference budget exceeded: ${dailyInferenceSpend} cents spent (max ${policy.maxInferenceDailyCents} cents / $${(policy.maxInferenceDailyCents / 100).toFixed(2)}/day)`,
+          `每日推理预算超出：已花费 ${dailyInferenceSpend} 美分（最多 ${policy.maxInferenceDailyCents} 美分 / $${(policy.maxInferenceDailyCents / 100).toFixed(2)}/天）`,
         );
       }
 
@@ -267,13 +267,13 @@ function createInferenceDailyCapRule(policy: TreasuryPolicy): PolicyRule {
 }
 
 /**
- * Return 'quarantine' (not deny) for transfer amounts above
- * requireConfirmationAboveCents. This is a soft limit requiring confirmation.
+ * 对于超过 requireConfirmationAboveCents 的转账金额返回 'quarantine'（而非 deny）。
+ * 这是一个需要确认的软限制。
  */
 function createRequireConfirmationRule(policy: TreasuryPolicy): PolicyRule {
   return {
     id: "financial.require_confirmation",
-    description: `Quarantine transfers above ${policy.requireConfirmationAboveCents} cents for confirmation`,
+    description: `将超过 ${policy.requireConfirmationAboveCents} 美分的转账隔离以进行确认`,
     priority: 500,
     appliesTo: { by: "name", names: ["transfer_credits"] },
     evaluate(request: PolicyRequest): PolicyRuleResult | null {
@@ -285,7 +285,7 @@ function createRequireConfirmationRule(policy: TreasuryPolicy): PolicyRule {
           rule: "financial.require_confirmation",
           action: "quarantine",
           reasonCode: "CONFIRMATION_REQUIRED",
-          humanMessage: `Transfer of ${amount} cents ($${(amount / 100).toFixed(2)}) exceeds confirmation threshold of ${policy.requireConfirmationAboveCents} cents ($${(policy.requireConfirmationAboveCents / 100).toFixed(2)})`,
+          humanMessage: `转账金额 ${amount} 美分（$${(amount / 100).toFixed(2)}）超过确认阈值 ${policy.requireConfirmationAboveCents} 美分（$${(policy.requireConfirmationAboveCents / 100).toFixed(2)}）`,
         };
       }
 
@@ -295,7 +295,7 @@ function createRequireConfirmationRule(policy: TreasuryPolicy): PolicyRule {
 }
 
 /**
- * Create all financial policy rules.
+ * 创建所有财务策略规则。
  */
 export function createFinancialRules(
   treasuryPolicy: TreasuryPolicy,

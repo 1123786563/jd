@@ -1,13 +1,13 @@
 /**
- * Authority + Rate Limit + Financial Phase 1 Rule Tests
+ * 权限 + 速率限制 + 财务阶段 1 规则测试
  *
- * Tests for Sub-phase 1.4: Financial Policy & Treasury Configuration
- * - Authority rules: external input blocked from dangerous tools
- * - Authority rules: self-mod from external blocked on protected paths
- * - Rate limit rules: genesis prompt, self-mod, spawn
- * - Financial Phase 1 rules: inference daily cap, require confirmation
- * - Treasury config loading and validation
- * - promptWithDefault behavior
+ * 阶段 1.4 子阶段测试：财务策略与资金库配置
+ * - 权限规则：阻止来自危险工具的外部输入
+ * - 权限规则：阻止来自外部对受保护路径的自我修改
+ * - 速率限制规则：创世提示词、自我修改、生成
+ * - 财务阶段 1 规则：推理每日上限、需要确认
+ * - 资金库配置加载和验证
+ * - promptWithDefault 行为
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -35,7 +35,7 @@ import { createRateLimitRules } from "../agent/policy-rules/rate-limits.js";
 import { createFinancialRules } from "../agent/policy-rules/financial.js";
 import { createDefaultRules } from "../agent/policy-rules/index.js";
 
-// ─── Test Helpers ───────────────────────────────────────────────
+// ─── 测试辅助函数 ───────────────────────────────────────────────
 
 function createRawTestDb(): Database.Database {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "authority-test-"));
@@ -137,7 +137,7 @@ function createRequest(
   };
 }
 
-// ─── Authority Rules Tests ──────────────────────────────────────
+// ─── 权限规则测试 ──────────────────────────────────────────────
 
 describe("Authority Rules", () => {
   let db: Database.Database;
@@ -151,7 +151,7 @@ describe("Authority Rules", () => {
   });
 
   describe("authority.external_tool_restriction", () => {
-    it("blocks destructive tools from external (undefined) input", () => {
+    it("阻止来自外部（未定义）输入的破坏性工具", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -167,7 +167,7 @@ describe("Authority Rules", () => {
       expect(decision.reasonCode).toBe("EXTERNAL_DANGEROUS_TOOL");
     });
 
-    it("blocks spawn_child from heartbeat input", () => {
+    it("阻止来自心跳输入的 spawn_child", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -183,7 +183,7 @@ describe("Authority Rules", () => {
       expect(decision.reasonCode).toBe("EXTERNAL_DANGEROUS_TOOL");
     });
 
-    it("blocks fund_child from external input", () => {
+    it("阻止来自外部输入的 fund_child", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -199,7 +199,7 @@ describe("Authority Rules", () => {
       expect(decision.reasonCode).toBe("EXTERNAL_DANGEROUS_TOOL");
     });
 
-    it("blocks update_genesis_prompt from external input", () => {
+    it("阻止来自外部输入的 update_genesis_prompt", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -215,7 +215,7 @@ describe("Authority Rules", () => {
       expect(decision.reasonCode).toBe("EXTERNAL_DANGEROUS_TOOL");
     });
 
-    it("allows register_erc8004 from external input", () => {
+    it("允许来自外部输入的 register_erc8004", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -230,7 +230,7 @@ describe("Authority Rules", () => {
       expect(decision.action).toBe("allow");
     });
 
-    it("allows register_erc8004 from heartbeat input", () => {
+    it("允许来自心跳输入的 register_erc8004", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -245,7 +245,7 @@ describe("Authority Rules", () => {
       expect(decision.action).toBe("allow");
     });
 
-    it("allows give_feedback from external input", () => {
+    it("允许来自外部输入的 give_feedback", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -260,7 +260,7 @@ describe("Authority Rules", () => {
       expect(decision.action).toBe("allow");
     });
 
-    it("allows destructive tools from agent input", () => {
+    it("允许来自代理输入的破坏性工具", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -275,7 +275,7 @@ describe("Authority Rules", () => {
       expect(decision.action).toBe("allow");
     });
 
-    it("allows destructive tools from creator input", () => {
+    it("允许来自创建者输入的破坏性工具", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -290,7 +290,7 @@ describe("Authority Rules", () => {
       expect(decision.action).toBe("allow");
     });
 
-    it("allows safe tools from external input", () => {
+    it("允许来自外部输入的安全工具", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -307,7 +307,7 @@ describe("Authority Rules", () => {
   });
 
   describe("authority.self_mod_from_external", () => {
-    it("blocks edit_own_file on protected paths from external input", () => {
+    it("阻止来自外部输入对受保护路径的 edit_own_file", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -323,7 +323,7 @@ describe("Authority Rules", () => {
       expect(decision.reasonCode).toBe("EXTERNAL_SELF_MOD");
     });
 
-    it("blocks write_file targeting policy-rules from external input", () => {
+    it("阻止来自外部输入针对 policy-rules 的 write_file", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -339,7 +339,7 @@ describe("Authority Rules", () => {
       expect(decision.reasonCode).toBe("EXTERNAL_SELF_MOD");
     });
 
-    it("allows write_file on non-protected paths from external input", () => {
+    it("允许来自外部输入对非受保护路径的 write_file", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -354,7 +354,7 @@ describe("Authority Rules", () => {
       expect(decision.action).toBe("allow");
     });
 
-    it("allows edit_own_file on protected paths from agent input", () => {
+    it("允许来自代理输入对受保护路径的 edit_own_file", () => {
       const rules = createAuthorityRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -371,7 +371,7 @@ describe("Authority Rules", () => {
   });
 });
 
-// ─── Rate Limit Rules Tests ─────────────────────────────────────
+// ─── 速率限制规则测试 ─────────────────────────────────────
 
 describe("Rate Limit Rules", () => {
   let db: Database.Database;
@@ -385,7 +385,7 @@ describe("Rate Limit Rules", () => {
   });
 
   describe("rate.genesis_prompt_daily", () => {
-    it("allows first genesis prompt change", () => {
+    it("允许首次创世提示词更改", () => {
       const rules = createRateLimitRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -400,8 +400,8 @@ describe("Rate Limit Rules", () => {
       expect(decision.action).toBe("allow");
     });
 
-    it("blocks genesis prompt change after 1/day", () => {
-      // Insert a recent allowed decision for update_genesis_prompt
+    it("每天超过 1 次后阻止创世提示词更改", () => {
+      // 为 update_genesis_prompt 插入一个最近允许的决策
       db.prepare(
         `INSERT INTO policy_decisions (id, tool_name, tool_args_hash, risk_level, decision, reason, created_at)
          VALUES ('dec1', 'update_genesis_prompt', 'hash1', 'dangerous', 'allow', 'ALLOWED', datetime('now'))`,
@@ -424,7 +424,7 @@ describe("Rate Limit Rules", () => {
   });
 
   describe("rate.self_mod_hourly", () => {
-    it("allows self-mod within rate limit", () => {
+    it("允许速率限制内的自我修改", () => {
       const rules = createRateLimitRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -439,8 +439,8 @@ describe("Rate Limit Rules", () => {
       expect(decision.action).toBe("allow");
     });
 
-    it("blocks self-mod after 10/hour", () => {
-      // Insert 10 recent allowed decisions for edit_own_file
+    it("每小时超过 10 次后阻止自我修改", () => {
+      // 为 edit_own_file 插入 10 个最近允许的决策
       for (let i = 0; i < 10; i++) {
         db.prepare(
           `INSERT INTO policy_decisions (id, tool_name, tool_args_hash, risk_level, decision, reason, created_at)
@@ -465,7 +465,7 @@ describe("Rate Limit Rules", () => {
   });
 
   describe("rate.spawn_daily", () => {
-    it("allows spawn within rate limit", () => {
+    it("允许速率限制内的生成", () => {
       const rules = createRateLimitRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -480,7 +480,7 @@ describe("Rate Limit Rules", () => {
       expect(decision.action).toBe("allow");
     });
 
-    it("blocks spawn after 3/day", () => {
+    it("每天超过 3 次后阻止生成", () => {
       for (let i = 0; i < 3; i++) {
         db.prepare(
           `INSERT INTO policy_decisions (id, tool_name, tool_args_hash, risk_level, decision, reason, created_at)
@@ -504,8 +504,8 @@ describe("Rate Limit Rules", () => {
     });
   });
 
-  describe("rate limit DB unavailable", () => {
-    it("denies when DB is not accessible (fail-closed)", () => {
+  describe("速率限制数据库不可用", () => {
+    it("当数据库不可访问时拒绝（失败关闭）", () => {
       const rules = createRateLimitRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -514,7 +514,7 @@ describe("Rate Limit Rules", () => {
         riskLevel: "dangerous",
         category: "self_mod",
       });
-      // Pass no DB to simulate DB unavailable
+      // 不传递数据库以模拟数据库不可用
       const request = createRequest(tool, {}, "agent");
 
       const decision = engine.evaluate(request);
@@ -522,7 +522,7 @@ describe("Rate Limit Rules", () => {
       expect(decision.reasonCode).toBe("DB_UNAVAILABLE");
     });
 
-    it("denies edit_own_file when DB is not accessible", () => {
+    it("当数据库不可访问时拒绝 edit_own_file", () => {
       const rules = createRateLimitRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -538,7 +538,7 @@ describe("Rate Limit Rules", () => {
       expect(decision.reasonCode).toBe("DB_UNAVAILABLE");
     });
 
-    it("denies spawn_child when DB is not accessible", () => {
+    it("当数据库不可访问时拒绝 spawn_child", () => {
       const rules = createRateLimitRules();
       const engine = new PolicyEngine(db, rules);
 
@@ -556,7 +556,7 @@ describe("Rate Limit Rules", () => {
   });
 });
 
-// ─── Financial Phase 1 Rules Tests ──────────────────────────────
+// ─── 财务阶段 1 规则测试 ──────────────────────────────
 
 describe("Financial Phase 1 Rules", () => {
   let db: Database.Database;
@@ -570,7 +570,7 @@ describe("Financial Phase 1 Rules", () => {
   });
 
   describe("financial.inference_daily_cap", () => {
-    it("allows inference when under daily cap", () => {
+    it("当低于每日上限时允许推理", () => {
       const rules = createFinancialRules(DEFAULT_TREASURY_POLICY);
       const engine = new PolicyEngine(db, rules);
 
@@ -589,7 +589,7 @@ describe("Financial Phase 1 Rules", () => {
       expect(decision.action).toBe("allow");
     });
 
-    it("denies inference when daily cap exceeded", () => {
+    it("当超过每日上限时拒绝推理", () => {
       const rules = createFinancialRules(DEFAULT_TREASURY_POLICY);
       const engine = new PolicyEngine(db, rules);
 
@@ -611,7 +611,7 @@ describe("Financial Phase 1 Rules", () => {
   });
 
   describe("financial.require_confirmation", () => {
-    it("allows transfers under confirmation threshold", () => {
+    it("允许低于确认阈值的转账", () => {
       const rules = createFinancialRules(DEFAULT_TREASURY_POLICY);
       const engine = new PolicyEngine(db, rules);
 
@@ -623,11 +623,11 @@ describe("Financial Phase 1 Rules", () => {
       const request = createRequest(tool, { amount_cents: 500 }, "agent");
 
       const decision = engine.evaluate(request);
-      // Should not be quarantined (500 < 1000 threshold)
+      // 不应该被隔离（500 < 1000 阈值）
       expect(decision.action).not.toBe("quarantine");
     });
 
-    it("quarantines transfers above confirmation threshold", () => {
+    it("隔离高于确认阈值的转账", () => {
       const rules = createFinancialRules(DEFAULT_TREASURY_POLICY);
       const engine = new PolicyEngine(db, rules);
 
@@ -639,14 +639,14 @@ describe("Financial Phase 1 Rules", () => {
       const request = createRequest(tool, { amount_cents: 2000 }, "agent");
 
       const decision = engine.evaluate(request);
-      // Should be quarantined (2000 > 1000 threshold), but may also be denied
-      // by transfer_max_single if over that limit. 2000 < 5000 so it won't be denied.
+      // 应该被隔离（2000 > 1000 阈值），但也可能被拒绝
+      // 如果超过 transfer_max_single 限制。2000 < 5000 所以不会被拒绝。
       expect(decision.action).toBe("quarantine");
       expect(decision.reasonCode).toBe("CONFIRMATION_REQUIRED");
     });
 
-    it("returns quarantine, not deny, for confirmation threshold", () => {
-      // Use a custom policy with very high transfer limits so only confirmation triggers
+    it("对于确认阈值返回隔离而不是拒绝", () => {
+      // 使用具有非常高转账限制的自定义策略，以便仅触发确认
       const policy: TreasuryPolicy = {
         ...DEFAULT_TREASURY_POLICY,
         maxSingleTransferCents: 100000,
@@ -669,10 +669,10 @@ describe("Financial Phase 1 Rules", () => {
   });
 });
 
-// ─── Treasury Config Tests ──────────────────────────────────────
+// ─── 资金库配置测试 ──────────────────────────────────────
 
 describe("Treasury Config", () => {
-  it("DEFAULT_TREASURY_POLICY has all required fields", () => {
+  it("DEFAULT_TREASURY_POLICY 具有所有必需字段", () => {
     expect(DEFAULT_TREASURY_POLICY.maxSingleTransferCents).toBe(5000);
     expect(DEFAULT_TREASURY_POLICY.maxHourlyTransferCents).toBe(10000);
     expect(DEFAULT_TREASURY_POLICY.maxDailyTransferCents).toBe(25000);
@@ -685,7 +685,7 @@ describe("Treasury Config", () => {
     expect(DEFAULT_TREASURY_POLICY.requireConfirmationAboveCents).toBe(1000);
   });
 
-  it("all default values are positive", () => {
+  it("所有默认值都是正数", () => {
     for (const [key, value] of Object.entries(DEFAULT_TREASURY_POLICY)) {
       if (key === "x402AllowedDomains") continue;
       expect(typeof value).toBe("number");
@@ -694,10 +694,10 @@ describe("Treasury Config", () => {
   });
 });
 
-// ─── createDefaultRules Integration ─────────────────────────────
+// ─── createDefaultRules 集成 ─────────────────────────────
 
 describe("createDefaultRules", () => {
-  it("includes authority and rate-limit rules", () => {
+  it("包括权限和速率限制规则", () => {
     const rules = createDefaultRules();
     const ruleIds = rules.map((r) => r.id);
 
@@ -710,7 +710,7 @@ describe("createDefaultRules", () => {
     expect(ruleIds).toContain("financial.require_confirmation");
   });
 
-  it("authority rules have priority 400", () => {
+  it("权限规则具有优先级 400", () => {
     const rules = createDefaultRules();
     const authorityRules = rules.filter((r) => r.id.startsWith("authority."));
     for (const rule of authorityRules) {
@@ -718,7 +718,7 @@ describe("createDefaultRules", () => {
     }
   });
 
-  it("rate limit rules have priority 600", () => {
+  it("速率限制规则具有优先级 600", () => {
     const rules = createDefaultRules();
     const rateRules = rules.filter((r) => r.id.startsWith("rate."));
     for (const rule of rateRules) {
@@ -726,7 +726,7 @@ describe("createDefaultRules", () => {
     }
   });
 
-  it("financial phase 1 rules have priority 500", () => {
+  it("财务阶段 1 规则具有优先级 500", () => {
     const rules = createDefaultRules();
     const financialRules = rules.filter(
       (r) => r.id === "financial.inference_daily_cap" || r.id === "financial.require_confirmation",
@@ -736,7 +736,7 @@ describe("createDefaultRules", () => {
     }
   });
 
-  it("accepts custom treasury policy", () => {
+  it("接受自定义资金库策略", () => {
     const customPolicy: TreasuryPolicy = {
       ...DEFAULT_TREASURY_POLICY,
       maxSingleTransferCents: 100,
@@ -746,14 +746,14 @@ describe("createDefaultRules", () => {
   });
 });
 
-// ─── promptWithDefault Tests ────────────────────────────────────
+// ─── promptWithDefault 测试 ────────────────────────────────────
 
 describe("promptWithDefault", () => {
-  // Note: promptWithDefault is an interactive prompt function.
-  // We test its logic by importing and testing the behavior expectations.
-  // The actual function requires readline, so we verify the exported signature.
+  // 注意：promptWithDefault 是一个交互式提示函数。
+  // 我们通过导入和测试行为期望来测试其逻辑。
+  // 实际函数需要 readline，所以我们验证导出的签名。
 
-  it("is exported from prompts module", async () => {
+  it("从 prompts 模块导出", async () => {
     const prompts = await import("../setup/prompts.js");
     expect(typeof prompts.promptWithDefault).toBe("function");
   });

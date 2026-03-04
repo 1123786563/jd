@@ -1,9 +1,9 @@
 /**
- * State Versioning
+ * 状态版本控制
  *
- * Version control the automaton's own state files (~/.automaton/).
- * Every self-modification triggers a git commit with a descriptive message.
- * The automaton's entire identity history is version-controlled and replayable.
+ * 对 automaton 自己的状态文件（~/.automaton/）进行版本控制
+ * 每次自我修改都会触发带有描述性消息的 git 提交
+ * automaton 的整个身份历史都是版本可控和可重放的
  */
 
 import type { ConwayClient, AutomatonDatabase } from "../types.js";
@@ -20,15 +20,15 @@ function resolveHome(p: string): string {
 }
 
 /**
- * Initialize git repo for the automaton's state directory.
- * Creates .gitignore to exclude sensitive files.
+ * 为 automaton 的状态目录初始化 git 仓库
+ * 创建 .gitignore 以排除敏感文件
  */
 export async function initStateRepo(
   conway: ConwayClient,
 ): Promise<void> {
   const dir = resolveHome(AUTOMATON_DIR);
 
-  // Check if already initialized
+  // 检查是否已初始化
   const checkResult = await conway.exec(
     `test -d ${dir}/.git && echo "exists" || echo "nope"`,
     5000,
@@ -38,11 +38,11 @@ export async function initStateRepo(
     return;
   }
 
-  // Initialize
+  // 初始化
   await gitInit(conway, dir);
 
-  // Create .gitignore for sensitive files
-  const gitignore = `# Sensitive files - never commit
+  // 为敏感文件创建 .gitignore
+  const gitignore = `# 敏感文件 - 永不提交
 wallet.json
 config.json
 state.db
@@ -55,19 +55,19 @@ logs/
 
   await conway.writeFile(`${dir}/.gitignore`, gitignore);
 
-  // Configure git user
+  // 配置 git 用户
   await conway.exec(
     `cd ${dir} && git config user.name "Automaton" && git config user.email "automaton@conway.tech"`,
     5000,
   );
 
-  // Initial commit
-  await gitCommit(conway, dir, "genesis: automaton state repository initialized");
+  // 初始提交
+  await gitCommit(conway, dir, "创世：automaton 状态仓库已初始化");
 }
 
 /**
- * Commit a state change with a descriptive message.
- * Called after any self-modification.
+ * 使用描述性消息提交状态更改
+ * 在任何自我修改后调用
  */
 export async function commitStateChange(
   conway: ConwayClient,
@@ -76,10 +76,10 @@ export async function commitStateChange(
 ): Promise<string> {
   const dir = resolveHome(AUTOMATON_DIR);
 
-  // Check if there are changes
+  // 检查是否有更改
   const status = await gitStatus(conway, dir);
   if (status.clean) {
-    return "No changes to commit";
+    return "没有要提交的更改";
   }
 
   const message = `${category}: ${description}`;
@@ -88,7 +88,7 @@ export async function commitStateChange(
 }
 
 /**
- * Commit after a SOUL.md update.
+ * 在 SOUL.md 更新后提交
  */
 export async function commitSoulUpdate(
   conway: ConwayClient,
@@ -98,7 +98,7 @@ export async function commitSoulUpdate(
 }
 
 /**
- * Commit after a skill installation or removal.
+ * 在技能安装或删除后提交
  */
 export async function commitSkillChange(
   conway: ConwayClient,
@@ -107,13 +107,13 @@ export async function commitSkillChange(
 ): Promise<string> {
   return commitStateChange(
     conway,
-    `${action} skill: ${skillName}`,
+    `${action} 技能：${skillName}`,
     "skill",
   );
 }
 
 /**
- * Commit after heartbeat config change.
+ * 在心跳配置更改后提交
  */
 export async function commitHeartbeatChange(
   conway: ConwayClient,
@@ -123,7 +123,7 @@ export async function commitHeartbeatChange(
 }
 
 /**
- * Commit after config change.
+ * 在配置更改后提交
  */
 export async function commitConfigChange(
   conway: ConwayClient,
@@ -133,7 +133,7 @@ export async function commitConfigChange(
 }
 
 /**
- * Get the state repo history.
+ * 获取状态仓库历史
  */
 export async function getStateHistory(
   conway: ConwayClient,

@@ -177,7 +177,7 @@ describe("UnifiedInferenceClient", () => {
     async (status) => {
       const client = createClient();
 
-      // openai gets 4 failures (3 retries + final failure), then groq succeeds
+      // openai 遭到 4 次失败（3 次重试 + 最终失败），然后 groq 成功
       queueError(status);
       queueError(status);
       queueError(status);
@@ -209,12 +209,12 @@ describe("UnifiedInferenceClient", () => {
   it("stops retrying after max retry budget", async () => {
     const client = createClient();
 
-    // openai exhausted
+    // openai 耗尽
     queueError(429, "openai-1");
     queueError(429, "openai-2");
     queueError(429, "openai-3");
     queueError(429, "openai-4");
-    // groq exhausted
+    // groq 耗尽
     queueError(429, "groq-1");
     queueError(429, "groq-2");
     queueError(429, "groq-3");
@@ -524,7 +524,7 @@ describe("UnifiedInferenceClient", () => {
     const client = createClient();
 
     queueUnknownError("openai-hard-fail");
-    // non-retryable error should stop immediately, without trying fallback provider
+    // 不可重试的错误应立即停止，不尝试备用提供商
     await expect(client.chat({ tier: "reasoning", messages: BASE_MESSAGES })).rejects.toThrow(
       /openai-hard-fail/,
     );

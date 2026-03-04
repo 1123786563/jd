@@ -1,12 +1,12 @@
 /**
- * Lineage Tracking
+ * 世系追踪
  *
- * Track parent-child relationships between automatons.
- * The parent records children in SQLite.
- * Children record their parent in config.
- * ERC-8004 registration includes parentAgent field.
+ * 追踪自动机之间的父子关系。
+ * 父自动机在 SQLite 中记录子自动机。
+ * 子自动机在配置中记录其父自动机。
+ * ERC-8004 注册包括 parentAgent 字段。
  *
- * Phase 3.1: Actual pruning + concurrency-limited refresh.
+ * 阶段 3.1：实际的修剪 + 并发限制的刷新。
  */
 
 import type {
@@ -23,7 +23,7 @@ import { createLogger } from "../observability/logger.js";
 const logger = createLogger("replication.lineage");
 
 /**
- * Get the full lineage tree (parent -> children).
+ * 获取完整的世系树（父 -> 子）。
  */
 export function getLineage(db: AutomatonDatabase): {
   children: ChildAutomaton[];
@@ -46,14 +46,14 @@ export function getLineage(db: AutomatonDatabase): {
 }
 
 /**
- * Check if this automaton has a parent (is itself a child).
+ * 检查此自动机是否有父自动机（即自身是子自动机）。
  */
 export function hasParent(config: AutomatonConfig): boolean {
   return !!config.parentAddress;
 }
 
 /**
- * Get a summary of the lineage for the system prompt.
+ * 获取用于系统提示的世系摘要。
  */
 export function getLineageSummary(
   db: AutomatonDatabase,
@@ -81,8 +81,8 @@ export function getLineageSummary(
 }
 
 /**
- * Prune dead children: actually delete from DB and clean up sandboxes.
- * Phase 3.1 fix: was previously a no-op.
+ * 修剪已死亡的子自动机：实际从数据库中删除并清理沙盒。
+ * 阶段 3.1 修复：之前是空操作。
  */
 export async function pruneDeadChildren(
   db: AutomatonDatabase,
@@ -96,32 +96,32 @@ export async function pruneDeadChildren(
 
   if (dead.length <= keepLast) return 0;
 
-  // Sort by creation date, oldest first
+  // 按创建日期排序，最旧的在前
   dead.sort(
     (a, b) =>
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
   );
 
-  // Keep the most recent `keepLast` dead children
+  // 保留最近的 `keepLast` 个已死亡的子自动机
   const toRemove = dead.slice(0, dead.length - keepLast);
   let removed = 0;
 
   for (const child of toRemove) {
     try {
-      // Clean up sandbox if cleanup is available and child is in cleanable state
+      // 如果清理可用且子自动机处于可清理状态，则清理沙盒
       if (cleanup && (child.status === "stopped" || child.status === "failed" || child.status === "dead")) {
         try {
           await cleanup.cleanup(child.id);
         } catch {
-          // Cleanup may fail; still delete the record
+          // 清理可能失败；仍删除记录
         }
       }
 
-      // Actually delete from DB
+      // 实际从数据库中删除
       deleteChild(db.raw, child.id);
       removed++;
     } catch (error) {
-      logger.error(`Failed to prune child ${child.id}`, error instanceof Error ? error : undefined);
+      logger.error(`修剪子自动机 ${child.id} 失败`, error instanceof Error ? error : undefined);
     }
   }
 
@@ -129,8 +129,8 @@ export async function pruneDeadChildren(
 }
 
 /**
- * Refresh status of all children using health monitor.
- * Concurrency limited to 3 simultaneous checks.
+ * 使用健康监视器刷新所有子自动机的状态。
+ * 并发限制为 3 个同时检查。
  */
 export async function refreshChildrenStatus(
   conway: ConwayClient,
@@ -138,12 +138,12 @@ export async function refreshChildrenStatus(
   healthMonitor?: ChildHealthMonitor,
 ): Promise<void> {
   if (healthMonitor) {
-    // Use the health monitor with built-in concurrency limiting
+    // 使用具有内置并发限制的健康监视器
     await healthMonitor.checkAllChildren();
     return;
   }
 
-  // Legacy path: sequential checks with concurrency limit of 3
+  // 传统路径：并发限制为 3 的顺序检查
   const children = db.getChildren().filter((c) => c.status !== "dead" && c.status !== "cleaned_up");
   const maxConcurrent = 3;
 

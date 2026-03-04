@@ -1,10 +1,10 @@
 /**
- * Durable Scheduler
+ * 持久化调度器
  *
- * DB-backed heartbeat scheduler with tick overlap guard,
- * task leases, timeouts, and retry logic.
+ * 由数据库支持的心跳调度器，具有 tick 重叠保护、
+ * 任务租约、超时和重试逻辑。
  *
- * Replaces the fragile setInterval-based heartbeat.
+ * 替换了脆弱的基于 setInterval 的心跳。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -46,12 +46,12 @@ function generateId(): string {
 function timeoutPromise(ms: number): { promise: Promise<never>; clear: () => void } {
   let timerId: ReturnType<typeof setTimeout>;
   const promise = new Promise<never>((_, reject) => {
-    timerId = setTimeout(() => reject(new Error(`Task timed out after ${ms}ms`)), ms);
+    timerId = setTimeout(() => reject(new Error(`任务在 ${ms}ms 后超时`)), ms);
   });
   return { promise, clear: () => clearTimeout(timerId!) };
 }
 
-// Survival tier ordering for tier minimum checks
+// 生存层级排序，用于最低层级检查
 const TIER_ORDER: Record<string, number> = {
   dead: 0,
   critical: 1,
@@ -79,17 +79,17 @@ export class DurableScheduler {
   }
 
   /**
-   * Called on interval -- guards against overlap.
+   * 按间隔调用 — 防止重叠。
    */
   async tick(): Promise<void> {
     if (this.tickInProgress) return;
     this.tickInProgress = true;
 
     try {
-      // Clear any expired leases first
+      // 首先清除任何过期的租约
       clearExpiredLeases(this.db);
 
-      // Build shared context (single API call for balance)
+      // 构建共享上下文（单次 API 调用获取余额）
       const context = await buildTickContext(
         this.db,
         this.legacyContext.conway,
@@ -97,54 +97,54 @@ export class DurableScheduler {
         this.legacyContext.identity.address,
       );
 
-      // Get tasks that are due
+      // 获取到期任务
       const dueTasks = this.getDueTasks(context);
 
       for (const task of dueTasks) {
         await this.executeTask(task.taskName, context);
       }
 
-      // Periodic cleanup
+      // 定期清理
       pruneExpiredDedupKeys(this.db);
     } catch (err: any) {
-      logger.error("Tick failed", err instanceof Error ? err : undefined);
+      logger.error("Tick 失败", err instanceof Error ? err : undefined);
     } finally {
       this.tickInProgress = false;
     }
   }
 
   /**
-   * Check which tasks are due based on DB schedule.
+   * 根据数据库计划检查哪些任务到期。
    */
   getDueTasks(context: TickContext): HeartbeatScheduleRow[] {
     const schedule = getHeartbeatSchedule(this.db);
     const now = new Date();
 
     return schedule.filter((row) => {
-      // Skip disabled tasks
+      // 跳过已禁用的任务
       if (!row.enabled) return false;
 
-      // Skip tasks that require a higher survival tier
+      // 跳过需要更高生存层级的任务
       if (!tierMeetsMinimum(context.survivalTier, row.tierMinimum)) return false;
 
-      // Skip if lease is held by someone else
+      // 如果租约被其他人持有，则跳过
       if (row.leaseOwner && row.leaseOwner !== this.ownerId) {
         if (row.leaseExpiresAt && new Date(row.leaseExpiresAt) > now) {
           return false;
         }
       }
 
-      // Check if a retry was explicitly scheduled via nextRunAt
+      // 检查是否通过 nextRunAt 明确调度了重试
       if (row.nextRunAt && new Date(row.nextRunAt) <= now) {
         return true;
       }
 
-      // Check if task is due based on cron expression
+      // 检查任务是否基于 cron 表达式到期
       if (row.cronExpression) {
         try {
           const currentDate = row.lastRunAt
             ? new Date(row.lastRunAt)
-            : new Date(Date.now() - 86400000); // If never run, assume due
+            : new Date(Date.now() - 86400000); // 如果从未运行，假设到期
 
           const interval = cronParser.parseExpression(row.cronExpression, {
             currentDate,
@@ -156,7 +156,7 @@ export class DurableScheduler {
         }
       }
 
-      // Check if task is due based on intervalMs
+      // 检查任务是否基于 intervalMs 到期
       if (row.intervalMs) {
         if (!row.lastRunAt) return true;
         const elapsed = now.getTime() - new Date(row.lastRunAt).getTime();
@@ -168,7 +168,7 @@ export class DurableScheduler {
   }
 
   /**
-   * Execute a single task with timeout and lease.
+   * 执行单个任务，具有超时和租约。
    */
   async executeTask(taskName: string, ctx: TickContext): Promise<void> {
     const taskFn = this.tasks.get(taskName);
@@ -179,7 +179,7 @@ export class DurableScheduler {
     );
     const timeoutMs = schedule?.timeoutMs ?? DEFAULT_TASK_TIMEOUT_MS;
 
-    // Acquire lease
+    // 获取租约
     if (!this.acquireLease(taskName)) return;
 
     const startedAt = new Date().toISOString();
@@ -195,15 +195,15 @@ export class DurableScheduler {
       const durationMs = Date.now() - startMs;
       this.recordSuccess(taskName, durationMs, startedAt);
 
-      // If the task says we should wake, fire the callback
+      // 如果任务说我们应该唤醒，触发回调
       if (result.shouldWake && this.onWakeRequest) {
-        const reason = result.message || `Heartbeat task '${taskName}' requested wake`;
+        const reason = result.message || `心跳任务 '${taskName}' 请求唤醒`;
         this.onWakeRequest(reason);
         insertWakeEvent(this.db, 'heartbeat', reason, { taskName });
       }
     } catch (err: any) {
       const durationMs = Date.now() - startMs;
-      const isTimeout = err.message?.includes("timed out");
+      const isTimeout = err.message?.includes("超时");
       this.recordFailure(
         taskName,
         err,
@@ -212,7 +212,7 @@ export class DurableScheduler {
         isTimeout ? "timeout" : "failure",
       );
 
-      // Check if we should retry
+      // 检查是否应该重试
       if (schedule && schedule.maxRetries > 0) {
         const history = this.getRecentFailures(taskName);
         if (history < schedule.maxRetries) {
@@ -226,21 +226,21 @@ export class DurableScheduler {
   }
 
   /**
-   * Acquire a lease for a task.
+   * 获取任务的租约。
    */
   acquireLease(taskName: string): boolean {
     return acquireTaskLease(this.db, taskName, this.ownerId, LEASE_TTL_MS);
   }
 
   /**
-   * Release a lease for a task.
+   * 释放任务的租约。
    */
   releaseLease(taskName: string): void {
     releaseTaskLease(this.db, taskName, this.ownerId);
   }
 
   /**
-   * Record a successful task execution.
+   * 记录成功的任务执行。
    */
   recordSuccess(taskName: string, durationMs: number, startedAt: string): void {
     const now = new Date().toISOString();
@@ -258,7 +258,7 @@ export class DurableScheduler {
 
     updateHeartbeatSchedule(this.db, taskName, {
       lastRunAt: now,
-      nextRunAt: null, // Clear any pending retry
+      nextRunAt: null, // 清除任何待处理的重试
       lastResult: "success",
       lastError: null,
       runCount: (this.getRunCount(taskName) ?? 0) + 1,
@@ -266,7 +266,7 @@ export class DurableScheduler {
   }
 
   /**
-   * Record a failed task execution.
+   * 记录失败的任务执行。
    */
   recordFailure(
     taskName: string,
@@ -297,11 +297,11 @@ export class DurableScheduler {
       runCount: (this.getRunCount(taskName) ?? 0) + 1,
     });
 
-    logger.error(`Task '${taskName}' ${result}: ${errorMessage}`);
+    logger.error(`任务 '${taskName}' ${result}：${errorMessage}`);
   }
 
   /**
-   * Prune old history entries.
+   * 清理旧的历史条目。
    */
   pruneHistory(retentionDays: number): number {
     const cutoff = new Date(Date.now() - retentionDays * 86400000).toISOString();
@@ -312,13 +312,13 @@ export class DurableScheduler {
   }
 
   /**
-   * Prune expired dedup keys.
+   * 清理过期的去重键。
    */
   pruneExpiredDedupKeys(): number {
     return pruneExpiredDedupKeys(this.db);
   }
 
-  // ─── Private helpers ──────────────────────────────────────────
+  // ─── 私有辅助函数 ──────────────────────────────────────────
 
   private getRunCount(taskName: string): number {
     const row = this.db.prepare(
@@ -335,7 +335,7 @@ export class DurableScheduler {
   }
 
   private getRecentFailures(taskName: string): number {
-    // Count consecutive recent failures (since last success)
+    // 计算最近的连续失败次数（自上次成功以来）
     const rows = this.db.prepare(
       `SELECT result FROM heartbeat_history
        WHERE task_name = ? ORDER BY started_at DESC LIMIT 10`,
@@ -350,7 +350,7 @@ export class DurableScheduler {
   }
 
   private scheduleRetry(taskName: string): void {
-    // Reset next_run_at to now + 30s for a quick retry
+    // 将 next_run_at 重置为 now + 30s 以快速重试
     const retryAt = new Date(Date.now() + 30_000).toISOString();
     updateHeartbeatSchedule(this.db, taskName, {
       nextRunAt: retryAt,

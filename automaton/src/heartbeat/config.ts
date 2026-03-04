@@ -1,7 +1,7 @@
 /**
- * Heartbeat Configuration
+ * 心跳配置
  *
- * Parses and manages heartbeat.yml configuration.
+ * 解析和管理 heartbeat.yml 配置。
  */
 
 import fs from "fs";
@@ -61,7 +61,7 @@ const DEFAULT_HEARTBEAT_CONFIG: HeartbeatConfig = {
 };
 
 /**
- * Load heartbeat config from YAML file, falling back to defaults.
+ * 从 YAML 文件加载心跳配置，回退到默认值。
  */
 export function loadHeartbeatConfig(configPath?: string): HeartbeatConfig {
   const filePath =
@@ -94,14 +94,14 @@ export function loadHeartbeatConfig(configPath?: string): HeartbeatConfig {
         DEFAULT_HEARTBEAT_CONFIG.lowComputeMultiplier,
     };
   } catch (error: any) {
-    logger.error("Failed to parse YAML config", error instanceof Error ? error : undefined);
-    // Continue with defaults, but log the error
+    logger.error("解析 YAML 配置失败", error instanceof Error ? error : undefined);
+    // 继续使用默认值，但记录错误
     return DEFAULT_HEARTBEAT_CONFIG;
   }
 }
 
 /**
- * Save heartbeat config to YAML file.
+ * 将心跳配置保存到 YAML 文件。
  */
 export function saveHeartbeatConfig(
   config: HeartbeatConfig,
@@ -118,14 +118,14 @@ export function saveHeartbeatConfig(
 }
 
 /**
- * Write the default heartbeat.yml file.
+ * 写入默认的 heartbeat.yml 文件。
  */
 export function writeDefaultHeartbeatConfig(configPath?: string): void {
   saveHeartbeatConfig(DEFAULT_HEARTBEAT_CONFIG, configPath);
 }
 
 /**
- * Sync heartbeat entries from YAML config into the database.
+ * 将心跳条目从 YAML 配置同步到数据库。
  */
 export function syncHeartbeatToDb(
   config: HeartbeatConfig,

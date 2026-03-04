@@ -1,8 +1,8 @@
 /**
- * Episodic Memory Manager
+ * 情景记忆管理器
  *
- * Records events and experiences from agent turns.
- * Supports recency-based retrieval, search, and session summarization.
+ * 记录 Agent 轮次中的事件和经验。
+ * 支持基于最近性的检索、搜索和会话摘要。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -18,7 +18,7 @@ export class EpisodicMemoryManager {
   constructor(private db: Database) {}
 
   /**
-   * Record a new episodic memory entry. Returns the ULID id.
+   * 记录新的情景记忆条目。返回 ULID id。
    */
   record(entry: {
     sessionId: string;
@@ -49,13 +49,13 @@ export class EpisodicMemoryManager {
         entry.classification ?? "maintenance",
       );
     } catch (error) {
-      logger.error("Failed to record entry", error instanceof Error ? error : undefined);
+      logger.error("记录条目失败", error instanceof Error ? error : undefined);
     }
     return id;
   }
 
   /**
-   * Get recent episodic memory entries for a session, ordered by creation time descending.
+   * 获取会话最近的情景记忆条目，按创建时间降序排列。
    */
   getRecent(sessionId: string, limit: number = 10): EpisodicMemoryEntry[] {
     try {
@@ -64,18 +64,18 @@ export class EpisodicMemoryManager {
       ).all(sessionId, limit) as any[];
       return rows.map(deserializeEpisodic);
     } catch (error) {
-      logger.error("Failed to get recent", error instanceof Error ? error : undefined);
+      logger.error("获取最近条目失败", error instanceof Error ? error : undefined);
       return [];
     }
   }
 
   /**
-   * Search episodic memory by summary/detail content using LIKE-based matching.
+   * 使用基于 LIKE 的匹配按摘要/详细内容搜索情景记忆。
    */
   search(query: string, limit: number = 10): EpisodicMemoryEntry[] {
     try {
-      // Escape SQL LIKE wildcards so literal '%' and '_' in the query
-      // don't match arbitrary characters.
+      // 转义 SQL LIKE 通配符，使查询中的字面 '%' 和 '_'
+      // 不匹配任意字符。
       const escaped = query.replace(/[%_]/g, (ch) => `\\${ch}`);
       const rows = this.db.prepare(
         `SELECT * FROM episodic_memory
@@ -85,13 +85,13 @@ export class EpisodicMemoryManager {
       ).all(`%${escaped}%`, `%${escaped}%`, limit) as any[];
       return rows.map(deserializeEpisodic);
     } catch (error) {
-      logger.error("Failed to search", error instanceof Error ? error : undefined);
+      logger.error("搜索失败", error instanceof Error ? error : undefined);
       return [];
     }
   }
 
   /**
-   * Mark an episodic memory as accessed, incrementing counter and updating timestamp.
+   * 将情景记忆标记为已访问，增加计数器并更新时间戳。
    */
   markAccessed(id: string): void {
     try {
@@ -99,13 +99,13 @@ export class EpisodicMemoryManager {
         "UPDATE episodic_memory SET accessed_count = accessed_count + 1, last_accessed_at = datetime('now') WHERE id = ?",
       ).run(id);
     } catch (error) {
-      logger.error("Failed to mark accessed", error instanceof Error ? error : undefined);
+      logger.error("标记访问失败", error instanceof Error ? error : undefined);
     }
   }
 
   /**
-   * Prune entries older than retentionDays.
-   * Returns number of entries removed.
+   * 修剪早于 retentionDays 的条目。
+   * 返回删除的条目数。
    */
   prune(retentionDays: number): number {
     if (retentionDays <= 0) return 0;
@@ -115,13 +115,13 @@ export class EpisodicMemoryManager {
       ).run(`-${retentionDays} days`);
       return result.changes;
     } catch (error) {
-      logger.error("Failed to prune", error instanceof Error ? error : undefined);
+      logger.error("修剪失败", error instanceof Error ? error : undefined);
       return 0;
     }
   }
 
   /**
-   * Generate a template-based summary of a session's episodic memories.
+   * 生成会话情景记忆的基于模板的摘要。
    */
   summarizeSession(sessionId: string): string {
     try {
@@ -137,19 +137,19 @@ export class EpisodicMemoryManager {
       const strategic = events.filter((e) => e.classification === "strategic").length;
 
       const summaryLines: string[] = [
-        `Session had ${events.length} recorded event(s).`,
+        `会话有 ${events.length} 个记录事件。`,
       ];
 
-      if (successes > 0) summaryLines.push(`${successes} successful outcome(s).`);
-      if (failures > 0) summaryLines.push(`${failures} failed outcome(s).`);
-      if (strategic > 0) summaryLines.push(`${strategic} strategic decision(s).`);
+      if (successes > 0) summaryLines.push(`${successes} 个成功结果。`);
+      if (failures > 0) summaryLines.push(`${failures} 个失败结果。`);
+      if (strategic > 0) summaryLines.push(`${strategic} 个战略决策。`);
 
-      // Include top 3 most important events
+      // 包括前 3 个最重要的事件
       const topEvents = [...events]
         .sort((a, b) => b.importance - a.importance)
         .slice(0, 3);
       if (topEvents.length > 0) {
-        summaryLines.push("Key events:");
+        summaryLines.push("关键事件：");
         for (const e of topEvents) {
           summaryLines.push(`- [${e.eventType}] ${e.summary}`);
         }
@@ -157,8 +157,8 @@ export class EpisodicMemoryManager {
 
       return summaryLines.join("\n");
     } catch (error) {
-      logger.error("Failed to summarize session", error instanceof Error ? error : undefined);
-      return "Failed to generate session summary.";
+      logger.error("生成会话摘要失败", error instanceof Error ? error : undefined);
+      return "生成会话摘要失败。";
     }
   }
 }

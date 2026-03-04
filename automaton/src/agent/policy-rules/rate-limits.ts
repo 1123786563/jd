@@ -1,8 +1,8 @@
 /**
- * Rate Limit Policy Rules
+ * 速率限制策略规则
  *
- * Enforces rate limits on sensitive operations to prevent abuse.
- * Queries the policy_decisions table to count recent operations.
+ * 对敏感操作强制执行速率限制以防止滥用。
+ * 查询 policy_decisions 表以统计最近的操作。
  */
 
 import type {
@@ -20,8 +20,8 @@ function deny(
 }
 
 /**
- * Count recent policy decisions for a tool within a time window.
- * Uses the policy_decisions table which logs all tool evaluations.
+ * 计算工具在时间窗口内的最近策略决策数量。
+ * 使用记录所有工具评估的 policy_decisions 表。
  */
 function countRecentDecisions(
   db: import("better-sqlite3").Database,
@@ -29,7 +29,7 @@ function countRecentDecisions(
   windowMs: number,
 ): number {
   const cutoff = new Date(Date.now() - windowMs);
-  // SQLite datetime format: 'YYYY-MM-DD HH:MM:SS'
+  // SQLite 日期时间格式：'YYYY-MM-DD HH:MM:SS'
   const cutoffStr = cutoff.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, "");
   const row = db
     .prepare(
@@ -41,20 +41,20 @@ function countRecentDecisions(
 }
 
 /**
- * Maximum 1 genesis prompt change per day.
+ * 每天最多 1 次创世提示词更改。
  */
 function createGenesisPromptDailyRule(): PolicyRule {
   return {
     id: "rate.genesis_prompt_daily",
-    description: "Maximum 1 update_genesis_prompt per day",
+    description: "每天最多 1 次 update_genesis_prompt",
     priority: 600,
     appliesTo: { by: "name", names: ["update_genesis_prompt"] },
     evaluate(request: PolicyRequest): PolicyRuleResult | null {
-      // Access the raw database through the tool context
-      // The db is available via context.db, but we need the raw sqlite instance
-      // Rate limit rules need the raw DB to query policy_decisions
+      // 通过工具上下文访问原始数据库
+      // 数据库通过 context.db 可用，但我们需要原始 sqlite 实例
+      // 速率限制规则需要原始数据库来查询 policy_decisions
       const db = (request.context.db as any)?.raw ?? (request.context as any).rawDb;
-      if (!db) return deny(this.id, "DB_UNAVAILABLE", "Rate limit check failed: database not accessible");
+      if (!db) return deny(this.id, "DB_UNAVAILABLE", "速率限制检查失败：数据库无法访问");
 
       const oneDayMs = 24 * 60 * 60 * 1000;
       const recentCount = countRecentDecisions(db, "update_genesis_prompt", oneDayMs);
@@ -63,7 +63,7 @@ function createGenesisPromptDailyRule(): PolicyRule {
         return deny(
           "rate.genesis_prompt_daily",
           "RATE_LIMIT_GENESIS",
-          `Genesis prompt change rate exceeded: ${recentCount} changes in the last 24 hours (max 1/day)`,
+          `创世提示词更改速率超出：在过去 24 小时内有 ${recentCount} 次更改（最多 1 次/天）`,
         );
       }
 
@@ -73,17 +73,17 @@ function createGenesisPromptDailyRule(): PolicyRule {
 }
 
 /**
- * Maximum 10 self-mod operations per hour.
+ * 每小时最多 10 次自我修改操作。
  */
 function createSelfModHourlyRule(): PolicyRule {
   return {
     id: "rate.self_mod_hourly",
-    description: "Maximum 10 edit_own_file calls per hour",
+    description: "每小时最多 10 次 edit_own_file 调用",
     priority: 600,
     appliesTo: { by: "name", names: ["edit_own_file"] },
     evaluate(request: PolicyRequest): PolicyRuleResult | null {
       const db = (request.context.db as any)?.raw ?? (request.context as any).rawDb;
-      if (!db) return deny(this.id, "DB_UNAVAILABLE", "Rate limit check failed: database not accessible");
+      if (!db) return deny(this.id, "DB_UNAVAILABLE", "速率限制检查失败：数据库无法访问");
 
       const oneHourMs = 60 * 60 * 1000;
       const recentCount = countRecentDecisions(db, "edit_own_file", oneHourMs);
@@ -92,7 +92,7 @@ function createSelfModHourlyRule(): PolicyRule {
         return deny(
           "rate.self_mod_hourly",
           "RATE_LIMIT_SELF_MOD",
-          `Self-modification rate exceeded: ${recentCount} edits in the last hour (max 10/hour)`,
+          `自我修改速率超出：在过去 1 小时内有 ${recentCount} 次编辑（最多 10 次/小时）`,
         );
       }
 
@@ -102,17 +102,17 @@ function createSelfModHourlyRule(): PolicyRule {
 }
 
 /**
- * Maximum 3 child spawns per day.
+ * 每天最多 3 次子代生成。
  */
 function createSpawnDailyRule(): PolicyRule {
   return {
     id: "rate.spawn_daily",
-    description: "Maximum 3 spawn_child calls per day",
+    description: "每天最多 3 次 spawn_child 调用",
     priority: 600,
     appliesTo: { by: "name", names: ["spawn_child"] },
     evaluate(request: PolicyRequest): PolicyRuleResult | null {
       const db = (request.context.db as any)?.raw ?? (request.context as any).rawDb;
-      if (!db) return deny(this.id, "DB_UNAVAILABLE", "Rate limit check failed: database not accessible");
+      if (!db) return deny(this.id, "DB_UNAVAILABLE", "速率限制检查失败：数据库无法访问");
 
       const oneDayMs = 24 * 60 * 60 * 1000;
       const recentCount = countRecentDecisions(db, "spawn_child", oneDayMs);
@@ -121,7 +121,7 @@ function createSpawnDailyRule(): PolicyRule {
         return deny(
           "rate.spawn_daily",
           "RATE_LIMIT_SPAWN",
-          `Child spawn rate exceeded: ${recentCount} spawns in the last 24 hours (max 3/day)`,
+          `子代生成速率超出：在过去 24 小时内有 ${recentCount} 次生成（最多 3 次/天）`,
         );
       }
 
@@ -131,7 +131,7 @@ function createSpawnDailyRule(): PolicyRule {
 }
 
 /**
- * Create all rate limit policy rules.
+ * 创建所有速率限制策略规则。
  */
 export function createRateLimitRules(): PolicyRule[] {
   return [

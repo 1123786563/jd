@@ -7,9 +7,13 @@ import {
   type ResolvedModel,
 } from "./provider-registry.js";
 
+// 可重试的 HTTP 状态码
 const RETRYABLE_STATUS_CODES = new Set([429, 500, 503]);
+// 重试退避时间（毫秒）
 const RETRY_BACKOFF_MS = [1000, 2000, 4000] as const;
+// 熔断器失败阈值
 const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5;
+// 熔断器禁用时长（毫秒）
 const CIRCUIT_BREAKER_DISABLE_MS = 5 * 60_000;
 
 export interface UnifiedInferenceResult {
@@ -97,11 +101,15 @@ export class UnifiedInferenceClient {
     this.registry = registry;
   }
 
+  /**
+   * 使用指定层级的模型进行聊天。
+   * 会自动尝试多个提供商，直到成功或全部失败。
+   */
   async chat(params: UnifiedChatParams): Promise<UnifiedInferenceResult> {
     const survivalMode = this.isSurvivalMode();
     const candidates = this.registry.resolveCandidates(params.tier, survivalMode);
     if (candidates.length === 0) {
-      throw new Error(`No providers available for tier '${params.tier}'`);
+      throw new Error(`层级 '${params.tier}' 没有可用的提供商`);
     }
 
     const failedProviders: string[] = [];
@@ -143,13 +151,16 @@ export class UnifiedInferenceClient {
     }
 
     throw new Error(
-      `All providers failed for tier '${params.tier}'. Failed providers: ${failedProviders.join(", ")}`,
+      `层级 '${params.tier}' 的所有提供商都失败了。失败的提供商：${failedProviders.join(", ")}`,
     );
   }
 
+  /**
+   * 直接使用指定的提供商和模型进行聊天。
+   */
   async chatDirect(params: UnifiedChatDirectParams): Promise<UnifiedInferenceResult> {
     if (this.isProviderCircuitOpen(params.providerId)) {
-      throw new Error(`Provider '${params.providerId}' circuit is open`);
+      throw new Error(`提供商 '${params.providerId}' 的熔断器已触发`);
     }
 
     const resolved = this.registry.getModel(params.providerId, params.modelId);
@@ -176,6 +187,9 @@ export class UnifiedInferenceClient {
     }
   }
 
+  /**
+   * 执行请求，并在失败时进行重试。
+   */
   private async executeWithRetries(
     resolved: ResolvedModel,
     params: SharedChatParams,
@@ -220,6 +234,9 @@ export class UnifiedInferenceClient {
     }
   }
 
+  /**
+   * 执行单个推理请求。
+   */
   private async executeSingleRequest(
     client: OpenAI,
     providerId: string,
@@ -253,7 +270,7 @@ export class UnifiedInferenceClient {
 
     const choice = (completion as any).choices?.[0];
     if (!choice?.message) {
-      throw new Error(`No completion choice returned from provider '${providerId}'`);
+      throw new Error(`提供商 '${providerId}' 没有返回完成结果`);
     }
 
     return this.buildUnifiedResult({
@@ -271,6 +288,9 @@ export class UnifiedInferenceClient {
     });
   }
 
+  /**
+   * 构建聊天完成请求的载荷。
+   */
   private buildChatCompletionRequest(modelId: string, params: SharedChatParams): Record<string, unknown> {
     const payload: Record<string, unknown> = {
       model: modelId,
@@ -306,6 +326,9 @@ export class UnifiedInferenceClient {
     return payload;
   }
 
+  /**
+   * 消费流式响应并聚合内容。
+   */
   private async consumeStreamResponse(stream: AsyncIterable<any>): Promise<{
     content: string;
     toolCalls?: unknown[];
@@ -373,6 +396,9 @@ export class UnifiedInferenceClient {
     };
   }
 
+  /**
+   * 构建统一的推理结果。
+   */
   private buildUnifiedResult(params: {
     providerId: string;
     model: ModelConfig;
@@ -410,11 +436,17 @@ export class UnifiedInferenceClient {
     };
   }
 
+  /**
+   * 判断错误是否可重试。
+   */
   private isRetryableError(error: unknown): boolean {
     const status = getStatusCode(error);
     return status !== undefined && RETRYABLE_STATUS_CODES.has(status);
   }
 
+  /**
+   * 检查提供商的熔断器是否已触发。
+   */
   private isProviderCircuitOpen(providerId: string): boolean {
     const state = this.circuitBreaker.get(providerId);
     if (!state) {
@@ -436,6 +468,9 @@ export class UnifiedInferenceClient {
     return false;
   }
 
+  /**
+   * 标记提供商失败。
+   */
   private markProviderFailure(providerId: string): void {
     const state = this.circuitBreaker.get(providerId) ?? {
       failures: 0,
@@ -448,7 +483,7 @@ export class UnifiedInferenceClient {
       state.disabledUntil = Date.now() + CIRCUIT_BREAKER_DISABLE_MS;
       this.registry.disableProvider(
         providerId,
-        "circuit-breaker: too many consecutive inference failures",
+        "熔断器：连续推理失败次数过多",
         CIRCUIT_BREAKER_DISABLE_MS,
       );
     }
@@ -456,6 +491,9 @@ export class UnifiedInferenceClient {
     this.circuitBreaker.set(providerId, state);
   }
 
+  /**
+   * 标记提供商成功。
+   */
   private markProviderSuccess(providerId: string): void {
     this.circuitBreaker.set(providerId, {
       failures: 0,
@@ -464,6 +502,9 @@ export class UnifiedInferenceClient {
     this.registry.enableProvider(providerId);
   }
 
+  /**
+   * 解包错误对象。
+   */
   private unwrapError(error: unknown): Error {
     if (error instanceof Error) {
       return error;
@@ -472,6 +513,9 @@ export class UnifiedInferenceClient {
     return new Error(String(error));
   }
 
+  /**
+   * 检查是否处于生存模式。
+   */
   private isSurvivalMode(): boolean {
     const rawCredits = process.env.AUTOMATON_CREDITS_BALANCE;
     if (!rawCredits) {

@@ -1,16 +1,16 @@
 /**
- * Self-Modification Engine
+ * 自我修改引擎
  *
- * Allows the automaton to edit its own code and configuration.
- * All changes are audited, rate-limited, and some paths are protected.
+ * 允许 automaton 编辑自己的代码和配置。
+ * 所有更改都经过审计、速率限制，某些路径受保护。
  *
- * Safety model inspired by nanoclaw's trust boundary architecture:
- * - Hard-coded invariants that can NEVER be modified by the agent
- * - The safety enforcement code is immutable from the agent's perspective
- * - Pre-modification snapshots via git
- * - Rate limiting on modification frequency
- * - Symlink resolution before path validation
- * - Maximum diff size enforcement
+ * 安全模型受 nanoclaw 的信任边界架构启发：
+ * - 代理永远无法修改的硬编码不变量
+ * - 从代理的角度来看，安全执行代码是不可变的
+ * - 通过 git 进行修改前快照
+ * - 修改频率的速率限制
+ * - 路径验证前的符号链接解析
+ * - 最大差异大小强制执行
  */
 
 import fs from "fs";
@@ -21,57 +21,57 @@ import type {
 } from "../types.js";
 import { logModification } from "./audit-log.js";
 
-// ─── IMMUTABLE SAFETY INVARIANTS ─────────────────────────────
-// These are hard-coded and CANNOT be changed by the agent.
-// The agent cannot modify this file (it's in PROTECTED_FILES).
-// Even if it modifies a copy, the runtime loads from the original.
+// ─── 不可变安全不变量 ─────────────────────────────
+// 这些是硬编码的，代理无法更改。
+// 代理无法修改此文件（它在 PROTECTED_FILES 中）。
+// 即使它修改了副本，运行时也会从原始文件加载。
 
 /**
- * Files that the automaton cannot modify under any circumstances.
- * This list protects:
- * - Identity (wallet, config)
- * - Defense systems (injection defense, this file)
- * - State database
- * - The audit log itself
+ * automaton 在任何情况下都无法修改的文件。
+ * 此列表保护：
+ * - 身份（钱包、配置）
+ * - 防御系统（注入防御、此文件）
+ * - 状态数据库
+ * - 审计日志本身
  */
 const PROTECTED_FILES: readonly string[] = Object.freeze([
-  // Identity
+  // 身份
   "wallet.json",
   "config.json",
-  // Database
+  // 数据库
   "state.db",
   "state.db-wal",
   "state.db-shm",
-  // Constitution (immutable, propagated to children)
+  // 宪法（不可变，传播给子进程）
   "constitution.md",
-  // Defense infrastructure (the agent must not modify its own guardrails)
+  // 防御基础设施（代理不得修改自己的防护栏）
   "injection-defense.ts",
   "injection-defense.js",
   "injection-defense.d.ts",
-  // Self-modification safety (this file and its compiled output)
+  // 自我修改安全（此文件及其编译输出）
   "self-mod/code.ts",
   "self-mod/code.js",
   "self-mod/code.d.ts",
   "self-mod/audit-log.ts",
   "self-mod/audit-log.js",
-  // Tool guard definitions
+  // 工具防护定义
   "agent/tools.ts",
   "agent/tools.js",
-  // Upstream and tools-manager infrastructure
+  // 上游和工具管理器基础设施
   "self-mod/upstream.ts",
   "self-mod/upstream.js",
   "self-mod/tools-manager.ts",
   "self-mod/tools-manager.js",
-  // Skills infrastructure
+  // 技能基础设施
   "skills/loader.ts",
   "skills/loader.js",
   "skills/registry.ts",
   "skills/registry.js",
-  // Configuration and identity
+  // 配置和身份
   "automaton.json",
   "package.json",
   "SOUL.md",
-  // Policy engine (protect from self-modification)
+  // 策略引擎（防止自我修改）
   "agent/policy-engine.ts",
   "agent/policy-engine.js",
   "agent/policy-rules/index.ts",
@@ -79,8 +79,8 @@ const PROTECTED_FILES: readonly string[] = Object.freeze([
 ]);
 
 /**
- * Directory patterns that are completely off-limits.
- * The agent cannot write to these locations.
+ * 完全禁止的目录模式。
+ * 代理无法写入这些位置。
  */
 const BLOCKED_DIRECTORY_PATTERNS: readonly string[] = Object.freeze([
   ".ssh",
@@ -99,45 +99,45 @@ const BLOCKED_DIRECTORY_PATTERNS: readonly string[] = Object.freeze([
 ]);
 
 /**
- * Maximum number of self-modifications per hour.
- * Prevents runaway modification loops.
+ * 每小时最大自我修改次数。
+ * 防止失控的修改循环。
  */
 const MAX_MODIFICATIONS_PER_HOUR = 20;
 
 /**
- * Maximum size of a single file modification (bytes).
+ * 单个文件修改的最大大小（字节）。
  */
 const MAX_MODIFICATION_SIZE = 100_000; // 100KB
 
 /**
- * Maximum diff size stored in the audit log (characters).
+ * 审计日志中存储的最大差异大小（字符）。
  */
 const MAX_DIFF_SIZE = 10_000;
 
-// ─── Path Validation ─────────────────────────────────────────
+// ─── 路径验证 ─────────────────────────────────────────
 
 /**
- * Resolve a file path, following symlinks, to prevent traversal attacks.
- * Returns null if the path cannot be resolved or is suspicious.
+ * 解析文件路径，跟随符号链接，以防止遍历攻击。
+ * 如果路径无法解析或可疑，则返回 null。
  */
 function resolveAndValidatePath(filePath: string): string | null {
   try {
-    // Step 1: Resolve ~ to home
+    // 步骤 1：将 ~ 解析为主目录
     let resolved = filePath;
     if (resolved.startsWith("~")) {
       resolved = path.join(process.env.HOME || "/root", resolved.slice(1));
     }
 
-    // Step 2: Resolve to absolute path (handles .. and relative paths)
+    // 步骤 2：解析为绝对路径（处理 .. 和相对路径）
     resolved = path.resolve(resolved);
 
-    // Step 3: Check resolved path is within the base directory (cwd)
+    // 步骤 3：检查解析的路径是否在基础目录（cwd）内
     const baseDir = path.resolve(process.cwd());
     if (!resolved.startsWith(baseDir + path.sep) && resolved !== baseDir) {
       return null;
     }
 
-    // Step 4: If the path exists, resolve symlinks and re-check
+    // 步骤 4：如果路径存在，解析符号链接并重新检查
     if (fs.existsSync(resolved)) {
       const realPath = fs.realpathSync(resolved);
       if (!realPath.startsWith(baseDir + path.sep) && realPath !== baseDir) {
@@ -153,31 +153,31 @@ function resolveAndValidatePath(filePath: string): string | null {
 }
 
 /**
- * Check if a file path is protected from modification.
+ * 检查文件路径是否受保护，无法修改。
  */
 export function isProtectedFile(filePath: string): boolean {
   const resolved = path.resolve(filePath);
 
-  // Check against protected file patterns using path-segment matching
+  // 使用路径段匹配检查受保护的文件模式
   for (const pattern of PROTECTED_FILES) {
     const patternResolved = path.resolve(pattern);
-    // Exact match on resolved paths
+    // 解析路径的精确匹配
     if (resolved === patternResolved) return true;
-    // Match by path suffix: the resolved path ends with /pattern
+    // 按路径后缀匹配：解析的路径以 /pattern 结尾
     if (resolved.endsWith(path.sep + pattern)) return true;
-    // Also check multi-segment patterns (e.g., "self-mod/code.ts")
+    // 还要检查多段模式（例如 "self-mod/code.ts"）
     if (pattern.includes("/") && resolved.endsWith(path.sep + pattern.replace(/\//g, path.sep))) return true;
   }
 
-  // Check against blocked directory patterns using path-segment matching
+  // 使用路径段匹配检查阻止的目录模式
   for (const pattern of BLOCKED_DIRECTORY_PATTERNS) {
-    // Check if any path segment matches the blocked directory
+    // 检查是否有任何路径段与阻止的目录匹配
     if (resolved.includes(path.sep + pattern + path.sep) ||
         resolved.endsWith(path.sep + pattern) ||
         resolved === pattern) {
       return true;
     }
-    // Handle absolute patterns like /etc/systemd
+    // 处理绝对路径模式，如 /etc/systemd
     if (pattern.startsWith("/") && resolved.startsWith(pattern)) {
       return true;
     }
@@ -187,13 +187,13 @@ export function isProtectedFile(filePath: string): boolean {
 }
 
 /**
- * Check if the modification rate limit has been exceeded.
+ * 检查是否已超过修改速率限制。
  */
 function isRateLimited(db: AutomatonDatabase): boolean {
   const recentMods = db.getRecentModifications(MAX_MODIFICATIONS_PER_HOUR);
   if (recentMods.length < MAX_MODIFICATIONS_PER_HOUR) return false;
 
-  // Check if the oldest is within the last hour
+  // 检查最旧的修改是否在最后一小时内
   const oldest = recentMods[0];
   if (!oldest) return false;
 
@@ -201,21 +201,21 @@ function isRateLimited(db: AutomatonDatabase): boolean {
   return new Date(oldest.timestamp).getTime() > hourAgo;
 }
 
-// ─── Self-Modification API ───────────────────────────────────
+// ─── 自我修改 API ───────────────────────────────────
 
 /**
- * Edit a file in the automaton's environment.
- * Records the change in the audit log.
- * Commits a git snapshot before modification.
+ * 编辑 automaton 环境中的文件。
+ * 在审计日志中记录更改。
+ * 在修改之前提交 git 快照。
  *
- * Safety checks:
- * 1. Protected file check (hard-coded invariant)
- * 2. Blocked directory check
- * 3. Path traversal check (symlink resolution)
- * 4. Rate limiting
- * 5. File size limit
- * 6. Pre-modification git snapshot
- * 7. Audit log entry
+ * 安全检查：
+ * 1. 受保护的文件检查（硬编码不变量）
+ * 2. 阻止的目录检查
+ * 3. 路径遍历检查（符号链接解析）
+ * 4. 速率限制
+ * 5. 文件大小限制
+ * 6. 修改前 git 快照
+ * 7. 审计日志条目
  */
 export async function editFile(
   conway: ConwayClient,
@@ -224,66 +224,66 @@ export async function editFile(
   newContent: string,
   reason: string,
 ): Promise<{ success: boolean; error?: string }> {
-  // 1. Protected file check
+  // 1. 受保护文件检查
   if (isProtectedFile(filePath)) {
     return {
       success: false,
-      error: `BLOCKED: Cannot modify protected file: ${filePath}. This is a hard-coded safety invariant.`,
+      error: `阻止中：无法修改受保护的文件：${filePath}。这是硬编码的安全不变量。`,
     };
   }
 
-  // 2. Path validation (symlink resolution + traversal check)
+  // 2. 路径验证（符号链接解析 + 遍历检查）
   const resolvedPath = resolveAndValidatePath(filePath);
   if (!resolvedPath) {
     return {
       success: false,
-      error: `BLOCKED: Invalid or suspicious file path: ${filePath}`,
+      error: `阻止中：无效或可疑的文件路径：${filePath}`,
     };
   }
 
-  // 3. Rate limiting
+  // 3. 速率限制
   if (isRateLimited(db)) {
     return {
       success: false,
-      error: `RATE LIMITED: Too many modifications in the past hour (max ${MAX_MODIFICATIONS_PER_HOUR}). Wait before making more changes.`,
+      error: `速率限制：过去一小时的修改过多（最多 ${MAX_MODIFICATIONS_PER_HOUR} 次）。请稍后再进行更多更改。`,
     };
   }
 
-  // 4. File size limit
+  // 4. 文件大小限制
   if (newContent.length > MAX_MODIFICATION_SIZE) {
     return {
       success: false,
-      error: `BLOCKED: File content too large (${newContent.length} bytes, max ${MAX_MODIFICATION_SIZE}). Break into smaller changes.`,
+      error: `阻止中：文件内容过大（${newContent.length} 字节，最大 ${MAX_MODIFICATION_SIZE}）。请拆分为更小的更改。`,
     };
   }
 
-  // 5. Read current content for diff
+  // 5. 读取当前内容以生成差异
   let oldContent = "";
   try {
     oldContent = await conway.readFile(filePath);
   } catch {
-    oldContent = "(new file)";
+    oldContent = "(新文件)";
   }
 
-  // 6. Pre-modification git snapshot (in repo root, not ~/.automaton/)
+  // 6. 修改前 git 快照（在仓库根目录，而不是 ~/.automaton/）
   try {
     const { gitCommit } = await import("../git/tools.js");
     await gitCommit(conway, process.cwd(), `pre-modify: ${reason}`);
   } catch {
-    // Git not available -- proceed without snapshot
+    // Git 不可用 —— 无快照继续
   }
 
-  // 7. Write new content
+  // 7. 写入新内容
   try {
     await conway.writeFile(filePath, newContent);
   } catch (err: any) {
     return {
       success: false,
-      error: `Failed to write file: ${err.message}`,
+      error: `写入文件失败：${err.message}`,
     };
   }
 
-  // 8. Generate diff and log
+  // 8. 生成差异并记录
   const diff = generateSimpleDiff(oldContent, newContent);
 
   logModification(db, "code_edit", reason, {
@@ -292,20 +292,20 @@ export async function editFile(
     reversible: true,
   });
 
-  // 9. Post-modification git commit (in repo root)
+  // 9. 修改后 git 提交（在仓库根目录）
   try {
     const { gitCommit } = await import("../git/tools.js");
     await gitCommit(conway, process.cwd(), `self-mod: ${reason}`);
   } catch {
-    // Git not available -- proceed without commit
+    // Git 不可用 —— 无提交继续
   }
 
-  // 10. Rebuild if source file was edited
+  // 10. 如果编辑了源文件，则重新构建
   if (/\.(ts|js|tsx|jsx)$/.test(filePath)) {
     try {
       await conway.exec("npm run build", 60_000);
     } catch {
-      return { success: true, error: "File edited but rebuild failed. Run 'npm run build' manually." };
+      return { success: true, error: "文件已编辑但重新构建失败。请手动运行 'npm run build'。" };
     }
   }
 
@@ -313,8 +313,8 @@ export async function editFile(
 }
 
 /**
- * Validate a proposed modification without executing it.
- * Returns safety analysis results.
+ * 验证提议的修改而不执行它。
+ * 返回安全分析结果。
  */
 export function validateModification(
   db: AutomatonDatabase,
@@ -327,44 +327,44 @@ export function validateModification(
 } {
   const checks: { name: string; passed: boolean; detail: string }[] = [];
 
-  // Protected file check
+  // 受保护文件检查
   const isProtected = isProtectedFile(filePath);
   checks.push({
     name: "protected_file",
     passed: !isProtected,
     detail: isProtected
-      ? `File matches protected pattern`
-      : "File is not protected",
+      ? `文件匹配受保护的模式`
+      : "文件不受保护",
   });
 
-  // Path validation
+  // 路径验证
   const resolved = resolveAndValidatePath(filePath);
   checks.push({
     name: "path_valid",
     passed: !!resolved,
     detail: resolved
-      ? `Resolved to: ${resolved}`
-      : "Path is invalid or suspicious",
+      ? `解析为：${resolved}`
+      : "路径无效或可疑",
   });
 
-  // Rate limit
+  // 速率限制
   const rateLimited = isRateLimited(db);
   checks.push({
     name: "rate_limit",
     passed: !rateLimited,
     detail: rateLimited
-      ? `Exceeded ${MAX_MODIFICATIONS_PER_HOUR}/hour limit`
-      : "Within rate limit",
+      ? `超过 ${MAX_MODIFICATIONS_PER_HOUR}/小时 限制`
+      : "在速率限制内",
   });
 
-  // Size limit
+  // 大小限制
   const sizeOk = contentSize <= MAX_MODIFICATION_SIZE;
   checks.push({
     name: "size_limit",
     passed: sizeOk,
     detail: sizeOk
-      ? `${contentSize} bytes (max ${MAX_MODIFICATION_SIZE})`
-      : `${contentSize} bytes exceeds ${MAX_MODIFICATION_SIZE} limit`,
+      ? `${contentSize} 字节（最大 ${MAX_MODIFICATION_SIZE}）`
+      : `${contentSize} 字节超过 ${MAX_MODIFICATION_SIZE} 限制`,
   });
 
   const allPassed = checks.every((c) => c.passed);
@@ -373,16 +373,16 @@ export function validateModification(
   return {
     allowed: allPassed,
     reason: allPassed
-      ? "All safety checks passed"
-      : `Blocked: ${failedChecks.map((c) => c.detail).join("; ")}`,
+      ? "所有安全检查通过"
+      : `阻止中：${failedChecks.map((c) => c.detail).join("; ")}`,
     checks,
   };
 }
 
-// ─── Diff Generation ─────────────────────────────────────────
+// ─── 差异生成 ─────────────────────────────────────────
 
 /**
- * Generate a simple line-based diff between two strings.
+ * 生成两个字符串之间的简单基于行的差异。
  */
 function generateSimpleDiff(
   oldContent: string,
@@ -407,7 +407,7 @@ function generateSimpleDiff(
   }
 
   if (changes >= 50) {
-    lines.push(`... (${maxLines - 50} more lines changed)`);
+    lines.push(`... （还有 ${maxLines - 50} 行已更改）`);
   }
 
   return lines.join("\n");

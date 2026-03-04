@@ -9,7 +9,7 @@ export function createInMemoryDb(): TestDatabase {
   db.pragma("foreign_keys = ON");
   db.exec(CREATE_TABLES);
   db.exec(MIGRATION_V9);
-  try { db.exec(MIGRATION_V9_ALTER_CHILDREN_ROLE); } catch { /* column may already exist */ }
+  try { db.exec(MIGRATION_V9_ALTER_CHILDREN_ROLE); } catch { /* 列可能已存在 */ }
   db.exec(MIGRATION_V10);
   return db;
 }

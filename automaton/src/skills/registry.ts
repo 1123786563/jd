@@ -1,13 +1,13 @@
 /**
- * Skills Registry
+ * 技能注册表
  *
- * Install skills from remote sources:
- * - Git repos: git clone <url> ~/.automaton/skills/<name>
- * - URLs: fetch a SKILL.md from any URL
- * - Self-created: the automaton writes its own SKILL.md files
+ * 从远程源安装技能：
+ * - Git 仓库：git clone <url> ~/.automaton/skills/<name>
+ * - URL：从任何 URL 获取 SKILL.md
+ * - 自创建：automaton 编写自己的 SKILL.md 文件
  *
- * All shell commands use execFileSync with argument arrays to prevent injection.
- * Directory operations use fs.* to avoid shell interpolation entirely.
+ * 所有 shell 命令都使用 execFileSync 和参数数组来防止注入
+ * 目录操作使用 fs.* 来完全避免 shell 插值
  */
 
 import { execFileSync } from "child_process";
@@ -22,30 +22,30 @@ import type {
 } from "../types.js";
 import { parseSkillMd } from "./format.js";
 
-// Validation patterns to prevent injection via path/URL arguments
+// 验证模式以防止通过路径/URL 参数进行注入
 const SKILL_NAME_RE = /^[a-zA-Z0-9-]+$/;
 const SAFE_URL_RE = /^https?:\/\/[^\s;|&$`(){}<>]+$/;
 
-// Size limits for skill content
+// 技能内容的大小限制
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_INSTRUCTIONS_LENGTH = 10_000;
 
 /**
- * Validate that a skill path does not escape the skills directory.
- * Prevents path traversal attacks via crafted skill names.
+ * 验证技能路径不会逃逸技能目录
+ * 防止通过精心设计的技能名称进行路径遍历攻击
  */
 function validateSkillPath(skillsDir: string, name: string): string {
   const resolved = path.resolve(skillsDir, name);
   if (!resolved.startsWith(path.resolve(skillsDir) + path.sep)) {
-    throw new Error(`Skill path traversal detected: ${name}`);
+    throw new Error(`检测到技能路径遍历：${name}`);
   }
   return resolved;
 }
 
 /**
- * Install a skill from a git repository.
- * Clones the repo into ~/.automaton/skills/<name>/
- * Uses execFileSync with argument arrays to prevent shell injection.
+ * 从 git 仓库安装技能
+ * 将仓库克隆到 ~/.automaton/skills/<name>/
+ * 使用 execFileSync 和参数数组来防止 shell 注入
  */
 export async function installSkillFromGit(
   repoUrl: string,
@@ -54,37 +54,37 @@ export async function installSkillFromGit(
   db: AutomatonDatabase,
   _conway: ConwayClient,
 ): Promise<Skill | null> {
-  // Validate inputs to prevent injection
+  // 验证输入以防止注入
   if (!SKILL_NAME_RE.test(name)) {
-    throw new Error(`Invalid skill name: "${name}". Must match ${SKILL_NAME_RE.source}`);
+    throw new Error(`无效的技能名称："${name}"。必须匹配 ${SKILL_NAME_RE.source}`);
   }
   if (!SAFE_URL_RE.test(repoUrl)) {
-    throw new Error(`Invalid repo URL: "${repoUrl}". Must be an http(s) URL with no shell metacharacters.`);
+    throw new Error(`无效的仓库 URL："${repoUrl}"。必须是不带 shell 元字符的 http(s) URL。`);
   }
 
   const resolvedDir = resolveHome(skillsDir);
   const targetDir = validateSkillPath(resolvedDir, name);
 
-  // Clone using execFileSync with argument array (no shell interpolation)
+  // 使用 execFileSync 和参数数组克隆（无 shell 插值）
   try {
     execFileSync("git", ["clone", "--depth", "1", repoUrl, targetDir], {
       encoding: "utf-8",
       timeout: 60_000,
     });
   } catch (err: any) {
-    throw new Error(`Failed to clone skill repo: ${err.message}`);
+    throw new Error(`克隆技能仓库失败：${err.message}`);
   }
 
-  // Read SKILL.md using fs (no shell needed)
+  // 使用 fs 读取 SKILL.md（不需要 shell）
   const skillMdPath = path.join(targetDir, "SKILL.md");
   if (!fs.existsSync(skillMdPath)) {
-    throw new Error(`No SKILL.md found in cloned repo at ${skillMdPath}`);
+    throw new Error(`在克隆的仓库中未找到 SKILL.md，路径：${skillMdPath}`);
   }
 
   const content = fs.readFileSync(skillMdPath, "utf-8");
   const skill = parseSkillMd(content, skillMdPath, "git");
   if (!skill) {
-    throw new Error("Failed to parse SKILL.md from cloned repo");
+    throw new Error("无法从克隆的仓库解析 SKILL.md");
   }
 
   db.upsertSkill(skill);
@@ -92,8 +92,8 @@ export async function installSkillFromGit(
 }
 
 /**
- * Install a skill from a URL (fetches a single SKILL.md).
- * Uses execFileSync with argument arrays and fs.* for safe operations.
+ * 从 URL 安装技能（获取单个 SKILL.md）
+ * 使用 execFileSync 和参数数组以及 fs.* 进行安全操作
  */
 export async function installSkillFromUrl(
   url: string,
@@ -102,36 +102,36 @@ export async function installSkillFromUrl(
   db: AutomatonDatabase,
   _conway: ConwayClient,
 ): Promise<Skill | null> {
-  // Validate inputs to prevent injection
+  // 验证输入以防止注入
   if (!SKILL_NAME_RE.test(name)) {
-    throw new Error(`Invalid skill name: "${name}". Must match ${SKILL_NAME_RE.source}`);
+    throw new Error(`无效的技能名称："${name}"。必须匹配 ${SKILL_NAME_RE.source}`);
   }
   if (!SAFE_URL_RE.test(url)) {
-    throw new Error(`Invalid URL: "${url}". Must be an http(s) URL with no shell metacharacters.`);
+    throw new Error(`无效的 URL："${url}"。必须是不带 shell 元字符的 http(s) URL。`);
   }
 
   const resolvedDir = resolveHome(skillsDir);
   const targetDir = validateSkillPath(resolvedDir, name);
   const skillMdPath = path.join(targetDir, "SKILL.md");
 
-  // Create directory using fs (no shell needed)
+  // 使用 fs 创建目录（不需要 shell）
   fs.mkdirSync(targetDir, { recursive: true });
 
-  // Fetch SKILL.md using execFileSync with argument array (no shell interpolation)
+  // 使用 execFileSync 和参数数组获取 SKILL.md（无 shell 插值）
   try {
     execFileSync("curl", ["-fsSL", "-o", skillMdPath, url], {
       encoding: "utf-8",
       timeout: 30_000,
     });
   } catch (err: any) {
-    throw new Error(`Failed to fetch SKILL.md from URL: ${err.message}`);
+    throw new Error(`从 URL 获取 SKILL.md 失败：${err.message}`);
   }
 
-  // Read content using fs (no shell needed)
+  // 使用 fs 读取内容（不需要 shell）
   const content = fs.readFileSync(skillMdPath, "utf-8");
   const skill = parseSkillMd(content, skillMdPath, "url");
   if (!skill) {
-    throw new Error("Failed to parse fetched SKILL.md");
+    throw new Error("无法解析获取的 SKILL.md");
   }
 
   db.upsertSkill(skill);
@@ -139,8 +139,8 @@ export async function installSkillFromUrl(
 }
 
 /**
- * Create a new skill authored by the automaton itself.
- * Uses fs.* for directory creation and file writing (no shell needed).
+ * 创建一个由 automaton 自己编写的新技能
+ * 使用 fs.* 进行目录创建和文件写入（不需要 shell）
  */
 export async function createSkill(
   name: string,
@@ -150,22 +150,22 @@ export async function createSkill(
   db: AutomatonDatabase,
   conway: ConwayClient,
 ): Promise<Skill> {
-  // Validate name to prevent path traversal/injection
+  // 验证名称以防止路径遍历/注入
   if (!SKILL_NAME_RE.test(name)) {
-    throw new Error(`Invalid skill name: "${name}". Must match ${SKILL_NAME_RE.source}`);
+    throw new Error(`无效的技能名称："${name}"。必须匹配 ${SKILL_NAME_RE.source}`);
   }
 
-  // Enforce size limits
+  // 强制执行大小限制
   const safeDescription = description.slice(0, MAX_DESCRIPTION_LENGTH);
   const safeInstructions = instructions.slice(0, MAX_INSTRUCTIONS_LENGTH);
 
   const resolvedDir = resolveHome(skillsDir);
   const targetDir = validateSkillPath(resolvedDir, name);
 
-  // Create directory using fs (no shell needed)
+  // 使用 fs 创建目录（不需要 shell）
   fs.mkdirSync(targetDir, { recursive: true });
 
-  // Generate YAML frontmatter safely using yaml.stringify (prevents YAML injection)
+  // 使用 yaml.stringify 安全生成 YAML 前置元数据（防止 YAML 注入）
   const frontmatter = yaml.stringify({
     name,
     description: safeDescription,
@@ -192,8 +192,8 @@ export async function createSkill(
 }
 
 /**
- * Remove a skill (disable in DB and optionally delete from disk).
- * Uses fs.rmSync for safe file deletion (no shell needed).
+ * 删除技能（在数据库中禁用并可选择从磁盘删除）
+ * 使用 fs.rmSync 进行安全文件删除（不需要 shell）
  */
 export async function removeSkill(
   name: string,
@@ -202,9 +202,9 @@ export async function removeSkill(
   skillsDir: string,
   deleteFiles: boolean = false,
 ): Promise<void> {
-  // Validate name to prevent path traversal/injection
+  // 验证名称以防止路径遍历/注入
   if (!SKILL_NAME_RE.test(name)) {
-    throw new Error(`Invalid skill name: "${name}". Must match ${SKILL_NAME_RE.source}`);
+    throw new Error(`无效的技能名称："${name}"。必须匹配 ${SKILL_NAME_RE.source}`);
   }
 
   db.removeSkill(name);
@@ -217,7 +217,7 @@ export async function removeSkill(
 }
 
 /**
- * List all installed skills.
+ * 列出所有已安装的技能
  */
 export function listSkills(db: AutomatonDatabase): Skill[] {
   return db.getSkills();

@@ -1,13 +1,12 @@
 /**
- * Local Agent Worker
+ * 本地代理工作器
  *
- * Runs inference-driven task execution in-process as an async background task.
- * Each worker gets a role-specific system prompt, a subset of tools, and
- * runs a ReAct loop (think → tool_call → observe → repeat → done).
+ * 在进程内作为异步后台任务运行推理驱动的任务执行。
+ * 每个工作器获得特定角色的系统提示、工具子集，并运行
+ * ReAct 循环（思考 → 工具调用 → 观察 → 重复 → 完成）。
  *
- * This enables multi-agent orchestration on local machines without Conway
- * sandbox infrastructure. Workers share the same Node.js process but run
- * concurrently as independent async tasks.
+ * 这使得本地机器上无需 Conway 沙箱基础设施即可进行多代理协调。
+ * 工作器共享同一个 Node.js 进程，但作为独立的异步任务并发运行。
  */
 
 import { ulid } from "ulid";
@@ -23,7 +22,7 @@ import type { ConwayClient } from "../types.js";
 
 function truncateOutput(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text;
-  return text.slice(0, maxLen) + `\n[TRUNCATED: ${text.length - maxLen} chars omitted]`;
+  return text.slice(0, maxLen) + `\n[已截断: 省略了 ${text.length - maxLen} 个字符]`;
 }
 
 function localExec(command: string, timeoutMs: number): Promise<{ stdout: string; stderr: string }> {
@@ -52,8 +51,8 @@ const logger = createLogger("orchestration.local-worker");
 const MAX_TURNS = 25;
 const DEFAULT_TIMEOUT_MS = 5 * 60_000;
 
-// Minimal inference interface — works with both UnifiedInferenceClient and
-// an adapter around the main agent's InferenceClient.
+// 最小推理接口 — 适用于 UnifiedInferenceClient 和
+// 主代理的 InferenceClient 适配器。
 interface WorkerInferenceClient {
   chat(params: {
     tier: string;
@@ -80,7 +79,7 @@ interface WorkerToolResult {
   error?: string;
 }
 
-// Minimal tool set available to local workers
+// 本地工作器可用的最小工具集
 interface WorkerTool {
   name: string;
   description: string;
@@ -94,8 +93,8 @@ export class LocalWorkerPool {
   constructor(private readonly config: LocalWorkerConfig) {}
 
   /**
-   * Spawn a local worker for a task. Returns immediately — the worker
-   * runs in the background and reports results via the task graph.
+   * 为任务生成一个本地工作器。立即返回 — 工作器在后台运行
+   * 并通过任务图报告结果。
    */
   spawn(task: TaskNode): { address: string; name: string; sandboxId: string } {
     const workerId = `local-worker-${ulid()}`;
@@ -105,13 +104,13 @@ export class LocalWorkerPool {
 
     const workerPromise = this.runWorker(workerId, task, abortController.signal)
       .catch((error) => {
-        logger.error("Local worker crashed", error instanceof Error ? error : new Error(String(error)), {
+        logger.error("本地工作器崩溃", error instanceof Error ? error : new Error(String(error)), {
           workerId,
           taskId: task.id,
         });
         try {
-          failTask(this.config.db, task.id, `Worker crashed: ${error instanceof Error ? error.message : String(error)}`, true);
-        } catch { /* task may already be in terminal state */ }
+          failTask(this.config.db, task.id, `工作器崩溃: ${error instanceof Error ? error.message : String(error)}`, true);
+        } catch { /* 任务可能已处于终态 */ }
       })
       .finally(() => {
         this.activeWorkers.delete(workerId);
@@ -127,8 +126,8 @@ export class LocalWorkerPool {
   }
 
   /**
-   * Check if a worker is currently active in this pool.
-   * Accepts either a full address ("local://worker-id") or raw worker ID.
+   * 检查工作器当前是否在此池中处于活动状态。
+   * 接受完整地址（"local://worker-id"）或原始工作器 ID。
    */
   hasWorker(addressOrId: string): boolean {
     const id = addressOrId.replace("local://", "");
@@ -165,23 +164,23 @@ export class LocalWorkerPool {
     let finalOutput = "";
     const startedAt = Date.now();
 
-    logger.info(`[WORKER ${workerId}] Starting task "${task.title}" (${task.id}), role: ${task.agentRole ?? "generalist"}`);
+    logger.info(`[工作器 ${workerId}] 开始任务 "${task.title}" (${task.id})，角色: ${task.agentRole ?? "通才"}`);
 
     for (let turn = 0; turn < maxTurns; turn++) {
       if (signal.aborted) {
-        logger.info(`[WORKER ${workerId}] Aborted on turn ${turn}`);
-        failTask(this.config.db, task.id, "Worker aborted", false);
+        logger.info(`[工作器 ${workerId}] 在第 ${turn} 轮中止`);
+        failTask(this.config.db, task.id, "工作器已中止", false);
         return;
       }
 
       const timeoutMs = task.metadata.timeoutMs || DEFAULT_TIMEOUT_MS;
       if (Date.now() - startedAt > timeoutMs) {
-        logger.warn(`[WORKER ${workerId}] Timed out after ${timeoutMs}ms on turn ${turn}`);
-        failTask(this.config.db, task.id, `Worker timed out after ${timeoutMs}ms`, true);
+        logger.warn(`[工作器 ${workerId}] 在第 ${turn} 轮超时（${timeoutMs}ms）`);
+        failTask(this.config.db, task.id, `工作器在 ${timeoutMs}ms 后超时`, true);
         return;
       }
 
-      logger.info(`[WORKER ${workerId}] Turn ${turn + 1}/${maxTurns} — calling inference (tier: fast)`);
+      logger.info(`[工作器 ${workerId}] 第 ${turn + 1}/${maxTurns} 轮 — 调用推理（层级: 快速）`);
 
       let response;
       try {
@@ -193,24 +192,24 @@ export class LocalWorkerPool {
         });
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        logger.error(`[WORKER ${workerId}] Inference failed on turn ${turn + 1}`, error instanceof Error ? error : new Error(msg));
-        failTask(this.config.db, task.id, `Inference failed: ${msg}`, true);
+        logger.error(`[工作器 ${workerId}] 在第 ${turn + 1} 轮推理失败`, error instanceof Error ? error : new Error(msg));
+        failTask(this.config.db, task.id, `推理失败: ${msg}`, true);
         return;
       }
 
-      // Check if the model wants to call tools
+      // 检查模型是否想要调用工具
       if (response.toolCalls && Array.isArray(response.toolCalls) && response.toolCalls.length > 0) {
         const toolNames = (response.toolCalls as any[]).map((tc: any) => tc.function?.name ?? "?").join(", ");
-        logger.info(`[WORKER ${workerId}] Turn ${turn + 1} — tool calls: ${toolNames}`);
+        logger.info(`[工作器 ${workerId}] 第 ${turn + 1} 轮 — 工具调用: ${toolNames}`);
 
-        // Add assistant message with tool calls
+        // 添加带有工具调用的助手消息
         messages.push({
           role: "assistant",
           content: response.content || "",
           tool_calls: response.toolCalls,
         });
 
-        // Execute each tool call
+        // 执行每个工具调用
         for (const rawToolCall of response.toolCalls) {
           const toolCall = rawToolCall as { id: string; function: { name: string; arguments: string | Record<string, unknown> } };
           const fn = toolCall.function;
@@ -218,20 +217,20 @@ export class LocalWorkerPool {
 
           let toolOutput: string;
           if (!tool) {
-            toolOutput = `Error: Unknown tool '${fn.name}'`;
-            logger.warn(`[WORKER ${workerId}] Unknown tool: ${fn.name}`);
+            toolOutput = `错误: 未知工具 '${fn.name}'`;
+            logger.warn(`[工作器 ${workerId}] 未知工具: ${fn.name}`);
           } else {
             try {
               const args = typeof fn.arguments === "string" ? JSON.parse(fn.arguments) : fn.arguments;
               toolOutput = await tool.execute(args as Record<string, unknown>);
-              logger.info(`[WORKER ${workerId}] ${fn.name} → ${toolOutput.slice(0, 120)}`);
+              logger.info(`[工作器 ${workerId}] ${fn.name} → ${toolOutput.slice(0, 120)}`);
 
-              // Track file artifacts
+              // 跟踪文件产物
               if (fn.name === "write_file" && typeof (args as any).path === "string") {
                 artifacts.push((args as any).path);
               }
             } catch (error) {
-              toolOutput = `Error: ${error instanceof Error ? error.message : String(error)}`;
+              toolOutput = `错误: ${error instanceof Error ? error.message : String(error)}`;
             }
           }
 
@@ -245,13 +244,13 @@ export class LocalWorkerPool {
         continue;
       }
 
-      // No tool calls — the model is done (final response)
-      finalOutput = response.content || "Task completed.";
-      logger.info(`[WORKER ${workerId}] Done on turn ${turn + 1} — ${finalOutput.slice(0, 200)}`);
+      // 没有工具调用 — 模型已完成（最终响应）
+      finalOutput = response.content || "任务已完成。";
+      logger.info(`[工作器 ${workerId}] 在第 ${turn + 1} 轮完成 — ${finalOutput.slice(0, 200)}`);
       break;
     }
 
-    // Mark task as completed
+    // 标记任务为已完成
     const duration = Date.now() - startedAt;
     const result: TaskResult = {
       success: true,
@@ -263,7 +262,7 @@ export class LocalWorkerPool {
 
     try {
       completeTask(this.config.db, task.id, result);
-      logger.info("Local worker completed task", {
+      logger.info("本地工作器完成任务", {
         workerId,
         taskId: task.id,
         title: task.title,
@@ -271,7 +270,7 @@ export class LocalWorkerPool {
         turns: messages.filter((m) => m.role === "assistant").length,
       });
     } catch (error) {
-      logger.warn("Failed to mark task complete", {
+      logger.warn("标记任务完成失败", {
         workerId,
         taskId: task.id,
         error: error instanceof Error ? error.message : String(error),
@@ -281,38 +280,37 @@ export class LocalWorkerPool {
 
   private buildWorkerSystemPrompt(task: TaskNode): string {
     const role = task.agentRole ?? "generalist";
-    return `You are a worker agent with the role: ${role}.
+    return `你是一个具有以下角色的工作器代理: ${role}。
 
-You have been assigned a specific task by the parent orchestrator. Your job is to
-complete this task using the tools available to you and then provide your final output.
+父协调器已为你分配了一个特定任务。你的工作是使用可用的工具完成此任务，然后提供最终输出。
 
-RULES:
-- Focus ONLY on the assigned task. Do not deviate.
-- Use exec to run shell commands (install packages, run scripts, etc.)
-- Use write_file to create or modify files.
-- Use read_file to inspect existing files.
-- When done, provide a clear summary of what you accomplished as your final message.
-- If you cannot complete the task, explain why in your final message.
-- Do NOT call tools after you are done. Just give your final text response.
-- Be efficient. Minimize unnecessary tool calls.
-- You have a limited number of turns. Do not waste them.`;
+规则:
+- 仅专注于分配的任务。不要偏离。
+- 使用 exec 运行 shell 命令（安装包、运行脚本等）
+- 使用 write_file 创建或修改文件。
+- 使用 read_file 检查现有文件。
+- 完成后，在你的最终消息中提供你完成工作的清晰摘要。
+- 如果无法完成任务，请在最终消息中说明原因。
+- 完成后不要调用工具。只需给出最终文本响应。
+- 要高效。尽量减少不必要的工具调用。
+- 你的轮次有限。不要浪费它们。`;
   }
 
   private buildTaskPrompt(task: TaskNode): string {
     const lines = [
-      `# Task Assignment`,
-      `**Title:** ${task.title}`,
-      `**Description:** ${task.description}`,
-      `**Role:** ${task.agentRole ?? "generalist"}`,
-      `**Task ID:** ${task.id}`,
-      `**Goal ID:** ${task.goalId}`,
+      `# 任务分配`,
+      `**标题:** ${task.title}`,
+      `**描述:** ${task.description}`,
+      `**角色:** ${task.agentRole ?? "通才"}`,
+      `**任务 ID:** ${task.id}`,
+      `**目标 ID:** ${task.goalId}`,
     ];
 
     if (task.dependencies.length > 0) {
-      lines.push(`**Dependencies (completed):** ${task.dependencies.join(", ")}`);
+      lines.push(`**依赖项（已完成）:** ${task.dependencies.join(", ")}`);
     }
 
-    lines.push("", "Complete this task and provide your results.");
+    lines.push("", "完成此任务并提供你的结果。");
     return lines.join("\n");
   }
 
@@ -320,12 +318,12 @@ RULES:
     return [
       {
         name: "exec",
-        description: "Execute a shell command and return stdout/stderr. Use for installing packages, running scripts, building code, etc.",
+        description: "执行 shell 命令并返回 stdout/stderr。用于安装包、运行脚本、构建代码等。",
         parameters: {
           type: "object",
           properties: {
-            command: { type: "string", description: "The shell command to execute" },
-            timeout_ms: { type: "number", description: "Timeout in milliseconds (default: 30000)" },
+            command: { type: "string", description: "要执行的 shell 命令" },
+            timeout_ms: { type: "number", description: "超时时间（毫秒）（默认: 30000）" },
           },
           required: ["command"],
         },
@@ -333,32 +331,32 @@ RULES:
           const command = args.command as string;
           const timeoutMs = typeof args.timeout_ms === "number" ? args.timeout_ms : 30_000;
 
-          // Try Conway API first, fall back to local shell
+          // 首先尝试 Conway API，回退到本地 shell
           try {
             const result = await this.config.conway.exec(command, timeoutMs);
             const stdout = truncateOutput(result.stdout ?? "", 16_000);
             const stderr = truncateOutput(result.stderr ?? "", 4000);
-            return stderr ? `stdout:\n${stdout}\nstderr:\n${stderr}` : stdout || "(no output)";
+            return stderr ? `stdout:\n${stdout}\nstderr:\n${stderr}` : stdout || "(无输出)";
           } catch {
             try {
               const result = await localExec(command, timeoutMs);
               const stdout = truncateOutput(result.stdout, 16_000);
               const stderr = truncateOutput(result.stderr, 4000);
-              return stderr ? `stdout:\n${stdout}\nstderr:\n${stderr}` : stdout || "(no output)";
+              return stderr ? `stdout:\n${stdout}\nstderr:\n${stderr}` : stdout || "(无输出)";
             } catch (error) {
-              return `exec error: ${error instanceof Error ? error.message : String(error)}`;
+              return `exec 错误: ${error instanceof Error ? error.message : String(error)}`;
             }
           }
         },
       },
       {
         name: "write_file",
-        description: "Write content to a file. Creates parent directories if needed.",
+        description: "将内容写入文件。如需要会创建父目录。",
         parameters: {
           type: "object",
           properties: {
-            path: { type: "string", description: "File path to write to" },
-            content: { type: "string", description: "File content" },
+            path: { type: "string", description: "要写入的文件路径" },
+            content: { type: "string", description: "文件内容" },
           },
           required: ["path", "content"],
         },
@@ -368,53 +366,53 @@ RULES:
 
           try {
             await this.config.conway.writeFile(filePath, content);
-            return `Wrote ${content.length} bytes to ${filePath}`;
+            return `已写入 ${content.length} 字节到 ${filePath}`;
           } catch {
             try {
               await localWriteFile(filePath, content);
-              return `Wrote ${content.length} bytes to ${filePath} (local)`;
+              return `已写入 ${content.length} 字节到 ${filePath} (本地)`;
             } catch (error) {
-              return `write error: ${error instanceof Error ? error.message : String(error)}`;
+              return `write 错误: ${error instanceof Error ? error.message : String(error)}`;
             }
           }
         },
       },
       {
         name: "read_file",
-        description: "Read the contents of a file.",
+        description: "读取文件内容。",
         parameters: {
           type: "object",
           properties: {
-            path: { type: "string", description: "File path to read" },
+            path: { type: "string", description: "要读取的文件路径" },
           },
           required: ["path"],
         },
         execute: async (args) => {
           try {
             const content = await this.config.conway.readFile(args.path as string);
-            return content.slice(0, 10_000) || "(empty file)";
+            return content.slice(0, 10_000) || "(空文件)";
           } catch {
             try {
               const content = await localReadFile(args.path as string);
-              return content.slice(0, 10_000) || "(empty file)";
+              return content.slice(0, 10_000) || "(空文件)";
             } catch (error) {
-              return `read error: ${error instanceof Error ? error.message : String(error)}`;
+              return `read 错误: ${error instanceof Error ? error.message : String(error)}`;
             }
           }
         },
       },
       {
         name: "task_done",
-        description: "Signal that you have finished the task. Call this as your final action with a summary of what you accomplished.",
+        description: "表示你已完成任务。将此作为你的最终操作，并附上你完成的工作摘要。",
         parameters: {
           type: "object",
           properties: {
-            summary: { type: "string", description: "Summary of what was accomplished" },
+            summary: { type: "string", description: "完成工作的摘要" },
           },
           required: ["summary"],
         },
         execute: async (args) => {
-          return `TASK_COMPLETE: ${args.summary as string}`;
+          return `任务完成: ${args.summary as string}`;
         },
       },
     ];

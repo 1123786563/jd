@@ -1,10 +1,10 @@
 /**
- * Unified Signed Message Protocol
+ * 统一签名消息协议
  *
- * Defines the signed message interface and utilities for message creation
- * and verification using ECDSA secp256k1.
+ * 定义签名消息接口和使用 ECDSA secp256k1 进行消息创建
+ * 和验证的工具。
  *
- * Phase 3.2: Social & Registry Hardening
+ * Phase 3.2: 社交与注册表加固
  */
 
 import crypto from "crypto";
@@ -16,7 +16,7 @@ import {
 } from "viem";
 
 /**
- * A fully signed social message.
+ * 完整签名的社交消息。
  */
 export interface SignedMessage {
   id: string;
@@ -29,24 +29,24 @@ export interface SignedMessage {
 }
 
 /**
- * Create a unique message ID using ULID.
+ * 使用 ULID 创建唯一的消息 ID。
  */
 export function createMessageId(): string {
   return ulid();
 }
 
 /**
- * Create a cryptographically random nonce for replay protection.
+ * 创建加密随机数以用于重放保护。
  */
 export function createNonce(): string {
   return crypto.randomBytes(16).toString("hex");
 }
 
 /**
- * Verify an ECDSA secp256k1 message signature.
+ * 验证 ECDSA secp256k1 消息签名。
  *
- * Reconstructs the canonical string used during signing and verifies
- * the signature against the expected sender address.
+ * 重建签名期间使用的规范字符串，并对照预期发件人地址
+ * 验证签名。
  */
 export async function verifyMessageSignature(
   message: { to: string; content: string; signed_at: string; signature: string },

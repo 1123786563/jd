@@ -1,8 +1,8 @@
 /**
- * Audit Log
+ * 审计日志
  *
- * Immutable append-only log of all self-modifications.
- * The creator can see everything the automaton changes about itself.
+ * 所有自我修改的不可变仅追加日志。
+ * 创建者可以看到 automaton 对自己所做的一切更改。
  */
 
 import type {
@@ -13,7 +13,7 @@ import type {
 import { ulid } from "ulid";
 
 /**
- * Log a self-modification to the audit trail.
+ * 将自我修改记录到审计跟踪中。
  */
 export function logModification(
   db: AutomatonDatabase,
@@ -40,7 +40,7 @@ export function logModification(
 }
 
 /**
- * Get recent modifications for display or context.
+ * 获取最近的修改以供显示或上下文使用。
  */
 export function getRecentModifications(
   db: AutomatonDatabase,
@@ -50,7 +50,7 @@ export function getRecentModifications(
 }
 
 /**
- * Generate a summary of all modifications for the creator.
+ * 为创建者生成所有修改的摘要。
  */
 export function generateAuditReport(
   db: AutomatonDatabase,
@@ -58,12 +58,12 @@ export function generateAuditReport(
   const mods = db.getRecentModifications(100);
 
   if (mods.length === 0) {
-    return "No self-modifications recorded.";
+    return "未记录自我修改。";
   }
 
   const lines = [
-    `=== SELF-MODIFICATION AUDIT LOG ===`,
-    `Total modifications: ${mods.length}`,
+    `=== 自我修改审计日志 ===`,
+    `总修改数：${mods.length}`,
     ``,
   ];
 

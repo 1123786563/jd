@@ -1,9 +1,9 @@
 /**
- * Semantic Memory Manager
+ * 语义记忆管理器
  *
- * Stores factual knowledge indexed by category and key.
- * Supports upsert semantics (category+key is unique), confidence scoring,
- * and LRU-based pruning.
+ * 存储按类别和键索引的事实知识。
+ * 支持 upsert 语义（类别+键是唯一的）、置信度评分
+ * 和基于 LRU 的修剪。
  */
 
 import type BetterSqlite3 from "better-sqlite3";
@@ -18,8 +18,8 @@ export class SemanticMemoryManager {
   constructor(private db: Database) {}
 
   /**
-   * Store a semantic memory entry. Upserts on (category, key).
-   * Returns the ULID id.
+   * 存储语义记忆条目。基于 (category, key) 进行 upsert（更新或插入）。
+   * 返回 ULID id。
    */
   store(entry: {
     category: SemanticCategory;
@@ -50,20 +50,20 @@ export class SemanticMemoryManager {
         entry.embeddingKey ?? null,
       );
 
-      // On upsert conflict, the DB keeps the original row's id, not the new one.
-      // Query for the actual id to return the correct value.
+      // 在 upsert 冲突时，数据库保留原始行的 id，而不是新的 id。
+      // 查询实际的 id 以返回正确的值（处理更新情况）。
       const row = this.db.prepare(
         "SELECT id FROM semantic_memory WHERE category = ? AND key = ?",
       ).get(entry.category, entry.key) as { id: string } | undefined;
       if (row) return row.id;
     } catch (error) {
-      logger.error("Failed to store entry", error instanceof Error ? error : undefined);
+      logger.error("存储条目失败", error instanceof Error ? error : undefined);
     }
     return id;
   }
 
   /**
-   * Get a specific semantic memory by category and key.
+   * 按类别和键获取特定的语义记忆（返回唯一条目）。
    */
   get(category: SemanticCategory, key: string): SemanticMemoryEntry | undefined {
     try {
@@ -72,18 +72,18 @@ export class SemanticMemoryManager {
       ).get(category, key) as any | undefined;
       return row ? deserializeSemantic(row) : undefined;
     } catch (error) {
-      logger.error("Failed to get entry", error instanceof Error ? error : undefined);
+      logger.error("获取条目失败", error instanceof Error ? error : undefined);
       return undefined;
     }
   }
 
   /**
-   * Search semantic memory by value content, optionally filtered by category.
+   * 按值内容搜索语义记忆，可按类别过滤（支持模糊搜索）。
    */
   search(query: string, category?: SemanticCategory): SemanticMemoryEntry[] {
     try {
-      // Escape SQL LIKE wildcards so literal '%' and '_' in the query
-      // don't match arbitrary characters.
+      // 转义 SQL LIKE 通配符，使查询中的字面 '%' 和 '_'
+      // 不匹配任意字符。
       const escaped = query.replace(/[%_]/g, (ch) => `\\${ch}`);
       if (category) {
         const rows = this.db.prepare(
@@ -100,13 +100,13 @@ export class SemanticMemoryManager {
       ).all(`%${escaped}%`, `%${escaped}%`) as any[];
       return rows.map(deserializeSemantic);
     } catch (error) {
-      logger.error("Failed to search", error instanceof Error ? error : undefined);
+      logger.error("搜索失败", error instanceof Error ? error : undefined);
       return [];
     }
   }
 
   /**
-   * Get all semantic memory entries in a category.
+   * 获取类别中的所有语义记忆条目（按置信度和更新时间排序）。
    */
   getByCategory(category: SemanticCategory): SemanticMemoryEntry[] {
     try {
@@ -115,25 +115,25 @@ export class SemanticMemoryManager {
       ).all(category) as any[];
       return rows.map(deserializeSemantic);
     } catch (error) {
-      logger.error("Failed to get by category", error instanceof Error ? error : undefined);
+      logger.error("按类别获取失败", error instanceof Error ? error : undefined);
       return [];
     }
   }
 
   /**
-   * Delete a semantic memory entry by id.
+   * 按 id 删除语义记忆条目（从存储中移除）。
    */
   delete(id: string): void {
     try {
       this.db.prepare("DELETE FROM semantic_memory WHERE id = ?").run(id);
     } catch (error) {
-      logger.error("Failed to delete entry", error instanceof Error ? error : undefined);
+      logger.error("删除条目失败", error instanceof Error ? error : undefined);
     }
   }
 
   /**
-   * Prune entries when over maxEntries, removing lowest confidence + oldest first (LRU).
-   * Returns number of entries removed.
+   * 当超过 maxEntries 时修剪条目，首先删除最低置信度 + 最旧的条目 (LRU)。
+   * 返回删除的条目数（用于内存管理）。
    */
   prune(maxEntries: number = 500): number {
     try {
@@ -153,7 +153,7 @@ export class SemanticMemoryManager {
       ).run(toRemove);
       return result.changes;
     } catch (error) {
-      logger.error("Failed to prune", error instanceof Error ? error : undefined);
+      logger.error("修剪失败", error instanceof Error ? error : undefined);
       return 0;
     }
   }

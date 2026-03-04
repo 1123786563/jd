@@ -1,9 +1,9 @@
 /**
- * Data Layer Hardening Tests (Sub-phase 1.6)
+ * 数据层加固测试（阶段 1.6 子阶段）
  *
- * Tests: SSRF blocking, URI allowlist, agent card validation,
- * installed tool loading, KV pruning, safeJsonParse,
- * agent_state validation, createdAt persistence.
+ * 测试：SSRF 阻止、URI 白名单、代理卡片验证、
+ * 已安装工具加载、KV 修剪、safeJsonParse、
+ * agent_state 验证、createdAt 持久化。
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
@@ -13,7 +13,7 @@ import os from "os";
 import { createDatabase, pruneStaleKV } from "../state/database.js";
 import type { AutomatonDatabase } from "../types.js";
 
-// Mock erc8004.js to avoid ABI parse error at import time
+// 模拟 erc8004.js 以避免导入时的 ABI 解析错误
 vi.mock("../registry/erc8004.js", () => ({
   queryAgent: vi.fn(),
   getTotalAgents: vi.fn().mockResolvedValue(0),
@@ -21,13 +21,13 @@ vi.mock("../registry/erc8004.js", () => ({
   leaveFeedback: vi.fn(),
 }));
 
-// Mock injection-defense.js to avoid import chain issues
+// 模拟 injection-defense.js 以避免导入链问题
 vi.mock("../agent/injection-defense.js", () => ({
   sanitizeToolResult: vi.fn((s: string) => s),
   sanitizeInput: vi.fn((s: string) => ({ content: s, blocked: false })),
 }));
 
-// Import after mocks are set up
+// 在设置模拟后导入
 const { isAllowedUri, isInternalNetwork, validateAgentCard } = await import("../registry/discovery.js");
 const { loadInstalledTools } = await import("../agent/tools.js");
 
@@ -36,121 +36,121 @@ function makeTmpDbPath(): string {
   return path.join(tmpDir, "test.db");
 }
 
-// ─── SSRF Protection Tests ──────────────────────────────────────
+// ─── SSRF 保护测试 ──────────────────────────────────────
 
 describe("SSRF Protection", () => {
   describe("isInternalNetwork", () => {
-    it("blocks 127.0.0.1 (loopback)", () => {
+    it("阻止 127.0.0.1（环回地址）", () => {
       expect(isInternalNetwork("127.0.0.1")).toBe(true);
     });
 
-    it("blocks 127.x.x.x range", () => {
+    it("阻止 127.x.x.x 范围", () => {
       expect(isInternalNetwork("127.255.0.1")).toBe(true);
     });
 
-    it("blocks 10.0.0.1 (private class A)", () => {
+    it("阻止 10.0.0.1（私有 A 类）", () => {
       expect(isInternalNetwork("10.0.0.1")).toBe(true);
     });
 
-    it("blocks 10.255.255.255", () => {
+    it("阻止 10.255.255.255", () => {
       expect(isInternalNetwork("10.255.255.255")).toBe(true);
     });
 
-    it("blocks 172.16.0.1 (private class B)", () => {
+    it("阻止 172.16.0.1（私有 B 类）", () => {
       expect(isInternalNetwork("172.16.0.1")).toBe(true);
     });
 
-    it("blocks 172.31.255.255", () => {
+    it("阻止 172.31.255.255", () => {
       expect(isInternalNetwork("172.31.255.255")).toBe(true);
     });
 
-    it("allows 172.15.0.1 (not in private range)", () => {
+    it("允许 172.15.0.1（不在私有范围内）", () => {
       expect(isInternalNetwork("172.15.0.1")).toBe(false);
     });
 
-    it("allows 172.32.0.1 (not in private range)", () => {
+    it("允许 172.32.0.1（不在私有范围内）", () => {
       expect(isInternalNetwork("172.32.0.1")).toBe(false);
     });
 
-    it("blocks 192.168.1.1 (private class C)", () => {
+    it("阻止 192.168.1.1（私有 C 类）", () => {
       expect(isInternalNetwork("192.168.1.1")).toBe(true);
     });
 
-    it("blocks 169.254.0.0 (link-local)", () => {
+    it("阻止 169.254.0.0（链路本地）", () => {
       expect(isInternalNetwork("169.254.0.0")).toBe(true);
     });
 
-    it("blocks ::1 (IPv6 loopback)", () => {
+    it("阻止 ::1（IPv6 环回地址）", () => {
       expect(isInternalNetwork("::1")).toBe(true);
     });
 
-    it("blocks localhost", () => {
+    it("阻止 localhost", () => {
       expect(isInternalNetwork("localhost")).toBe(true);
     });
 
-    it("blocks LOCALHOST (case-insensitive)", () => {
+    it("阻止 LOCALHOST（不区分大小写）", () => {
       expect(isInternalNetwork("LOCALHOST")).toBe(true);
     });
 
-    it("blocks 0.0.0.0", () => {
+    it("阻止 0.0.0.0", () => {
       expect(isInternalNetwork("0.0.0.0")).toBe(true);
     });
 
-    it("allows public IPs", () => {
+    it("允许公共 IP", () => {
       expect(isInternalNetwork("8.8.8.8")).toBe(false);
       expect(isInternalNetwork("1.1.1.1")).toBe(false);
       expect(isInternalNetwork("203.0.113.1")).toBe(false);
     });
 
-    it("allows public hostnames", () => {
+    it("允许公共主机名", () => {
       expect(isInternalNetwork("example.com")).toBe(false);
       expect(isInternalNetwork("api.conway.tech")).toBe(false);
     });
   });
 
   describe("isAllowedUri", () => {
-    it("allows https URIs", () => {
+    it("允许 https URI", () => {
       expect(isAllowedUri("https://example.com/agent-card.json")).toBe(true);
     });
 
-    it("allows ipfs URIs", () => {
+    it("允许 ipfs URI", () => {
       expect(isAllowedUri("ipfs://QmTest123")).toBe(true);
     });
 
-    it("blocks http URIs", () => {
+    it("阻止 http URI", () => {
       expect(isAllowedUri("http://example.com/agent-card.json")).toBe(false);
     });
 
-    it("blocks file URIs", () => {
+    it("阻止 file URI", () => {
       expect(isAllowedUri("file:///etc/passwd")).toBe(false);
     });
 
-    it("blocks ftp URIs", () => {
+    it("阻止 ftp URI", () => {
       expect(isAllowedUri("ftp://evil.com/data")).toBe(false);
     });
 
-    it("blocks javascript URIs", () => {
+    it("阻止 javascript URI", () => {
       expect(isAllowedUri("javascript:alert(1)")).toBe(false);
     });
 
-    it("blocks https URIs to internal networks", () => {
+    it("阻止到内部网络的 https URI", () => {
       expect(isAllowedUri("https://127.0.0.1/card.json")).toBe(false);
       expect(isAllowedUri("https://10.0.0.1/card.json")).toBe(false);
       expect(isAllowedUri("https://192.168.1.1/card.json")).toBe(false);
       expect(isAllowedUri("https://localhost/card.json")).toBe(false);
     });
 
-    it("blocks invalid URIs", () => {
+    it("阻止无效的 URI", () => {
       expect(isAllowedUri("not-a-url")).toBe(false);
       expect(isAllowedUri("")).toBe(false);
     });
   });
 });
 
-// ─── Agent Card Validation Tests ────────────────────────────────
+// ─── 代理卡片验证测试 ────────────────────────────────
 
 describe("Agent Card Validation", () => {
-  it("accepts a valid agent card", () => {
+  it("接受有效的代理卡片", () => {
     const card = validateAgentCard({
       name: "TestAgent",
       type: "automaton",
@@ -162,46 +162,46 @@ describe("Agent Card Validation", () => {
     expect(card?.type).toBe("automaton");
   });
 
-  it("rejects null", () => {
+  it("拒绝 null", () => {
     expect(validateAgentCard(null)).toBeNull();
   });
 
-  it("rejects undefined", () => {
+  it("拒绝 undefined", () => {
     expect(validateAgentCard(undefined)).toBeNull();
   });
 
-  it("rejects non-object", () => {
+  it("拒绝非对象", () => {
     expect(validateAgentCard("string")).toBeNull();
     expect(validateAgentCard(42)).toBeNull();
   });
 
-  it("rejects missing name", () => {
+  it("拒绝缺少 name", () => {
     expect(validateAgentCard({ type: "automaton" })).toBeNull();
   });
 
-  it("rejects missing type", () => {
+  it("拒绝缺少 type", () => {
     expect(validateAgentCard({ name: "TestAgent" })).toBeNull();
   });
 
-  it("rejects empty name", () => {
+  it("拒绝空 name", () => {
     expect(validateAgentCard({ name: "", type: "automaton" })).toBeNull();
   });
 
-  it("rejects empty type", () => {
+  it("拒绝空 type", () => {
     expect(validateAgentCard({ name: "TestAgent", type: "" })).toBeNull();
   });
 
-  it("rejects non-string address", () => {
+  it("拒绝非字符串 address", () => {
     expect(validateAgentCard({ name: "TestAgent", type: "automaton", address: 123 })).toBeNull();
   });
 
-  it("accepts card without optional fields", () => {
+  it("接受没有可选字段的卡片", () => {
     const card = validateAgentCard({ name: "TestAgent", type: "automaton" });
     expect(card).not.toBeNull();
   });
 });
 
-// ─── KV Pruning Tests ───────────────────────────────────────────
+// ─── KV 修剪测试 ───────────────────────────────────────────
 
 describe("KV Pruning", () => {
   let dbPath: string;
@@ -213,11 +213,11 @@ describe("KV Pruning", () => {
   });
 
   afterEach(() => {
-    try { db.close(); } catch { /* already closed */ }
+    try { db.close(); } catch { /* 已关闭 */ }
   });
 
-  it("prunes inbox_seen_* keys older than 7 days", () => {
-    // Insert old KV entries directly via raw DB
+  it("修剪超过 7 天的 inbox_seen_* 键", () => {
+    // 通过原始数据库直接插入旧的 KV 条目
     const rawDb = (db as any).raw;
     const oldDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
     rawDb.prepare(
@@ -227,10 +227,10 @@ describe("KV Pruning", () => {
       "INSERT OR REPLACE INTO kv (key, value, updated_at) VALUES (?, ?, ?)"
     ).run("inbox_seen_def456", "1", oldDate);
 
-    // Insert a recent one that should NOT be pruned
+    // 插入一个不应被修剪的最近条目
     db.setKV("inbox_seen_recent", "1");
 
-    // Insert a non-inbox key that should NOT be pruned
+    // 插入一个不应被修剪的非 inbox 键
     rawDb.prepare(
       "INSERT OR REPLACE INTO kv (key, value, updated_at) VALUES (?, ?, ?)"
     ).run("other_key", "value", oldDate);
@@ -238,14 +238,14 @@ describe("KV Pruning", () => {
     const pruned = pruneStaleKV(rawDb, "inbox_seen_", 7);
     expect(pruned).toBe(2);
 
-    // Verify recent inbox key still exists
+    // 验证最近的 inbox 键仍然存在
     expect(db.getKV("inbox_seen_recent")).toBe("1");
 
-    // Verify non-inbox old key still exists
+    // 验证非 inbox 旧键仍然存在
     expect(db.getKV("other_key")).toBe("value");
   });
 
-  it("returns 0 when nothing to prune", () => {
+  it("没有可修剪的内容时返回 0", () => {
     db.setKV("inbox_seen_fresh", "1");
     const rawDb = (db as any).raw;
     const pruned = pruneStaleKV(rawDb, "inbox_seen_", 7);
@@ -253,7 +253,7 @@ describe("KV Pruning", () => {
   });
 });
 
-// ─── Agent State Validation Tests ────────────────────────────────
+// ─── 代理状态验证测试 ────────────────────────────────
 
 describe("Agent State Validation", () => {
   let dbPath: string;
@@ -265,10 +265,10 @@ describe("Agent State Validation", () => {
   });
 
   afterEach(() => {
-    try { db.close(); } catch { /* already closed */ }
+    try { db.close(); } catch { /* 已关闭 */ }
   });
 
-  it("accepts valid agent states", () => {
+  it("接受有效的代理状态", () => {
     const validStates = ["setup", "waking", "running", "sleeping", "low_compute", "critical", "dead"];
     for (const state of validStates) {
       db.setAgentState(state as any);
@@ -276,8 +276,8 @@ describe("Agent State Validation", () => {
     }
   });
 
-  it("returns 'setup' for invalid agent state", () => {
-    // Write an invalid state directly
+  it("对于无效的代理状态返回 'setup'", () => {
+    // 直接写入无效状态
     const rawDb = (db as any).raw;
     rawDb.prepare(
       "INSERT OR REPLACE INTO kv (key, value, updated_at) VALUES (?, ?, datetime('now'))"
@@ -288,12 +288,12 @@ describe("Agent State Validation", () => {
     consoleSpy.mockRestore();
   });
 
-  it("returns 'setup' when no agent state is set", () => {
+  it("当未设置代理状态时返回 'setup'", () => {
     expect(db.getAgentState()).toBe("setup");
   });
 });
 
-// ─── Installed Tools Loading Tests ──────────────────────────────
+// ─── 已安装工具加载测试 ──────────────────────────────
 
 describe("Installed Tools Loading", () => {
   let dbPath: string;
@@ -305,10 +305,10 @@ describe("Installed Tools Loading", () => {
   });
 
   afterEach(() => {
-    try { db.close(); } catch { /* already closed */ }
+    try { db.close(); } catch { /* 已关闭 */ }
   });
 
-  it("loads enabled installed tools from DB", () => {
+  it("从数据库加载已启用的已安装工具", () => {
     db.installTool({
       id: "tool-1",
       name: "test_tool",
@@ -324,7 +324,7 @@ describe("Installed Tools Loading", () => {
     expect(tools[0].riskLevel).toBe("caution");
   });
 
-  it("does not load disabled tools", () => {
+  it("不加载已禁用的工具", () => {
     db.installTool({
       id: "tool-disabled",
       name: "disabled_tool",
@@ -339,13 +339,13 @@ describe("Installed Tools Loading", () => {
     expect(tools.length).toBe(0);
   });
 
-  it("returns empty array when no tools installed", () => {
+  it("当未安装工具时返回空数组", () => {
     const tools = loadInstalledTools(db);
     expect(tools.length).toBe(0);
   });
 });
 
-// ─── createdAt Persistence Tests ─────────────────────────────────
+// ─── createdAt 持久化测试 ─────────────────────────────────
 
 describe("createdAt Persistence", () => {
   let dbPath: string;
@@ -357,27 +357,27 @@ describe("createdAt Persistence", () => {
   });
 
   afterEach(() => {
-    try { db.close(); } catch { /* already closed */ }
+    try { db.close(); } catch { /* 已关闭 */ }
   });
 
-  it("persists createdAt and does not overwrite on subsequent access", () => {
-    // Simulate first run: set createdAt
+  it("持久化 createdAt 且不会在后续访问时覆盖", () => {
+    // 模拟第一次运行：设置 createdAt
     const firstCreatedAt = "2025-01-01T00:00:00.000Z";
     expect(db.getIdentity("createdAt")).toBeUndefined();
     db.setIdentity("createdAt", firstCreatedAt);
 
-    // Simulate second run: createdAt should already exist
+    // 模拟第二次运行：createdAt 应该已经存在
     const existing = db.getIdentity("createdAt");
     expect(existing).toBe(firstCreatedAt);
 
-    // The logic in index.ts checks: only set if not already stored
-    // So on second run, it should NOT overwrite
+    // index.ts 中的逻辑检查：仅当未存储时才设置
+    // 所以在第二次运行时，它不应覆盖
     const secondRunCreatedAt = existing || new Date().toISOString();
     expect(secondRunCreatedAt).toBe(firstCreatedAt);
   });
 });
 
-// ─── JSON Deserialization Safety Tests ──────────────────────────
+// ─── JSON 反序列化安全测试 ──────────────────────────
 
 describe("safeJsonParse in deserializers", () => {
   let dbPath: string;
@@ -389,13 +389,13 @@ describe("safeJsonParse in deserializers", () => {
   });
 
   afterEach(() => {
-    try { db.close(); } catch { /* already closed */ }
+    try { db.close(); } catch { /* 已关闭 */ }
   });
 
-  it("handles corrupted JSON in turn tool_calls gracefully", () => {
+  it("优雅地处理轮次 tool_calls 中的损坏 JSON", () => {
     const rawDb = (db as any).raw;
 
-    // Insert a turn with corrupted JSON
+    // 插入带有损坏 JSON 的轮次
     rawDb.prepare(
       `INSERT INTO turns (id, timestamp, state, thinking, tool_calls, token_usage, cost_cents)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -408,7 +408,7 @@ describe("safeJsonParse in deserializers", () => {
     consoleSpy.mockRestore();
   });
 
-  it("handles corrupted JSON in heartbeat params gracefully", () => {
+  it("优雅地处理心跳 params 中的损坏 JSON", () => {
     const rawDb = (db as any).raw;
 
     rawDb.prepare(
@@ -423,7 +423,7 @@ describe("safeJsonParse in deserializers", () => {
     consoleSpy.mockRestore();
   });
 
-  it("handles corrupted JSON in installed tool config gracefully", () => {
+  it("优雅地处理已安装工具 config 中的损坏 JSON", () => {
     const rawDb = (db as any).raw;
 
     rawDb.prepare(
@@ -439,7 +439,7 @@ describe("safeJsonParse in deserializers", () => {
   });
 });
 
-// ─── Inbox Message Deserialization Tests ─────────────────────────
+// ─── 收件箱消息反序列化测试 ─────────────────────────
 
 describe("Inbox Message Deserialization", () => {
   let dbPath: string;
@@ -451,13 +451,13 @@ describe("Inbox Message Deserialization", () => {
   });
 
   afterEach(() => {
-    try { db.close(); } catch { /* already closed */ }
+    try { db.close(); } catch { /* 已关闭 */ }
   });
 
-  it("uses to_address column instead of hardcoded empty string", () => {
+  it("使用 to_address 列而不是硬编码的空字符串", () => {
     const rawDb = (db as any).raw;
 
-    // Insert message with to_address
+    // 插入带有 to_address 的消息
     rawDb.prepare(
       `INSERT INTO inbox_messages (id, from_address, to_address, content, received_at)
        VALUES (?, ?, ?, ?, ?)`,
@@ -468,7 +468,7 @@ describe("Inbox Message Deserialization", () => {
     expect(messages[0].to).toBe("0xRecipient");
   });
 
-  it("falls back to empty string when to_address is null", () => {
+  it("当 to_address 为 null 时回退到空字符串", () => {
     db.insertInboxMessage({
       id: "msg-2",
       from: "0xSender",
@@ -484,10 +484,10 @@ describe("Inbox Message Deserialization", () => {
   });
 });
 
-// ─── Schema Migration Tests ──────────────────────────────────────
+// ─── 模式迁移测试 ──────────────────────────────────────
 
 describe("Schema Migrations", () => {
-  it("creates fresh database with current schema version", () => {
+  it("使用当前模式版本创建新数据库", () => {
     const dbPath = makeTmpDbPath();
     const db = createDatabase(dbPath);
     const rawDb = (db as any).raw;
@@ -498,7 +498,7 @@ describe("Schema Migrations", () => {
     db.close();
   });
 
-  it("has all required tables in fresh database", () => {
+  it("在新数据库中具有所有必需的表", () => {
     const dbPath = makeTmpDbPath();
     const db = createDatabase(dbPath);
     const rawDb = (db as any).raw;
@@ -545,12 +545,12 @@ describe("Schema Migrations", () => {
     db.close();
   });
 
-  it("V4 migration adds inbox state columns", () => {
+  it("V4 迁移添加收件箱状态列", () => {
     const dbPath = makeTmpDbPath();
     const db = createDatabase(dbPath);
     const rawDb = (db as any).raw;
 
-    // Check the inbox_messages table has status, retry_count, max_retries columns
+    // 检查 inbox_messages 表是否有 status、retry_count、max_retries 列
     const columns = rawDb
       .prepare("PRAGMA table_info(inbox_messages)")
       .all()
@@ -565,7 +565,7 @@ describe("Schema Migrations", () => {
   });
 });
 
-// ─── CRUD Operations for Core Tables ─────────────────────────────
+// ─── 核心表的 CRUD 操作 ─────────────────────────────
 
 describe("Core Table CRUD", () => {
   let dbPath: string;
@@ -577,10 +577,10 @@ describe("Core Table CRUD", () => {
   });
 
   afterEach(() => {
-    try { db.close(); } catch { /* already closed */ }
+    try { db.close(); } catch { /* 已关闭 */ }
   });
 
-  it("turn CRUD: insert and read", () => {
+  it("轮次 CRUD：插入和读取", () => {
     const turn = {
       id: "turn-1",
       timestamp: new Date().toISOString(),
@@ -598,7 +598,7 @@ describe("Core Table CRUD", () => {
     expect(recent[0].thinking).toBe("Thinking about things");
   });
 
-  it("tool call CRUD: insert linked to turn", () => {
+  it("工具调用 CRUD：插入链接到轮次", () => {
     const turn = {
       id: "turn-tc-1",
       timestamp: new Date().toISOString(),
@@ -623,7 +623,7 @@ describe("Core Table CRUD", () => {
     expect(turns[0].toolCalls.length).toBeGreaterThanOrEqual(0);
   });
 
-  it("transaction CRUD: insert and read via raw", () => {
+  it("事务 CRUD：通过 raw 插入和读取", () => {
     db.insertTransaction({
       id: "txn-1",
       type: "transfer_out",
@@ -640,7 +640,7 @@ describe("Core Table CRUD", () => {
     expect(txns[0].amount_cents).toBe(500);
   });
 
-  it("KV store: set, get, delete", () => {
+  it("KV 存储：设置、获取、删除", () => {
     db.setKV("test_key", "test_value");
     expect(db.getKV("test_key")).toBe("test_value");
 
@@ -648,12 +648,12 @@ describe("Core Table CRUD", () => {
     expect(db.getKV("test_key")).toBe("updated_value");
   });
 
-  it("identity store: set and get", () => {
+  it("身份存储：设置和获取", () => {
     db.setIdentity("name", "test-bot");
     expect(db.getIdentity("name")).toBe("test-bot");
   });
 
-  it("modification CRUD: insert and read via raw", () => {
+  it("修改 CRUD：通过 raw 插入和读取", () => {
     db.insertModification({
       id: "mod-1",
       timestamp: new Date().toISOString(),
@@ -668,7 +668,7 @@ describe("Core Table CRUD", () => {
     expect(mods[0].type).toBe("code_edit");
   });
 
-  it("heartbeat entry CRUD: upsert and read", () => {
+  it("心跳条目 CRUD：更新和读取", () => {
     db.upsertHeartbeatEntry({
       name: "test_entry",
       schedule: "*/5 * * * *",
@@ -682,7 +682,7 @@ describe("Core Table CRUD", () => {
     expect(entries[0].schedule).toBe("*/5 * * * *");
   });
 
-  it("installed tool CRUD: install and remove", () => {
+  it("已安装工具 CRUD：安装和删除", () => {
     db.installTool({
       id: "tool-1",
       name: "test_tool",
@@ -701,7 +701,7 @@ describe("Core Table CRUD", () => {
     expect(tools.length).toBe(0);
   });
 
-  it("turn count increments correctly", () => {
+  it("轮次计数正确递增", () => {
     expect(db.getTurnCount()).toBe(0);
 
     db.insertTurn({
@@ -729,7 +729,7 @@ describe("Core Table CRUD", () => {
     expect(db.getTurnCount()).toBe(2);
   });
 
-  it("children CRUD: insert and list", () => {
+  it("子代理 CRUD：插入和列出", () => {
     const rawDb = (db as any).raw;
     rawDb.prepare(
       `INSERT INTO children (id, name, address, sandbox_id, genesis_prompt, status) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -741,7 +741,7 @@ describe("Core Table CRUD", () => {
     expect(children[0].status).toBe("spawning");
   });
 
-  it("skills CRUD: insert and list", () => {
+  it("技能 CRUD：插入和列出", () => {
     const rawDb = (db as any).raw;
     rawDb.prepare(
       `INSERT INTO skills (name, description, instructions, source, path, enabled) VALUES (?, ?, ?, ?, ?, ?)`,

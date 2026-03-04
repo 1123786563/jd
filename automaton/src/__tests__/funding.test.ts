@@ -1,7 +1,7 @@
 /**
- * Funding Strategy Tests
+ * 资金策略测试
  *
- * Tests for executeFundingStrategies, especially per-tier cooldown isolation.
+ * executeFundingStrategies 的测试，特别是每层级冷却隔离。
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -21,18 +21,18 @@ describe("executeFundingStrategies", () => {
   beforeEach(() => {
     db = createTestDb();
     conway = new MockConwayClient();
-    conway.creditsCents = 5; // low balance
+    conway.creditsCents = 5; // 低余额
   });
 
   afterEach(() => {
     db.close();
   });
 
-  it("dead-tier cooldown does not suppress low_compute notification", async () => {
+  it("死亡层级冷却不抑制 low_compute 通知", async () => {
     const identity = createTestIdentity();
     const config = createTestConfig();
 
-    // First: trigger dead-tier plea
+    // 首先：触发死亡层级请求
     const deadAttempts = await executeFundingStrategies(
       "dead",
       identity,
@@ -43,8 +43,8 @@ describe("executeFundingStrategies", () => {
     expect(deadAttempts.length).toBe(1);
     expect(deadAttempts[0].strategy).toBe("desperate_plea");
 
-    // Now: agent recovers to low_compute. With the fix, the low_compute
-    // notification should fire because it has its own cooldown key.
+    // 现在：代理恢复到 low_compute。通过修复，low_compute
+    // 通知应该触发，因为它有自己的冷却键。
     const lowAttempts = await executeFundingStrategies(
       "low_compute",
       identity,
@@ -56,11 +56,11 @@ describe("executeFundingStrategies", () => {
     expect(lowAttempts[0].strategy).toBe("polite_creator_notification");
   });
 
-  it("critical-tier cooldown does not suppress low_compute notification", async () => {
+  it("危急层级冷却不抑制 low_compute 通知", async () => {
     const identity = createTestIdentity();
     const config = createTestConfig();
 
-    // Trigger critical-tier notice
+    // 触发危急层级通知
     const criticalAttempts = await executeFundingStrategies(
       "critical",
       identity,
@@ -71,7 +71,7 @@ describe("executeFundingStrategies", () => {
     expect(criticalAttempts.length).toBe(1);
     expect(criticalAttempts[0].strategy).toBe("urgent_local_notice");
 
-    // low_compute should still fire independently
+    // low_compute 应该仍然独立触发
     const lowAttempts = await executeFundingStrategies(
       "low_compute",
       identity,
@@ -83,15 +83,15 @@ describe("executeFundingStrategies", () => {
     expect(lowAttempts[0].strategy).toBe("polite_creator_notification");
   });
 
-  it("respects per-tier cooldown on repeated calls", async () => {
+  it("在重复调用时尊重每层级冷却", async () => {
     const identity = createTestIdentity();
     const config = createTestConfig();
 
-    // First dead-tier call fires
+    // 第一次死亡层级调用触发
     const first = await executeFundingStrategies("dead", identity, config, db, conway);
     expect(first.length).toBe(1);
 
-    // Immediate second dead-tier call should be suppressed (2h cooldown)
+    // 立即第二次死亡层级调用应该被抑制（2小时冷却）
     const second = await executeFundingStrategies("dead", identity, config, db, conway);
     expect(second.length).toBe(0);
   });

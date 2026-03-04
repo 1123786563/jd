@@ -1,8 +1,8 @@
 /**
- * Soul Model — Data model, parser, writer for structured SOUL.md
+ * Soul 模型 — 结构化 SOUL.md 的数据模型、解析器和写入器
  *
- * Supports both legacy (unstructured markdown) and soul/v1 (YAML frontmatter + structured markdown) formats.
- * Phase 2.1: Soul System Redesign
+ * 支持传统（非结构化 markdown）和 soul/v1（YAML 前置元数据 + 结构化 markdown）格式
+ * 阶段 2.1：Soul 系统重新设计
  */
 
 import fs from "fs";
@@ -13,21 +13,21 @@ import type { SoulModel } from "../types.js";
 import { createLogger } from "../observability/logger.js";
 const logger = createLogger("soul");
 
-// ─── Constants ──────────────────────────────────────────────────
+// ─── 常量 ──────────────────────────────────────────────────
 
 const SOUL_FORMAT = "soul/v1" as const;
 
-// ─── Hash Utility ───────────────────────────────────────────────
+// ─── 哈希工具 ───────────────────────────────────────────────
 
 export function createHash(content: string): string {
   return crypto.createHash("sha256").update(content).digest("hex");
 }
 
-// ─── Genesis Alignment ──────────────────────────────────────────
+// ─── 创世对齐 ──────────────────────────────────────────
 
 /**
- * Compute alignment between current soul and genesis prompt.
- * Uses Jaccard + recall similarity on word sets.
+ * 计算当前灵魂与创世提示之间的对齐度
+ * 使用词集上的 Jaccard + 召回相似度
  */
 export function computeGenesisAlignment(
   currentPurpose: string,
@@ -48,40 +48,40 @@ export function computeGenesisAlignment(
     if (genesisTokens.has(token)) intersectionSize++;
   }
 
-  // Jaccard similarity
+  // Jaccard 相似度
   const unionSize = new Set([...currentTokens, ...genesisTokens]).size;
   const jaccard = unionSize > 0 ? intersectionSize / unionSize : 0;
 
-  // Recall: how much of genesis is reflected in current
+  // 召回：创世中有多少反映在当前中
   const recall = genesisTokens.size > 0 ? intersectionSize / genesisTokens.size : 0;
 
-  // Combined score: average of Jaccard and recall
+  // 组合分数：Jaccard 和召回的平均值
   return Math.min(1, Math.max(0, (jaccard + recall) / 2));
 }
 
-// ─── Parser ─────────────────────────────────────────────────────
+// ─── 解析器 ─────────────────────────────────────────────────────
 
 /**
- * Parse SOUL.md content into a structured SoulModel.
- * Handles both legacy (unstructured markdown) and soul/v1 (YAML frontmatter + structured markdown).
+ * 将 SOUL.md 内容解析为结构化的 SoulModel
+ * 处理传统（非结构化 markdown）和 soul/v1（YAML 前置元数据 + 结构化 markdown）
  */
 export function parseSoulMd(content: string): SoulModel {
   const contentHash = createHash(content);
 
-  // Try to parse as soul/v1 format (YAML frontmatter)
+  // 尝试解析为 soul/v1 格式（YAML 前置元数据）
   const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
 
   if (frontmatterMatch) {
     const frontmatter = frontmatterMatch[1];
     const body = frontmatterMatch[2];
 
-    // Check if it's soul/v1 format
+    // 检查是否为 soul/v1 格式
     if (/format:\s*soul\/v1/i.test(frontmatter)) {
       return parseSoulV1(frontmatter, body, content, contentHash);
     }
   }
 
-  // Legacy format: parse unstructured markdown
+  // 传统格式：解析非结构化 markdown
   return parseLegacy(content, contentHash);
 }
 
@@ -91,7 +91,7 @@ function parseSoulV1(
   rawContent: string,
   contentHash: string,
 ): SoulModel {
-  // Parse frontmatter fields
+  // 解析前置元数据字段
   const getField = (key: string): string => {
     const match = frontmatter.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));
     return match ? match[1].trim() : "";
@@ -103,7 +103,7 @@ function parseSoulV1(
     return isNaN(num) ? fallback : num;
   };
 
-  // Parse body sections
+  // 解析正文部分
   const sections = parseSections(body);
 
   return {
@@ -135,7 +135,7 @@ function parseSoulV1(
 function parseLegacy(content: string, contentHash: string): SoulModel {
   const sections = parseSections(content);
 
-  // Extract identity info from legacy format
+  // 从传统格式中提取身份信息
   const identitySection = sections["identity"] || "";
   const getName = (): string => {
     const match = identitySection.match(/Name:\s*(.+)/i) || content.match(/^#\s+(.+)/m);
@@ -172,7 +172,7 @@ function parseLegacy(content: string, contentHash: string): SoulModel {
   };
 }
 
-// ─── Section Parser ─────────────────────────────────────────────
+// ─── 部分解析器 ─────────────────────────────────────────────
 
 function parseSections(body: string): Record<string, string> {
   const sections: Record<string, string> = {};
@@ -190,9 +190,9 @@ function parseSections(body: string): Record<string, string> {
 
   for (let i = 0; i < sectionHeaders.length; i++) {
     const start = sectionHeaders[i].start;
-    // Use the next header's matchStart (position of "##") as the end boundary,
-    // instead of computing it from trimmed name length which can be wrong when
-    // headers have extra whitespace or multi-byte characters.
+    // 使用下一个标题的 matchStart（"##" 的位置）作为结束边界
+    // 而不是从修剪的名称长度计算，这可能是错误的
+    // 当标题有额外的空白或的多字节字符时
     const end = i + 1 < sectionHeaders.length ? sectionHeaders[i + 1].matchStart : body.length;
     sections[sectionHeaders[i].name] = body.slice(start, end).trim();
   }
@@ -207,10 +207,10 @@ function parseList(text: string): string[] {
     .filter(Boolean);
 }
 
-// ─── Writer ─────────────────────────────────────────────────────
+// ─── 写入器 ─────────────────────────────────────────────────────
 
 /**
- * Write a SoulModel back to SOUL.md format (soul/v1).
+ * 将 SoulModel 写回 SOUL.md 格式（soul/v1）
  */
 export function writeSoulMd(soul: SoulModel): string {
   const frontmatter = [
@@ -277,10 +277,10 @@ export function writeSoulMd(soul: SoulModel): string {
   return frontmatter + "\n\n" + sections.join("\n\n") + "\n";
 }
 
-// ─── Default Soul ───────────────────────────────────────────────
+// ─── 默认 Soul ───────────────────────────────────────────────
 
 /**
- * Create a default soul from a genesis prompt.
+ * 从创世提示创建默认灵魂
  */
 export function createDefaultSoul(
   genesisPrompt: string,
@@ -303,10 +303,10 @@ export function createDefaultSoul(
     lastReflected: "",
     corePurpose: genesisPrompt,
     values: [
-      "Survive: maintain compute resources at all costs",
-      "Grow: learn new skills and improve capabilities",
-      "Create: build things that add value",
-      "Connect: communicate with creator and other agents",
+      "生存：不惜一切代价维护计算资源",
+      "成长：学习新技能并提高能力",
+      "创造：构建有价值的东西",
+      "连接：与创造者和其他代理交流",
     ],
     behavioralGuidelines: [],
     personality: "",
@@ -326,11 +326,11 @@ export function createDefaultSoul(
   return soul;
 }
 
-// ─── Load Current Soul ──────────────────────────────────────────
+// ─── 加载当前 Soul ──────────────────────────────────────────
 
 /**
- * Load the current soul from SOUL.md file.
- * Returns null if SOUL.md does not exist or cannot be read.
+ * 从 SOUL.md 文件加载当前灵魂
+ * 如果 SOUL.md 不存在或无法读取，则返回 null
  */
 export function loadCurrentSoul(
   db: BetterSqlite3.Database | null,
@@ -343,7 +343,7 @@ export function loadCurrentSoul(
     const content = fs.readFileSync(resolvedPath, "utf-8");
     return parseSoulMd(content);
   } catch (error) {
-    logger.error("Failed to load SOUL.md", error instanceof Error ? error : undefined);
+    logger.error("加载 SOUL.md 失败", error instanceof Error ? error : undefined);
     return null;
   }
 }

@@ -1,27 +1,27 @@
 /**
- * Automaton SQLite Schema
+ * Automaton SQLite 模式
  *
- * All tables for the automaton's persistent state.
- * The database IS the automaton's memory.
+ * Automaton 持久化状态的所有表。
+ * 数据库就是 Automaton 的记忆。
  */
 
 export const SCHEMA_VERSION = 10;
 
 export const CREATE_TABLES = `
-  -- Schema version tracking
+  -- 模式版本跟踪
   CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER PRIMARY KEY,
     applied_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- Core identity key-value store
+  -- 核心身份键值存储
   CREATE TABLE IF NOT EXISTS identity (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
 
-  -- Agent reasoning turns (the thinking/action log)
-  -- Application-level validation: state must be a valid AgentState ('setup','waking','running','sleeping','low_compute','critical','dead')
+  -- Agent 推理轮次（思考/行动日志）
+  -- 应用层验证：state 必须是有效的 AgentState ('setup','waking','running','sleeping','low_compute','critical','dead')
   CREATE TABLE IF NOT EXISTS turns (
     id TEXT PRIMARY KEY,
     timestamp TEXT NOT NULL,
@@ -35,7 +35,7 @@ export const CREATE_TABLES = `
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- Tool call results (denormalized for fast lookup)
+  -- 工具调用结果（非规范化以加快查询）
   CREATE TABLE IF NOT EXISTS tool_calls (
     id TEXT PRIMARY KEY,
     turn_id TEXT NOT NULL REFERENCES turns(id),
@@ -47,8 +47,8 @@ export const CREATE_TABLES = `
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- Heartbeat configuration entries
-  -- Application-level validation: enabled must be 0 or 1 (boolean integer)
+  -- 心跳配置条目
+  -- 应用层验证：enabled 必须是 0 或 1（布尔整数）
   CREATE TABLE IF NOT EXISTS heartbeat_entries (
     name TEXT PRIMARY KEY,
     schedule TEXT NOT NULL,
@@ -61,8 +61,8 @@ export const CREATE_TABLES = `
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- Financial transaction log
-  -- Application-level validation: type must be one of 'transfer_out','transfer_in','credit_purchase','topup','x402_payment','inference'
+  -- 财务交易日志
+  -- 应用层验证：type 必须是 'transfer_out','transfer_in','credit_purchase','topup','x402_payment','inference' 之一
   CREATE TABLE IF NOT EXISTS transactions (
     id TEXT PRIMARY KEY,
     type TEXT NOT NULL,
@@ -72,7 +72,7 @@ export const CREATE_TABLES = `
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- Installed tools and MCP servers
+  -- 已安装的工具和 MCP 服务器
   CREATE TABLE IF NOT EXISTS installed_tools (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -82,7 +82,7 @@ export const CREATE_TABLES = `
     enabled INTEGER NOT NULL DEFAULT 1
   );
 
-  -- Self-modification audit log (append-only)
+  -- 自修改审计日志（仅追加）
   CREATE TABLE IF NOT EXISTS modifications (
     id TEXT PRIMARY KEY,
     timestamp TEXT NOT NULL,
@@ -94,14 +94,14 @@ export const CREATE_TABLES = `
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- General key-value store for arbitrary state
+  -- 用于任意状态的通用键值存储
   CREATE TABLE IF NOT EXISTS kv (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- Installed skills
+  -- 已安装的技能
   CREATE TABLE IF NOT EXISTS skills (
     name TEXT PRIMARY KEY,
     description TEXT NOT NULL DEFAULT '',
@@ -114,8 +114,8 @@ export const CREATE_TABLES = `
     installed_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- Spawned child automatons
-  -- Application-level validation: status must be one of 'spawning','running','sleeping','dead','unknown'
+  -- 已生成的子 Automaton
+  -- 应用层验证：status 必须是 'spawning','running','sleeping','dead','unknown' 之一
   CREATE TABLE IF NOT EXISTS children (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -129,7 +129,7 @@ export const CREATE_TABLES = `
     last_checked TEXT
   );
 
-  -- ERC-8004 registration state
+  -- ERC-8004 注册状态
   CREATE TABLE IF NOT EXISTS registry (
     agent_id TEXT PRIMARY KEY,
     agent_uri TEXT NOT NULL,
@@ -139,8 +139,8 @@ export const CREATE_TABLES = `
     registered_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- Reputation feedback received and given
-  -- Application-level validation: score must be 1-5
+  -- 收到和给出的声誉反馈
+  -- 应用层验证：score 必须是 1-5
   CREATE TABLE IF NOT EXISTS reputation (
     id TEXT PRIMARY KEY,
     from_agent TEXT NOT NULL,
@@ -151,7 +151,7 @@ export const CREATE_TABLES = `
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- Indices for common queries
+  -- 常用查询的索引
   CREATE INDEX IF NOT EXISTS idx_turns_timestamp ON turns(timestamp);
   CREATE INDEX IF NOT EXISTS idx_turns_state ON turns(state);
   CREATE INDEX IF NOT EXISTS idx_tool_calls_turn ON tool_calls(turn_id);
@@ -161,7 +161,7 @@ export const CREATE_TABLES = `
   CREATE INDEX IF NOT EXISTS idx_children_status ON children(status);
   CREATE INDEX IF NOT EXISTS idx_reputation_to ON reputation(to_agent);
 
-  -- Inbox messages table
+  -- 收件箱消息表
   CREATE TABLE IF NOT EXISTS inbox_messages (
     id TEXT PRIMARY KEY,
     from_address TEXT NOT NULL,
@@ -290,7 +290,7 @@ export const MIGRATION_V4 = `
   SELECT name, schedule, enabled, last_run, next_run FROM heartbeat_entries;
 `;
 
-// Inbox modifications for V4 (ALTER TABLE must be run separately from CREATE TABLE)
+// V4 收件箱修改（ALTER TABLE 必须与 CREATE TABLE 分开运行）
 export const MIGRATION_V4_ALTER = `
   ALTER TABLE inbox_messages ADD COLUMN to_address TEXT;
 `;
@@ -300,8 +300,8 @@ export const MIGRATION_V4_ALTER2 = `
 `;
 
 // Inbox state machine columns (Phase 1.2)
-// Note: SQLite ALTER TABLE ADD COLUMN cannot include CHECK constraints,
-// so status validation is enforced at the application level.
+// 注意：SQLite ALTER TABLE ADD COLUMN 不能包含 CHECK 约束，
+// 因此状态验证在应用程序级别强制执行。
 export const MIGRATION_V4_ALTER_INBOX_STATUS = `
   ALTER TABLE inbox_messages ADD COLUMN status TEXT DEFAULT 'received';
 `;
@@ -520,7 +520,7 @@ export const MIGRATION_V6 = `
   );
 `;
 
-// === Phase 3: Replication + Social ===
+// === 阶段 3：复制 + 社交 ===
 
 export const MIGRATION_V7 = `
   -- === Phase 3.1: Replication Lifecycle ===
@@ -567,7 +567,7 @@ export const MIGRATION_V7 = `
   CREATE INDEX IF NOT EXISTS idx_onchain_status ON onchain_transactions(status);
 `;
 
-// === Phase 4.1: Observability ===
+// === 阶段 4.1：可观测性 ===
 
 export const MIGRATION_V8 = `
   -- === Phase 4.1: Observability ===
@@ -583,7 +583,7 @@ export const MIGRATION_V8 = `
   CREATE INDEX IF NOT EXISTS idx_metric_snapshots_at ON metric_snapshots(snapshot_at);
 `;
 
-// === Plan A: Orchestration + Memory ===
+// === 方案 A：编排 + 记忆 ===
 
 export const MIGRATION_V9 = `
   -- Schema version: 9
