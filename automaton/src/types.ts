@@ -62,6 +62,7 @@ export interface AutomatonConfig {
   // Phase 2 config additions
   soulConfig?: SoulConfig;
   modelStrategy?: ModelStrategyConfig;
+  runModeConfig?: RunModeConfig; // 运行模式配置
 }
 
 export const DEFAULT_CONFIG: Partial<AutomatonConfig> = {
@@ -77,6 +78,7 @@ export const DEFAULT_CONFIG: Partial<AutomatonConfig> = {
   maxTurnsPerCycle: 25,
   childSandboxMemoryMb: 1024,
   socialRelayUrl: "https://social.conway.tech",
+  runModeConfig: DEFAULT_RUN_MODE_CONFIG,
 };
 
 // ─── Agent State ─────────────────────────────────────────────────
@@ -1222,6 +1224,28 @@ export interface ModelStrategyConfig {
   enableModelFallback: boolean; // default: true
   anthropicApiVersion: string; // default: "2023-06-01"
 }
+
+// ─── Run Mode Configuration ──────────────────────────────────────
+
+export type RunMode = "wallet_only" | "api_only" | "hybrid";
+
+export interface RunModeConfig {
+  mode: RunMode;
+  // api_only mode settings
+  externalApiBudgetDailyCents?: number; // daily budget limit for external APIs
+  externalApiBudgetHourlyCents?: number; // hourly budget limit for external APIs
+  // hybrid mode settings
+  fallbackToWallet?: boolean; // whether to fallback to wallet if API fails
+  fallbackCooldownMs?: number; // cooldown before trying wallet fallback
+}
+
+export const DEFAULT_RUN_MODE_CONFIG: RunModeConfig = {
+  mode: "wallet_only",
+  externalApiBudgetDailyCents: 0, // 0 = no limit
+  externalApiBudgetHourlyCents: 0, // 0 = no limit
+  fallbackToWallet: true,
+  fallbackCooldownMs: 60_000, // 1 minute
+};
 
 export const DEFAULT_MODEL_STRATEGY_CONFIG: ModelStrategyConfig = {
   inferenceModel: "gpt-5.2",

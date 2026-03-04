@@ -378,6 +378,10 @@ export async function runAgentLoop(
   // Get financial state
   let financial = await getFinancialState(conway, identity.address, db);
 
+  // Check run mode
+  const runMode = config.runModeConfig?.mode || "wallet_only";
+  logger.info(`Running in ${runMode} mode`);
+
   // Check if this is the first run
   const isFirstRun = db.getTurnCount() === 0;
 
@@ -444,12 +448,18 @@ export async function runAgentLoop(
       }
 
       // Refresh financial state periodically
-      financial = await getFinancialState(conway, identity.address, db);
+      if (runMode !== "api_only") {
+        financial = await getFinancialState(conway, identity.address, db);
+      }
 
       // Check survival tier
       // api_unreachable: creditsCents === -1 means API failed with no cache.
       // Do NOT kill the agent; continue in low-compute mode and retry next tick.
-      if (financial.creditsCents === -1) {
+      if (runMode === "api_only") {
+        // API-only mode: always use high tier
+        logger.debug("[API_ONLY] Skipping wallet checks, using high survival tier");
+        inference.setLowComputeMode(false);
+      } else if (financial.creditsCents === -1) {
         log(config, "[API_UNREACHABLE] Balance API unreachable, continuing in low-compute mode.");
         inference.setLowComputeMode(true);
       } else {
@@ -597,8 +607,8 @@ export async function runAgentLoop(
       pendingInput = undefined;
 
       // ── Inference Call (via router when available) ──
-      const survivalTier = getSurvivalTier(financial.creditsCents);
-      log(config, `[THINK] Routing inference (tier: ${survivalTier}, model: ${inference.getDefaultModel()})...`);
+      const survivalTier = getSurvivalTier(financial.creditsCents, runMode);
+      log(config, `[THINK] Routing inference (tier: ${survivalTier}, model: ${inference.getDefaultModel()}, mode: ${runMode})...`);
 
       const inferenceTools = toolsToInferenceFormat(tools);
       const routerResult = await inferenceRouter.route(

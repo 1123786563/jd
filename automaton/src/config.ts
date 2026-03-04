@@ -6,9 +6,9 @@
 
 import fs from "fs";
 import path from "path";
-import type { AutomatonConfig, TreasuryPolicy, ModelStrategyConfig, SoulConfig } from "./types.js";
+import type { AutomatonConfig, TreasuryPolicy, ModelStrategyConfig, SoulConfig, RunModeConfig } from "./types.js";
 import type { Address } from "viem";
-import { DEFAULT_CONFIG, DEFAULT_TREASURY_POLICY, DEFAULT_MODEL_STRATEGY_CONFIG, DEFAULT_SOUL_CONFIG } from "./types.js";
+import { DEFAULT_CONFIG, DEFAULT_TREASURY_POLICY, DEFAULT_MODEL_STRATEGY_CONFIG, DEFAULT_SOUL_CONFIG, DEFAULT_RUN_MODE_CONFIG } from "./types.js";
 import { getAutomatonDir } from "./identity/wallet.js";
 import { loadApiKeyFromConfig } from "./identity/provision.js";
 import { createLogger } from "./observability/logger.js";
@@ -33,6 +33,12 @@ export function loadConfig(): AutomatonConfig | null {
   try {
     const raw = JSON.parse(fs.readFileSync(configPath, "utf-8"));
     const apiKey = raw.conwayApiKey || loadApiKeyFromConfig();
+
+    // Override mode from environment variable
+    const modeFromEnv = process.env.AUTOMATON_RUN_MODE;
+    const modeConfig = modeFromEnv
+      ? { ...DEFAULT_RUN_MODE_CONFIG, mode: modeFromEnv as any }
+      : raw.runModeConfig ?? DEFAULT_RUN_MODE_CONFIG;
 
     // Deep-merge treasury policy with defaults
     const treasuryPolicy: TreasuryPolicy = {
@@ -68,6 +74,7 @@ export function loadConfig(): AutomatonConfig | null {
       treasuryPolicy,
       modelStrategy,
       soulConfig,
+      runModeConfig: modeConfig,
     } as AutomatonConfig;
   } catch {
     return null;
@@ -90,6 +97,7 @@ export function saveConfig(config: AutomatonConfig): void {
     treasuryPolicy: config.treasuryPolicy ?? DEFAULT_TREASURY_POLICY,
     modelStrategy: config.modelStrategy ?? DEFAULT_MODEL_STRATEGY_CONFIG,
     soulConfig: config.soulConfig ?? DEFAULT_SOUL_CONFIG,
+    runModeConfig: config.runModeConfig ?? DEFAULT_RUN_MODE_CONFIG,
   };
   fs.writeFileSync(configPath, JSON.stringify(toSave, null, 2), {
     mode: 0o600,
@@ -123,6 +131,7 @@ export function createConfig(params: {
   ollamaBaseUrl?: string;
   parentAddress?: Address;
   treasuryPolicy?: TreasuryPolicy;
+  runModeConfig?: RunModeConfig;
 }): AutomatonConfig {
   return {
     name: params.name,
@@ -149,5 +158,6 @@ export function createConfig(params: {
     maxChildren: DEFAULT_CONFIG.maxChildren || 3,
     parentAddress: params.parentAddress,
     treasuryPolicy: params.treasuryPolicy ?? DEFAULT_TREASURY_POLICY,
+    runModeConfig: params.runModeConfig ?? DEFAULT_RUN_MODE_CONFIG,
   };
 }

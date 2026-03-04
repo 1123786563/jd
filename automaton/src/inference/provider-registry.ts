@@ -242,11 +242,11 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
   {
     id: "zhipu",
     name: "Zhipu AI (智普)",
-    baseUrl: "https://open.bigmodel.cn/api/paas/v4",
+    baseUrl: " https://open.bigmodel.cn/api/coding/paas/v4",
     apiKeyEnvVar: "ZHIPU_API_KEY",
     models: [
       {
-        id: "glm-4-plus",
+        id: "glm-5",
         tier: "reasoning",
         contextWindow: 128000,
         maxOutputTokens: 32768,
@@ -257,7 +257,7 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
         supportsStreaming: true,
       },
       {
-        id: "glm-4",
+        id: "glm-4.6",
         tier: "fast",
         contextWindow: 128000,
         maxOutputTokens: 32768,

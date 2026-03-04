@@ -1,0 +1,187 @@
+# Epic 4b.9: 审批记录与审计 (human_approvals 表)
+
+Status: ready-for-dev
+
+<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+
+## Story
+
+As a System Administrator,
+I want to have a comprehensive approval tracking system that records all human-in-the-loop interventions with complete audit trails,
+so that I can monitor, analyze, and ensure compliance with approval workflows.
+
+## Acceptance Criteria
+
+1. **表结构完整性** (AC: 1)
+   - [ ] `human_approvals` 表必须包含所有必需字段
+   - [ ] 所有字段类型正确 (INTEGER, TEXT, JSON, TIMESTAMP)
+   - [ ] 默认值设置正确 (status='pending', created_at=CURRENT_TIMESTAMP)
+
+2. **索引性能优化** (AC: 2)
+   - [ ] 创建索引 `idx_human_approvals_status` 用于按状态查询
+   - [ ] 创建索引 `idx_human_approvals_conversation` 用于按会话ID关联查询
+   - [ ] 创建索引 `idx_human_approvals_created` 用于时间范围查询
+
+3. **数据完整性** (AC: 3)
+   - [ ] `action_type` 必须是非空字段，包含有效值
+   - [ ] `status` 必须是 'pending', 'approved', 'rejected' 之一
+   - [ ] `approved_at` 仅在批准后设置，拒绝时不设置
+
+4. **审批流程支持** (AC: 4)
+   - [ ] 支持四种审批类型：DAG_REVIEW, KMS_SIGNATURE, BUDGET_OVERRIDE, FINAL_AUDIT
+   - [ ] 能够记录完整的请求载荷 (request_payload JSON)
+   - [ ] 能够记录审批人、审批时间和拒绝原因
+
+5. **响应时间追踪** (AC: 5)
+   - [ ] 记录审批响应时间 (response_time_seconds)
+   - [ ] 计算从创建到审批完成的时间差
+
+6. **事务安全性** (AC: 6)
+   - [ ] 所有审批状态更新必须在事务中完成
+   - [ ] 使用 WAL 模式保证并发安全
+
+7. **查询功能** (AC: 7)
+   - [ ] 提供按状态查询待审批列表
+   - [ ] 提供按会话关联查询审批历史
+   - [ ] 提供按时间范围查询统计
+
+## Tasks / Subtasks
+
+- [ ] Task 1: 创建数据库表和索引 (AC: 1, 2)
+  - [ ] 编写 `human_approvals` 表的 CREATE TABLE 语句
+  - [ ] 编写三个索引的 CREATE INDEX 语句
+  - [ ] 创建数据库迁移脚本
+  - [ ] 编写表结构验证测试
+
+- [ ] Task 2: 实现审批记录 DAO 层 (AC: 3, 4, 5)
+  - [ ] 创建 TypeScript 接口定义
+  - [ ] 实现插入审批记录方法 (requestApproval)
+  - [ ] 实现查询待审批列表方法 (getPendingApprovals)
+  - [ ] 实现更新审批状态方法 (respondApproval)
+  - [ ] 实现按会话查询方法 (getApprovalsByConversation)
+  - [ ] 实现统计方法 (getApprovalStats)
+
+- [ ] Task 3: 实现审批状态机 (AC: 6)
+  - [ ] 实现状态转换验证 (pending → approved/rejected)
+  - [ ] 实现事务包装器 (withTransaction)
+  - [ ] 防止重复审批 (idempotency check)
+  - [ ] 实现超时处理 (timeout handling)
+
+- [ ] Task 4: 实现审计日志功能 (AC: 7)
+  - [ ] 创建审计日志辅助类
+  - [ ] 记录所有审批操作到日志
+  - [ ] 实现审批统计查询 (响应时间、批准率等)
+  - [ ] 实现导出功能 (CSV/JSON)
+
+## Dev Notes
+
+### 项目结构
+- **数据库迁移**: `automaton/migrations/` 或 `tinyclaw/src/db/migrations/`
+- **DAO 层**: `tinyclaw/src/db/approvals.ts` (基于 upwork_autopilot 设计)
+- **类型定义**: `tinyclaw/src/types/approval.ts`
+- **测试**: `tinyclaw/tests/approvals.test.ts`
+
+### 架构约束
+- 使用 SQLite WAL 模式确保并发安全
+- 所有 JSON 字段使用 `JSON.stringify()` 和 `JSON.parse()`
+- 时间戳使用 ISO 8601 格式
+- 状态转换必须通过原子事务完成
+
+### 技术栈要求
+- **数据库**: SQLite 3.35+ (支持 JSON1 扩展)
+- **类型系统**: TypeScript 5.0+
+- **测试框架**: Vitest
+- **数据库工具**: better-sqlite3
+
+### 关键业务流程
+1. **请求审批**: HumanSupervisor.requestApproval() → INSERT INTO human_approvals
+2. **查询待办**: HumanSupervisor.getPendingApprovals() → SELECT * WHERE status='pending'
+3. **审批响应**: HumanSupervisor.respondApproval() → UPDATE SET status, approved_by, approved_at
+4. **审计统计**: ApprovalStats.getStats() → 聚合查询响应时间、批准率
+
+### 与其他表的关系
+```
+┌──────────────┐
+│   projects   │
+│              │
+└──────┬───────┘
+       │ 1
+       │
+       ▼
+┌──────────────┐
+│ conversations│
+│              │
+└──────┬───────┘
+       │ 1
+       │
+       ▼
+┌──────────────┐
+│human_approvals│
+│              │
+└──────────────┘
+```
+
+**关系说明**:
+- 1 个项目可能对应多个会话
+- 1 个会话可能触发多次人工审批
+- 审批记录通过 `conversation_id` 与会话关联
+- 审批记录通过 `project_id` (可选) 与项目关联
+
+### 参考资料
+- [Source: docs/upwork_autopilot_detailed_design.md#L991-1003] - human_approvals 表结构设计
+- [Source: docs/upwork_autopilot_detailed_design.md#L1445-1462] - 数据库表定义和索引
+- [Source: docs/upwork_autopilot_detailed_design.md#L2445-2458] - 审批流程代码示例
+- [Source: docs/upwork_autopilot_detailed_design.md#L769-916] - 四大人工介入点详细设计
+- [Source: docs/upwork_autopilot_architecture.md#L758-760] - 审批阈值配置
+- [Source: docs/upwork_autopilot_architecture.md#L790-791] - 审计留痕示例
+
+### 实现注意事项
+1. **并发安全**: 使用 SQLite 的 `BEGIN IMMEDIATE` 确保同一会话的审批串行处理
+2. **幂等性**: 同一审批记录只能被批准或拒绝一次
+3. **审计完整性**: 所有字段变更必须记录到审计日志
+4. **性能优化**: 索引必须覆盖常用查询模式 (status, conversation_id, created_at)
+5. **数据保留**: 审批记录永久保留，不支持物理删除 (仅逻辑删除)
+
+### 配置示例
+```typescript
+// 审批类型定义
+enum ApprovalActionType {
+  DAG_REVIEW = 'DAG_REVIEW',        // 架构图纸开工审批
+  KMS_SIGNATURE = 'KMS_SIGNATURE',  // 大额交易签名审批
+  BUDGET_OVERRIDE = 'BUDGET_OVERRIDE', // 预算超支审批
+  FINAL_AUDIT = 'FINAL_AUDIT'       // 交付前最终审计
+}
+
+// 审批状态定义
+enum ApprovalStatus {
+  PENDING = 'pending',      // 待审批
+  APPROVED = 'approved',    // 已批准
+  REJECTED = 'rejected'     // 已拒绝
+}
+```
+
+## Dev Agent Record
+
+### Agent Model Used
+
+qwen3-max-2026-01-23
+
+### Debug Log References
+
+### Completion Notes List
+
+### File List
+
+- ✅ `tinyclaw/src/db/migrations/XXXX_create_human_approvals.sql`
+- ✅ `tinyclaw/src/db/approvals.ts` (ApprovalDAO)
+- ✅ `tinyclaw/src/types/approval.ts` (类型定义)
+- ✅ `tinyclaw/src/services/approval-stats.ts` (审计统计)
+- ✅ `tinyclaw/tests/approvals.test.ts` (单元测试)
+- ✅ `tinyclaw/src/services/human-supervisor.ts` (审批服务集成)
+
+---
+
+**Story Generation Date**: 2026-03-04
+**Generated By**: BMAD Create-Story Workflow
+**Epic Reference**: Epic 4b - 安全与合规
+**Priority**: High (Phase 4 核心审计功能)

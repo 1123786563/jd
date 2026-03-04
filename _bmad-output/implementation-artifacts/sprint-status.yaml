@@ -1,0 +1,156 @@
+# generated: 2026-03-04
+# project: jd
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-03-04
+project: jd
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # Phase 1: Conway Automaton 核心完善
+  epic-1a: backlog
+  1a-1-memory-compression: backlog
+  1a-2-context-aggregation: backlog
+  1a-3-semantic-search: backlog
+  1a-4-memory-backup: backlog
+  1a-5-memory-archive: backlog
+  epic-1a-retrospective: optional
+
+  epic-1a-plus: backlog
+  1a-plus-1-daemon-heartbeat: backlog
+  1a-plus-2-orchestration-engine: backlog
+  1a-plus-3-economic-decision: backlog
+  1a-plus-4-web4-integration: backlog
+  1a-plus-5-architecture-diagram: backlog
+  epic-1a-plus-retrospective: optional
+
+  epic-1b: backlog
+  1b-1-code-generation-security: backlog
+  1b-2-code-review-workflow: backlog
+  1b-3-git-integration: backlog
+  1b-4-skill-marketplace: backlog
+  1b-5-audit-visualization: backlog
+  epic-1b-retrospective: optional
+
+  epic-1c: backlog
+  1c-1-agent-registry: backlog
+  1c-2-agent-communication: backlog
+  1c-3-team-collaboration: backlog
+  1c-4-load-balancing: backlog
+  1c-5-agent-lifecycle: backlog
+  1c-6-error-reflow: backlog
+  1c-7-conversation-state-machine: backlog
+  1c-8-task-node-state-machine: backlog
+  1c-9-status-validation: backlog
+  epic-1c-retrospective: optional
+
+  # Phase 2: TinyClaw 功能增强
+  epic-2a: backlog
+  2a-1-agent-management: backlog
+  2a-2-team-management: backlog
+  2a-3-chat-interface: backlog
+  2a-4-task-tracking: backlog
+  2a-5-log-viewer: backlog
+  2a-6-config-editor: backlog
+  2a-7-performance-dashboard: backlog
+  2a-8-mobile-responsive: backlog
+  epic-2a-retrospective: optional
+
+  epic-2b: backlog
+  2b-1-rest-api: backlog
+  2b-2-websocket-stream: backlog
+  2b-3-plugin-hooks: backlog
+  2b-4-rate-limiting: backlog
+  2b-5-backup-recovery: backlog
+  2b-6-multitenant: backlog
+  2b-7-hybrid-queue: backlog
+  2b-8-disaster-recovery: backlog
+  2b-9-mention-routing: backlog
+  2b-10-core-context: backlog
+  2b-11-context-sharing: backlog
+  2b-12-database-design: backlog
+  2b-13-index-optimization: backlog
+  epic-2b-retrospective: optional
+
+  epic-2c: backlog
+  2c-1-zhipu-integration: backlog
+  2c-2-qwen-vision: backlog
+  2c-3-kimi-optimization: backlog
+  2c-4-model-routing: backlog
+  2c-5-performance-monitoring: backlog
+  2c-6-local-models: backlog
+  epic-2c-retrospective: optional
+
+  # Phase 3: 集成与协同
+  epic-3a: backlog
+  3a-1-shared-registry: backlog
+  3a-2-unified-tools: backlog
+  3a-3-config-sync: backlog
+  3a-4-skill-marketplace: backlog
+  3a-5-llm-abstraction: backlog
+  epic-3a-retrospective: optional
+
+  epic-3b: backlog
+  3b-1-automaton-agent: backlog
+  3b-2-api-bridge: backlog
+  3b-3-state-sharing: backlog
+  3b-4-unified-logging: backlog
+  3b-5-deployment-coordination: backlog
+  epic-3b-retrospective: optional
+
+  # Phase 4: 高级功能
+  epic-4a: backlog
+  4a-1-metrics-collection: backlog
+  4a-2-health-check: backlog
+  4a-3-alerting-system: backlog
+  4a-4-distributed-tracing: backlog
+  4a-5-grafana-dashboard: backlog
+  epic-4a-retrospective: optional
+
+  epic-4b: backlog
+  4b-1-policy-engine: backlog
+  4b-2-injection-defense: backlog
+  4b-3-audit-logging: backlog
+  4b-4-rbac-permissions: backlog
+  4b-5-data-encryption: backlog
+  4b-6-gdpr-compliance: backlog
+  4b-7-human-intervention: backlog
+  4b-8-approval-workflow: backlog
+  4b-9-approval-audit: backlog
+  4b-10-sandbox-protection: backlog
+  4b-11-private-key-security: backlog
+  4b-12-upwork-compliance: backlog
+  epic-4b-retrospective: optional

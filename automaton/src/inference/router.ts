@@ -45,6 +45,11 @@ export class InferenceRouter {
   ): Promise<InferenceResult> {
     const { messages, taskType, tier, sessionId, turnId, tools } = request;
 
+    // Check if API-only mode: skip budget checks
+    const isApiOnly = tier === "high" &&
+                      this.budget.config.hourlyBudgetCents === 0 &&
+                      this.budget.config.sessionBudgetCents === 0;
+
     // 1. Select model from routing matrix
     const model = this.selectModel(tier, taskType);
     if (!model) {
@@ -61,33 +66,18 @@ export class InferenceRouter {
       };
     }
 
-    // 2. Estimate cost and check budget
-    const estimatedTokens = messages.reduce((sum, m) => sum + (m.content?.length || 0) / 4, 0);
-    const estimatedCostCents = Math.ceil(
-      (estimatedTokens / 1000) * model.costPer1kInput / 100 +
-      (request.maxTokens || 1000) / 1000 * model.costPer1kOutput / 100,
-    );
+    // 2. Estimate cost and check budget (skip if API-only mode with no budget limits)
+    if (!isApiOnly) {
+      const estimatedTokens = messages.reduce((sum, m) => sum + (m.content?.length || 0) / 4, 0);
+      const estimatedCostCents = Math.ceil(
+        (estimatedTokens / 1000) * model.costPer1kInput / 100 +
+        (request.maxTokens || 1000) / 1000 * model.costPer1kOutput / 100,
+      );
 
-    const budgetCheck = this.budget.checkBudget(estimatedCostCents, model.modelId);
-    if (!budgetCheck.allowed) {
-      return {
-        content: `Budget exceeded: ${budgetCheck.reason}`,
-        model: model.modelId,
-        provider: model.provider,
-        inputTokens: 0,
-        outputTokens: 0,
-        costCents: 0,
-        latencyMs: 0,
-        finishReason: "budget_exceeded",
-      };
-    }
-
-    // 3. Check session budget
-    if (request.sessionId && this.budget.config.sessionBudgetCents > 0) {
-      const sessionCost = this.budget.getSessionCost(request.sessionId);
-      if (sessionCost + estimatedCostCents > this.budget.config.sessionBudgetCents) {
+      const budgetCheck = this.budget.checkBudget(estimatedCostCents, model.modelId);
+      if (!budgetCheck.allowed) {
         return {
-          content: `Session budget exceeded: ${sessionCost}c spent + ${estimatedCostCents}c estimated > ${this.budget.config.sessionBudgetCents}c limit`,
+          content: `Budget exceeded: ${budgetCheck.reason}`,
           model: model.modelId,
           provider: model.provider,
           inputTokens: 0,
@@ -96,6 +86,23 @@ export class InferenceRouter {
           latencyMs: 0,
           finishReason: "budget_exceeded",
         };
+      }
+
+      // 3. Check session budget
+      if (request.sessionId && this.budget.config.sessionBudgetCents > 0) {
+        const sessionCost = this.budget.getSessionCost(request.sessionId);
+        if (sessionCost + estimatedCostCents > this.budget.config.sessionBudgetCents) {
+          return {
+            content: `Session budget exceeded: ${sessionCost}c spent + ${estimatedCostCents}c estimated > ${this.budget.config.sessionBudgetCents}c limit`,
+            model: model.modelId,
+            provider: model.provider,
+            inputTokens: 0,
+            outputTokens: 0,
+            costCents: 0,
+            latencyMs: 0,
+            finishReason: "budget_exceeded",
+          };
+        }
       }
     }
 

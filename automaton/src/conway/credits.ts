@@ -34,8 +34,15 @@ export async function checkFinancialState(
  *
  * Zero credits = "critical" (broke but alive — can still accept funding, send distress).
  * Only negative balance (API-confirmed debt) = "dead".
+ *
+ * API-only mode: If runMode is "api_only", always return "high" to bypass wallet checks.
  */
-export function getSurvivalTier(creditsCents: number): SurvivalTier {
+export function getSurvivalTier(creditsCents: number, runMode?: "wallet_only" | "api_only" | "hybrid"): SurvivalTier {
+  // API-only mode: Always return high survival tier
+  if (runMode === "api_only") {
+    return "high";
+  }
+
   if (creditsCents > SURVIVAL_THRESHOLDS.high) return "high";
   if (creditsCents > SURVIVAL_THRESHOLDS.normal) return "normal";
   if (creditsCents > SURVIVAL_THRESHOLDS.low_compute) return "low_compute";

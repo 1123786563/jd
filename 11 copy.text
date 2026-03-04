@@ -1,0 +1,65 @@
+/bmad-bmm-create-story  **1b.3:** Git集成与PR自动化，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **1b.4:** 技能市场原型 (可安装技能包)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **1b.5:** 审计日志可视化，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **1c.1:** 多智能体注册表，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **1c.2:** 智能体间通信协议，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **1c.3:** 团队协作框架 (与TinyClaw对齐)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **1c.4:** 负载均衡与故障转移，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **1c.5:** 智能体生命周期管理，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **1c.6:** 异常回流与自愈机制 - 四大回流类型 (COMPILATION_ERROR/LOGIC_ERROR/REQUIREMENT_MISMATCH/ARCHITECTURE_FLAW)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **1c.7:** 会话状态机实现 - Conversation State Machine (discovered/negotiating/signed/developing/testing/deployed)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **1c.8:** 任务节点状态机实现 - TaskNode State Machine (blocked/pending/running/completed/failed/abandoned)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **1c.9:** 状态转换验证与异常处理 - updateTaskStatus() 原子操作与依赖解锁，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2a.1:** Agent管理页面完善 (CRUD + 状态监控)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2a.2:** Team管理页面 (团队配置、成员管理)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2a.3:** 实时聊天界面优化，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2a.4:** 任务追踪系统，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2a.5:** 日志查看器和搜索，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2a.6:** 配置编辑器 (可视化)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2a.7:** 性能监控仪表盘，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2a.8:** 响应式移动端适配，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2b.1:** REST API完整化，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2b.2:** WebSocket实时事件流，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2b.3:** 插件/钩子系统实现 (runIncomingHooks/runOutgoingHooks) - 消息预处理/后处理拦截器，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2b.4:** 速率限制和安全加固 (Token Bucket + Jitter 防封号)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2b.5:** 备份与恢复功能，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2b.6:** 多租户支持原型，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2b.7:** Redis+SQLite 混合消息队列 - Redis 实时分发 + SQLite 持久化 (HybridQueueManager)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2b.8:** 消息队列灾难恢复机制 - recoverStaleMessages() 从 SQLite 恢复处理中消息，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2b.9:** Agent 深度通信协议 - @mention 路由机制 (parseMentions(), routeMentions())，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2b.10:** 上下文共享与传递机制 - ConversationContext (loadContext(), shareWithAgent())，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2b.11:** 数据库表设计与迁移 - 9 个核心表 (messages, conversations, task_graph, projects, token_audit_log 等)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2b.12:** 索引优化与查询性能 - SQLite WAL 模式 + 原子事务 (BEGIN IMMEDIATE)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2c.1:** 智普(Zhipu)模型集成完善，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2c.2:** 通义千问(Qwen)视觉模型支持，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2c.3:** Kimi(Moonshot)长文本优化，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2c.4:** 模型路由策略优化，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2c.5:** 国产模型性能监控，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **2c.6:** 本地模型(Ollama/vLLM)集成，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **3a.1:** 共享智能体注册表，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **3a.2:** 统一工具/技能库 (@jd/core)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **3a.3:** 智能体配置同步，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **3a.4:** 跨项目技能市场，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **3a.5:** 通用LLM供应商抽象，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **3b.1:** Automaton作为TinyClaw专用智能体，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **3b.2:** API桥接层 (消息路由)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **3b.3:** 状态共享机制，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **3b.4:** 统一日志和监控，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **3b.5:** 部署协调工具 (Docker Compose)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4a.1:** 性能指标收集，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4a.2:** 健康检查端点完善，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4a.3:** 告警系统 (余额、错误率)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4a.4:** 分布式追踪原型，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4a.5:** 可视化仪表盘 (Grafana集成)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4b.1:** 策略引擎增强 (PolicyEngine) - Escrow Check、Budget Guard、Risk Classifier，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4b.2:** 注入防御完善 (Llama-Guard 集成) - 提示词注入防护、内容安全过滤，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4b.3:** 审计日志归档 - 不可篡改日志记录，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4b.4:** RBAC权限系统，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4b.5:** 数据加密与隐私保护，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4b.6:** GDPR/合规性检查，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4b.7:** 人工介入点设计与实现 - 四大 HITL 节点完整实现，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4b.8:** HITL 审批工作流 - Telegram/Discord 管理界面集成，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4b.9:** 审批记录与审计 (human_approvals 表)，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4b.10:** 沙箱逃逸防护 - Docker 断网模式、资源限制 (0.5 CPU, 512MB RAM)、只读根文件系统，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4b.11:** 私钥安全管理 - KMS/Vault 集成、硬件钱包签名授权，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
+/bmad-bmm-create-story  **4b.12:** Upwork ToS 合规检查 - 自动化投标合规性验证，需要阅读docs/目录下的文档，不要偏离现有技术框架和技术栈。
