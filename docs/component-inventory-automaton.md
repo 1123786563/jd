@@ -1,483 +1,568 @@
-# Conway Automaton - Component Inventory
+# Conway Automaton - 组件清单
 
-**Part:** automaton
-**Last Updated:** 2026-03-03
-
----
-
-## Overview
-
-This document catalogs all major components in Conway Automaton, including their purpose, location, dependencies, and key interfaces.
+**所属部分：** automaton
+**上次更新：** 2026-03-03
 
 ---
 
-## Core Runtime Components
+## 概述
 
-### 1. Agent Loop
-**File:** `src/agent/loop.ts`
-**Purpose:** Core ReAct execution loop - the agent's consciousness
-**Key Functions:**
-- `runAgentLoop(options)` - Main execution function
-- Manages turn-based conversation flow
-- Enforces policy rules and budget limits
-**Dependencies:** context.ts, tools.ts, policy-engine.ts, injection-defense.ts
-**Interfaces:** AgentLoopOptions, AgentState, AgentTurn
-
-### 2. Context Manager
-**File:** `src/memory/context-manager.ts`
-**Purpose:** Aggregate and manage context from all memory layers
-**Key Functions:**
-- `buildContextMessages()` - Build messages array for LLM
-- `trimContext()` - Trim context to token limit
-- Token counting and budgeting
-**Dependencies:** working.ts, episodic.ts, semantic.ts, procedural.ts
-**Interfaces:** ContextManager, TokenCounter
-
-### 3. Policy Engine
-**File:** `src/agent/policy-engine.ts`
-**Purpose:** Runtime safety rule enforcement
-**Key Functions:**
-- `validate(state)` - Run all policy rules
-- `registerRule(rule)` - Add custom rule
-- `removeRule(name)` - Remove rule
-**Dependencies:** policy-rules/validation.ts, rate-limits.ts, path-protection.ts
-**Interfaces:** PolicyEngine, PolicyRule
+本文档记录了 Conway Automaton 中的所有主要组件，包括它们的用途、位置、依赖关系和关键接口。
 
 ---
 
-## Memory System Components
+## 核心运行时组件
 
-### 4. Working Memory
-**File:** `src/memory/working.ts`
-**Purpose:** Active context for current conversation turn
-**Key Functions:**
-- Store recent messages and active goals
-- Session-scoped (cleared between turns)
-- Fast in-memory access
-**Dependencies:** None
-**Interfaces:** WorkingMemory
+### 1. 智能体循环 (Agent Loop)
 
-### 5. Episodic Memory
-**File:** `src/memory/episodic.ts`
-**Purpose:** Persistent event history and conversation transcripts
-**Key Functions:**
-- `storeEvent(event)` - Save event to database
-- `retrieveEvents(query)` - Query events by time/type
-- `getConversationHistory()` - Get full conversation
-**Dependencies:** database.ts
-**Interfaces:** EpisodicMemory, MemoryEvent
+**文件：** `src/agent/loop.ts`
+**用途：** 核心 ReAct 执行循环 —— 智能体的意识中枢
+**关键函数：**
 
-### 6. Semantic Memory
-**File:** `src/memory/semantic.ts`
-**Purpose:** Knowledge base with vector similarity search
-**Key Functions:**
-- `storeKnowledge(knowledge)` - Add knowledge with embeddings
-- `searchKnowledge(query)` - Semantic similarity search
-- `updateKnowledge(id, data)` - Update existing knowledge
-**Dependencies:** knowledge-store.ts, embeddings (via inference)
-**Interfaces:** SemanticMemory, KnowledgeBlock
+- `runAgentLoop(options)` - 主执行函数
+- 管理基于轮次的会话流
+- 实施策略规则和预算限制
+**依赖关系：** context.ts, tools.ts, policy-engine.ts, injection-defense.ts
+**接口：** AgentLoopOptions, AgentState, AgentTurn
 
-### 7. Procedural Memory
-**File:** `src/memory/procedural.ts`
-**Purpose:** Skills, tools, and how-to knowledge
-**Key Functions:**
-- `registerSkill(skill)` - Add new skill
-- `getSkill(name)` - Retrieve skill by name
-- `listSkills()` - Get all available skills
-**Dependencies:** tools.ts
-**Interfaces:** ProceduralMemory, Skill
+### 2. 上下文管理器 (Context Manager)
 
-### 8. Knowledge Store
-**File:** `src/memory/knowledge-store.ts`
-**Purpose:** Unified storage for semantic knowledge
-**Key Functions:**
-- Persistent storage with SQLite
-- Embedding caching
-- Deduplication and merging
-**Dependencies:** database.ts, inference.ts (for embeddings)
-**Interfaces:** KnowledgeStore
+**文件：** `src/memory/context-manager.ts`
+**用途：** 聚合并管理来自所有记忆层级的上下文
+**关键函数：**
 
-### 9. Memory Retriever
-**File:** `src/memory/retrieval.ts`
-**Purpose:** Intelligent memory retrieval strategies
-**Key Functions:**
-- `retrieveRelevant(context)` - Get relevant memories
-- `hybridSearch(query)` - Combine keyword + semantic search
-- Relevance scoring and ranking
-**Dependencies:** semantic.ts, episodic.ts
-**Interfaces:** MemoryRetriever
+- `buildContextMessages()` - 为 LLM 构建消息数组
+- `trimContext()` - 将上下文裁剪至 Token 限制内
+- Token 计数与预算管理
+**依赖关系：** working.ts, episodic.ts, semantic.ts, procedural.ts
+**接口：** ContextManager, TokenCounter
 
-### 10. Memory Ingestion Pipeline
-**File:** `src/memory/ingestion.ts`
-**Purpose:** Process and store new knowledge
-**Key Functions:**
-- `ingest(text)` - Process and store knowledge
-- `extractEntities(text)` - Extract named entities
-- `chunkAndEmbed(text)` - Chunk text and generate embeddings
-**Dependencies:** knowledge-store.ts, inference.ts
-**Interfaces:** MemoryIngestionPipeline
+### 3. 策略引擎 (Policy Engine)
 
-### 11. Compression Engine
-**File:** `src/memory/compression-engine.ts`
-**Purpose:** Compress long conversations and memories
-**Key Functions:**
-- `summarizeConversation()` - Summarize long conversation
-- `compressMemory()` - Lossy compression of old memories
-- Retention policies
-**Dependencies:** inference.ts (for summarization)
-**Interfaces:** CompressionEngine
+**文件：** `src/agent/policy-engine.ts`
+**用途：** 运行时安全规则强制执行
+**关键函数：**
 
-### 12. Event Stream
-**File:** `src/memory/event-stream.ts`
-**Purpose:** Event-based memory updates
-**Key Functions:**
-- `onEvent(event)` - Handle memory events
-- `subscribe(listener)` - Subscribe to events
-- Event batching and debouncing
-**Dependencies:** None
-**Interfaces:** EventStream
+- `validate(state)` - 运行所有策略规则
+- `registerRule(rule)` - 添加自定义规则
+- `removeRule(name)` - 移除规则
+**依赖关系：** policy-rules/validation.ts, rate-limits.ts, path-protection.ts
+**接口：** PolicyEngine, PolicyRule
 
 ---
 
-## Identity & Web3 Components
+## 记忆系统组件
 
-### 13. Wallet Manager
-**File:** `src/identity/wallet.ts`
-**Purpose:** Ethereum wallet generation and management
-**Key Functions:**
-- `getWallet()` - Get or create wallet
-- `getAutomatonDir()` - Get config directory path
-- `signMessage(message)` - Sign message with wallet
-**Dependencies:** viem, siwe
-**Interfaces:** AutomatonIdentity
+### 4. 工作记忆 (Working Memory)
 
-### 14. Provision Manager
-**File:** `src/identity/provision.ts`
-**Purpose:** Conway API key provisioning via SIWE
-**Key Functions:**
-- `provision()` - Provision API key via SIWE
-- `loadApiKeyFromConfig()` - Load existing key
-- Blockchain identity verification
-**Dependencies:** wallet.ts, conway/client.ts
-**Interfaces:** None
+**文件：** `src/memory/working.ts`
+**用途：** 当前会话轮次的活跃上下文
+**关键函数：**
 
----
+- 存储最近的消息和活跃目标
+- 会话作用域 (轮次结束后清除)
+- 快速内存访问
+**依赖关系：** 无
+**接口：** WorkingMemory
 
-## Conway API Components
+### 5. 情节记忆 (Episodic Memory)
 
-### 15. Conway Client
-**File:** `src/conway/client.ts`
-**Purpose:** Conway API HTTP client
-**Key Functions:**
-- `request(endpoint, data)` - Make authenticated request
-- Request signing and retries
-- Error handling
-**Dependencies:** fetch (or axios)
-**Interfaces:** ConwayClient
+**文件：** `src/memory/episodic.ts`
+**用途：** 持久化的事件历史和会话记录
+**关键函数：**
 
-### 16. Credits Manager
-**File:** `src/conway/credits.ts`
-**Purpose:** Credit balance tracking
-**Key Functions:**
-- `getCreditBalance()` - Get current balance
-- `getSurvivalTier()` - Determine survival tier
-- Budget calculations
-**Dependencies:** client.ts
-**Interfaces:** None
+- `storeEvent(event)` - 将事件保存到数据库
+- `retrieveEvents(query)` - 按时间/类型查询事件
+- `getConversationHistory()` - 获取完整的会话历史
+**依赖关系：** database.ts
+**接口：** EpisodicMemory, MemoryEvent
 
-### 17. X402 Payment Handler
-**File:** `src/conway/x402.ts`
-**Purpose:** USDC balance and payment processing
-**Key Functions:**
-- `getUsdcBalance()` - Get USDC balance
-- `processInvoice(invoice)` - Process payment
-- Payment protocol handling
-**Dependencies:** client.ts, viem (for blockchain)
-**Interfaces:** None
+### 6. 语义记忆 (Semantic Memory)
 
-### 18. Inference Client
-**File:** `src/conway/inference.ts`
-**Purpose:** Inference API integration
-**Key Functions:**
-- `createInferenceClient()` - Create client instance
-- `inference(model, messages)` - Call LLM
-- Cost tracking
-**Dependencies:** client.ts, openai SDK
-**Interfaces:** InferenceClient
+**文件：** `src/memory/semantic.ts`
+**用途：** 具有向量相似度搜索功能的知识库
+**关键函数：**
 
-### 19. Top-up Manager
-**File:** `src/conway/topup.ts`
-**Purpose:** Automated credit top-up
-**Key Functions:**
-- `bootstrapTopup()` - Initialize top-up
-- `monitorBalance()` - Monitor and auto-top-up
-- Payment processing
-**Dependencies:** credits.ts, x402.ts
-**Interfaces:** None
+- `storeKnowledge(knowledge)` - 添加带有嵌入 (embeddings) 的知识
+- `searchKnowledge(query)` - 语义相似度搜索
+- `updateKnowledge(id, data)` - 更新现有知识
+**依赖关系：** knowledge-store.ts, embeddings (通过 inference)
+**接口：** SemanticMemory, KnowledgeBlock
 
----
+### 7. 程序记忆 (Procedural Memory)
 
-## Self-Modification Components
+**文件：** `src/memory/procedural.ts`
+**用途：** 技能、工具和操作类知识
+**关键函数：**
 
-### 20. Code Generator
-**File:** `src/self-mod/code.ts`
-**Purpose:** Safe code generation and modification
-**Key Functions:**
-- `generateCode(prompt)` - Generate code from prompt
-- `modifyFile(path, changes)` - Modify file safely
-- Syntax validation
-**Dependencies:** inference.ts, audit-log.ts
-**Interfaces:** None
+- `registerSkill(skill)` - 添加新技能
+- `getSkill(name)` - 按名称检索技能
+- `listSkills()` - 获取所有可用技能
+**依赖关系：** tools.ts
+**接口：** ProceduralMemory, Skill
 
-### 21. Tools Manager
-**File:** `src/self-mod/tools-manager.ts`
-**Purpose:** Dynamic tool registration and lifecycle
-**Key Functions:**
-- `registerTool(tool)` - Register new tool
-- `unregisterTool(name)` - Remove tool
-- `listTools()` - Get all tools
-**Dependencies:** tools.ts
-**Interfaces:** ToolsManager
+### 8. 知识存储 (Knowledge Store)
 
-### 22. Upstream Manager
-**File:** `src/self-mod/upstream.ts`
-**Purpose:** Git integration for code versioning
-**Key Functions:**
-- `commitChanges(message)` - Commit changes
-- `createPR(branch, title)` - Create pull request
-- `pushToRemote()` - Push to remote repo
-**Dependencies:** simple-git
-**Interfaces:** None
+**文件：** `src/memory/knowledge-store.ts`
+**用途：** 语义知识的统一存储
+**关键函数：**
 
-### 23. Audit Logger
-**File:** `src/self-mod/audit-log.ts`
-**Purpose:** Log all code changes for rollback
-**Key Functions:**
-- `logChange(change)` - Log change
-- `getChangeHistory()` - Get history
-- `rollbackTo(version)` - Rollback
-**Dependencies:** database.ts
-**Interfaces:** AuditLog
+- 使用 SQLite 进行持久化存储
+- 嵌入 (Embedding) 缓存
+- 去重与合并
+**依赖关系：** database.ts, inference.ts (用于 embeddings)
+**接口：** KnowledgeStore
+
+### 9. 记忆检索器 (Memory Retriever)
+
+**文件：** `src/memory/retrieval.ts`
+**用途：** 智能记忆检索策略
+**关键函数：**
+
+- `retrieveRelevant(context)` - 获取相关记忆
+- `hybridSearch(query)` - 结合关键词 + 语义搜索
+- 相关性评分与排序
+**依赖关系：** semantic.ts, episodic.ts
+**接口：** MemoryRetriever
+
+### 10. 记忆摄取流水线 (Memory Ingestion Pipeline)
+
+**文件：** `src/memory/ingestion.ts`
+**用途：** 处理并存储新知识
+**关键函数：**
+
+- `ingest(text)` - 处理并存储知识
+- `extractEntities(text)` - 提取命名实体
+- `chunkAndEmbed(text)` - 文本分块并生成嵌入
+**依赖关系：** knowledge-store.ts, inference.ts
+**接口：** MemoryIngestionPipeline
+
+### 11. 压缩引擎 (Compression Engine)
+
+**文件：** `src/memory/compression-engine.ts`
+**用途：** 压缩长会话和记忆
+**关键函数：**
+
+- `summarizeConversation()` - 总结长对话
+- `compressMemory()` - 对旧记忆进行有损压缩
+- 保留策略 (Retention policies)
+**依赖关系：** inference.ts (用于总结)
+**接口：** CompressionEngine
+
+### 12. 事件流 (Event Stream)
+
+**文件：** `src/memory/event-stream.ts`
+**用途：** 基于事件的记忆更新
+**关键函数：**
+
+- `onEvent(event)` - 处理记忆事件
+- `subscribe(listener)` - 订阅事件
+- 事件批处理与防抖
+**依赖关系：** 无
+**接口：** EventStream
 
 ---
 
-## Inference Components
+## 身份与 Web3 组件
 
-### 24. Model Registry
-**File:** `src/inference/registry.ts`
-**Purpose:** Multi-provider model registration
-**Key Functions:**
-- `registerProvider(provider)` - Add provider
-- `getModel(modelName)` - Get model config
-- `listModels()` - List all models
-**Dependencies:** provider-registry.ts
-**Interfaces:** ModelRegistry
+### 13. 钱包管理器 (Wallet Manager)
 
-### 25. Budget Tracker
-**File:** `src/inference/budget.ts`
-**Purpose:** Credit tracking and spend limits
-**Key Functions:**
-- `trackSpend(amount)` - Track spend
-- `checkBudget()` - Check if within limits
-- `setLimit(limit)` - Set spend limit
-**Dependencies:** conway/credits.ts
-**Interfaces:** InferenceBudgetTracker
+**文件：** `src/identity/wallet.ts`
+**用途：** 以太坊钱包的生成与管理
+**关键函数：**
 
-### 26. Inference Router
-**File:** `src/inference/router.ts`
-**Purpose:** Intelligent model selection and routing
-**Key Functions:**
-- `route(model, messages)` - Route to best provider
-- Fallback strategies
-- Load balancing
-**Dependencies:** registry.ts, budget.ts
-**Interfaces:** InferenceRouter
+- `getWallet()` - 获取或创建钱包
+- `getAutomatonDir()` - 获取配置目录路径
+- `signMessage(message)` - 使用钱包签名消息
+**依赖关系：** viem, siwe
+**接口：** AutomatonIdentity
 
-### 27. Provider Registry
-**File:** `src/inference/provider-registry.ts`
-**Purpose:** Provider configuration and health monitoring
-**Key Functions:**
-- `addProvider(config)` - Add provider
-- `checkHealth(provider)` - Health check
-- Automatic failover
-**Dependencies:** None
-**Interfaces:** ProviderRegistry
+### 14. 供给管理器 (Provision Manager)
+
+**文件：** `src/identity/provision.ts`
+**用途：** 通过 SIWE 进行 Conway API 密钥供给 (provisioning)
+**关键函数：**
+
+- `provision()` - 通过 SIWE 获取 API 密钥
+- `loadApiKeyFromConfig()` - 加载现有密钥
+- 区块链身份验证
+**依赖关系：** wallet.ts, conway/client.ts
+**接口：** 无
 
 ---
 
-## Persistence Components
+## Conway API 组件
 
-### 28. Database Manager
-**File:** `src/state/database.ts`
-**Purpose:** SQLite database layer
-**Key Functions:**
-- `createDatabase()` - Initialize database
-- `query(sql, params)` - Execute query
-- Schema migrations
-**Dependencies:** better-sqlite3
-**Interfaces:** AutomatonDatabase
+### 15. Conway 客户端 (Conway Client)
 
-**Tables:**
-- `agent_state` - Current agent state
-- `agent_turns` - Conversation history
-- `memory_blocks` - Memory storage
-- `wake_events` - Scheduled events
-- `inbox_messages` - Pending messages
-- `audit_log` - Self-mod audit trail
-- `spend_tracker` - Financial transactions
+**文件：** `src/conway/client.ts`
+**用途：** Conway API HTTP 客户端
+**关键函数：**
 
----
+- `request(endpoint, data)` - 发起经过认证的请求
+- 请求签名与重试
+- 错误处理
+**依赖关系：** fetch (或 axios)
+**接口：** ConwayClient
 
-## Setup & Configuration Components
+### 16. 额度管理器 (Credits Manager)
 
-### 29. Setup Wizard
-**File:** `src/setup/wizard.ts`
-**Purpose:** Interactive first-run setup
-**Key Functions:**
-- Interactive CLI prompts
-- Provider configuration
-- Model selection
-- Treasury setup
-**Dependencies:** prompts.ts, configure.ts, model-picker.ts
-**Interfaces:** None
+**文件：** `src/conway/credits.ts`
+**用途：** 额度余额追踪
+**关键函数：**
 
-### 30. Configuration Manager
-**File:** `src/setup/configure.ts`
-**Purpose:** Configuration editing UI
-**Key Functions:**
-- `editConfig()` - Interactive config editor
-- `saveConfig(config)` - Save config
-- `loadConfig()` - Load config
-**Dependencies:** environment.ts
-**Interfaces:** None
+- `getCreditBalance()` - 获取当前余额
+- `getSurvivalTier()` - 确定生存层级
+- 预算计算
+**依赖关系：** client.ts
+**接口：** 无
 
-### 31. Model Picker
-**File:** `src/setup/model-picker.ts`
-**Purpose:** Interactive model selection
-**Key Functions:**
-- Display available models
-- Cost estimation
-- Provider comparison
-**Dependencies:** registry.ts
-**Interfaces:** None
+### 17. X402 支付处理器 (X402 Payment Handler)
 
-### 32. Environment Loader
-**File:** `src/setup/environment.ts`
-**Purpose:** Environment variable and config loading
-**Key Functions:**
-- `loadEnvironment()` - Load env vars
-- `parseConfigFile()` - Parse config file
-- Default value resolution
-**Dependencies:** None
-**Interfaces:** None
+**文件：** `src/conway/x402.ts`
+**用途：** USDC 余额与支付处理
+**关键函数：**
+
+- `getUsdcBalance()` - 获取 USDC 余额
+- `processInvoice(invoice)` - 处理支付发票
+- 支付协议处理
+**依赖关系：** client.ts, viem (用于区块链)
+**接口：** 无
+
+### 18. 推理客户端 (Inference Client)
+
+**文件：** `src/conway/inference.ts`
+**用途：** 推理 API 集成
+**关键函数：**
+
+- `createInferenceClient()` - 创建客户端实例
+- `inference(model, messages)` - 调用 LLM
+- 成本追踪
+**依赖关系：** client.ts, openai SDK
+**接口：** InferenceClient
+
+### 19. 充值管理器 (Top-up Manager)
+
+**文件：** `src/conway/topup.ts`
+**用途：** 自动化额度充值
+**关键函数：**
+
+- `bootstrapTopup()` - 初始化充值
+- `monitorBalance()` - 监控并自动充值
+- 支付处理
+**依赖关系：** credits.ts, x402.ts
+**接口：** 无
 
 ---
 
-## Orchestration Components
+## 自修改组件 (Self-Modification Components)
 
-### 33. Orchestrator
-**File:** `src/orchestration/orchestrator.ts`
-**Purpose:** Multi-agent orchestration
-**Key Functions:**
-- Coordinate multiple agents
-- Resource allocation
-- Load balancing
-**Dependencies:** None
-**Interfaces:** Orchestrator
+### 20. 代码生成器 (Code Generator)
 
-### 34. Plan Mode Controller
-**File:** `src/orchestration/plan-mode.ts`
-**Purpose:** Plan-and-execute mode
-**Key Functions:**
-- Create execution plans
-- Step-by-step execution
-- Plan validation
-**Dependencies:** None
-**Interfaces:** PlanModeController
+**文件：** `src/self-mod/code.ts`
+**用途：** 安全的代码生成与修改
+**关键函数：**
 
-### 35. Attention Manager
-**File:** `src/orchestration/attention.ts`
-**Purpose:** Attention and TODO management
-**Key Functions:**
-- `generateTodoMd()` - Generate TODO list
-- `injectTodoContext()` - Inject TODOs into context
-- Priority management
-**Dependencies:** None
-**Interfaces:** None
+- `generateCode(prompt)` - 根据提示词生成代码
+- `modifyFile(path, changes)` - 安全地修改文件
+- 语法验证
+**依赖关系：** inference.ts, audit-log.ts
+**接口：** 无
 
-### 36. Messaging System
-**File:** `src/orchestration/messaging.ts`
-**Purpose:** Inter-agent messaging
-**Key Functions:**
-- `sendMessage(to, from, message)` - Send message
-- Message queue and routing
-- Local transport implementation
-**Dependencies:** None
-**Interfaces:** ColonyMessaging, LocalDBTransport
+### 21. 工具管理器 (Tools Manager)
 
-### 37. Worker Pool
-**File:** `src/orchestration/local-worker.ts`
-**Purpose:** Local worker thread pool
-**Key Functions:**
-- `executeTask(task)` - Execute in worker
-- Worker lifecycle management
-- Task queueing
-**Dependencies:** None
-**Interfaces:** LocalWorkerPool
+**文件：** `src/self-mod/tools-manager.ts`
+**用途：** 动态工具注册与生命周期管理
+**关键函数：**
 
-### 38. Agent Tracker
-**File:** `src/orchestration/simple-tracker.ts`
-**Purpose:** Simple agent tracking and funding
-**Key Functions:**
-- Track agent state
-- Manage funding
-- Simple protocol implementation
-**Dependencies:** None
-**Interfaces:** SimpleAgentTracker, SimpleFundingProtocol
+- `registerTool(tool)` - 注册新工具
+- `unregisterTool(name)` - 移除工具
+- `listTools()` - 获取所有工具
+**依赖关系：** tools.ts
+**接口：** ToolsManager
+
+### 22. 上游管理器 (Upstream Manager)
+
+**文件：** `src/self-mod/upstream.ts`
+**用途：** 用于代码版本控制的 Git 集成
+**关键函数：**
+
+- `commitChanges(message)` - 提交更改
+- `createPR(branch, title)` - 创建拉取请求 (PR)
+- `pushToRemote()` - 推送到远程仓库
+**依赖关系：** simple-git
+**接口：** 无
+
+### 23. 审计记录器 (Audit Logger)
+
+**文件：** `src/self-mod/audit-log.ts`
+**用途：** 记录所有代码更改以便回滚
+**关键函数：**
+
+- `logChange(change)` - 记录更改
+- `getChangeHistory()` - 获取历史记录
+- `rollbackTo(version)` - 回滚到特定版本
+**依赖关系：** database.ts
+**接口：** AuditLog
 
 ---
 
-## Observability Components
+## 推理组件 (Inference Components)
 
-### 39. Logger
-**File:** `src/observability/logger.ts`
-**Purpose:** Structured logging
-**Key Functions:**
-- `createLogger(name)` - Create named logger
-- `setGlobalLogLevel(level)` - Set global level
-- Log to file and console
-**Dependencies:** fs, path
-**Interfaces:** Logger
+### 24. 模型注册表 (Model Registry)
+
+**文件：** `src/inference/registry.ts`
+**用途：** 多供应商模型注册
+**关键函数：**
+
+- `registerProvider(provider)` - 添加供应商
+- `getModel(modelName)` - 获取模型配置
+- `listModels()` - 列出所有模型
+**依赖关系：** provider-registry.ts
+**接口：** ModelRegistry
+
+### 25. 预算追踪器 (Budget Tracker)
+
+**文件：** `src/inference/budget.ts`
+**用途：** 额度追踪与支出限制
+**关键函数：**
+
+- `trackSpend(amount)` - 追踪支出
+- `checkBudget()` - 检查是否在预算范围内
+- `setLimit(limit)` - 设置支出上限
+**依赖关系：** conway/credits.ts
+**接口：** InferenceBudgetTracker
+
+### 26. 推理路由 (Inference Router)
+
+**文件：** `src/inference/router.ts`
+**用途：** 智能模型选择与路由
+**关键函数：**
+
+- `route(model, messages)` - 路由到最佳供应商
+- 备选策略 (Fallback strategies)
+- 负载均衡
+**依赖关系：** registry.ts, budget.ts
+**接口：** InferenceRouter
+
+### 27. 供应商注册表 (Provider Registry)
+
+**文件：** `src/inference/provider-registry.ts`
+**用途：** 供应商配置与健康监测
+**关键函数：**
+
+- `addProvider(config)` - 添加供应商
+- `checkHealth(provider)` - 健康检查
+- 自动故障转移 (Failover)
+**依赖关系：** 无
+**接口：** ProviderRegistry
 
 ---
 
-## CLI Components
+## 持久化组件 (Persistence Components)
 
-### 40. CLI Package
-**Location:** `packages/cli/src/`
-**Purpose:** Command-line interface
-**Commands:**
-- `status.ts` - Show agent status
-- `logs.ts` - View logs
-- `send.ts` - Send message to agent
-- `fund.ts` - Fund treasury
+### 28. 数据库管理器 (Database Manager)
 
----
+**文件：** `src/state/database.ts`
+**用途：** SQLite 数据库层
+**关键函数：**
 
-## Key Patterns
+- `createDatabase()` - 初始化数据库
+- `query(sql, params)` - 执行查询
+- 数据库架构迁移 (Schema migrations)
+**依赖关系：** better-sqlite3
+**接口：** AutomatonDatabase
 
-### ReAct Loop Pattern
-Think → Act → Observe → Persist
+**数据表：**
 
-### Multi-Layer Memory Pattern
-Working + Episodic + Semantic + Procedural
-
-### Policy-Driven Safety Pattern
-Validation → Rate Limit → Path Protection → Budget Check
-
-### Self-Modification with Audit Pattern
-Generate → Validate → Log → Commit
+- `agent_state` - 当前智能体状态
+- `agent_turns` - 对话轮次历史
+- `memory_blocks` - 记忆存储
+- `wake_events` - 计划事件
+- `inbox_messages` - 待处理消息
+- `audit_log` - 自修改审计追踪
+- `spend_tracker` - 财务交易记录
 
 ---
 
-_This component inventory was generated by the BMAD `document-project` workflow_
+## 设置与配置组件
+
+### 29. 设置向导 (Setup Wizard)
+
+**文件：** `src/setup/wizard.ts`
+**用途：** 交互式初次运行设置
+**关键函数：**
+
+- 交互式 CLI 提示
+- 供应商配置
+- 模型选择
+- 金库 (Treasury) 设置
+**依赖关系：** prompts.ts, configure.ts, model-picker.ts
+**接口：** 无
+
+### 30. 配置管理器 (Configuration Manager)
+
+**文件：** `src/setup/configure.ts`
+**用途：** 配置编辑 UI
+**关键函数：**
+
+- `editConfig()` - 交互式配置编辑器
+- `saveConfig(config)` - 保存配置
+- `loadConfig()` - 加载配置
+**依赖关系：** environment.ts
+**接口：** 无
+
+### 31. 模型选择器 (Model Picker)
+
+**文件：** `src/setup/model-picker.ts`
+**用途：** 交互式模型选择
+**关键函数：**
+
+- 显示可用模型
+- 成本估算
+- 供应商对比
+**依赖关系：** registry.ts
+**接口：** 无
+
+### 32. 环境加载器 (Environment Loader)
+
+**文件：** `src/setup/environment.ts`
+**用途：** 环境变量与配置加载
+**关键函数：**
+
+- `loadEnvironment()` - 加载环境变量
+- `parseConfigFile()` - 解析配置文件
+- 默认值解析
+**依赖关系：** 无
+**接口：** 无
+
+---
+
+## 编排组件 (Orchestration Components)
+
+### 33. 编排器 (Orchestrator)
+
+**文件：** `src/orchestration/orchestrator.ts`
+**用途：** 多智能体编排
+**关键函数：**
+
+- 协调多个智能体
+- 资源分配
+- 负载均衡
+**依赖关系：** 无
+**接口：** Orchestrator
+
+### 34. 计划模式控制器 (Plan Mode Controller)
+
+**文件：** `src/orchestration/plan-mode.ts`
+**用途：** 计划与执行模式
+**关键函数：**
+
+- 创建执行计划
+- 分步执行
+- 计划验证
+**依赖关系：** 无
+**接口：** PlanModeController
+
+### 35. 注意力管理器 (Attention Manager)
+
+**文件：** `src/orchestration/attention.ts`
+**用途：** 注意力与 TODO 管理
+**关键函数：**
+
+- `generateTodoMd()` - 生成 TODO 列表
+- `injectTodoContext()` - 将 TODO 注入到上下文中
+- 优先级管理
+**依赖关系：** 无
+**接口：** 无
+
+### 36. 消息系统 (Messaging System)
+
+**文件：** `src/orchestration/messaging.ts`
+**用途：** 智能体间消息传递
+**关键函数：**
+
+- `sendMessage(to, from, message)` - 发送消息
+- 消息队列与路由
+- 本地传输实现
+**依赖关系：** 无
+**接口：** ColonyMessaging, LocalDBTransport
+
+### 37. 工作线程池 (Worker Pool)
+
+**文件：** `src/orchestration/local-worker.ts`
+**用途：** 本地工作线程池
+**关键函数：**
+
+- `executeTask(task)` - 在工作线程中执行
+- 工作线程生命周期管理
+- 任务排队
+**依赖关系：** 无
+**接口：** LocalWorkerPool
+
+### 38. 智能体追踪器 (Agent Tracker)
+
+**文件：** `src/orchestration/simple-tracker.ts`
+**用途：** 简单的智能体追踪与资金支持
+**关键函数：**
+
+- 追踪智能体状态
+- 管理资金拨付
+- 简单的协议实现
+**依赖关系：** 无
+**接口：** SimpleAgentTracker, SimpleFundingProtocol
+
+---
+
+## 可观测性组件 (Observability Components)
+
+### 39. 日志记录器 (Logger)
+
+**文件：** `src/observability/logger.ts`
+**用途：** 结构化日志记录
+**关键函数：**
+
+- `createLogger(name)` - 创建命名日志记录器
+- `setGlobalLogLevel(level)` - 设置全局日志级别
+- 记录到文件和控制台
+**依赖关系：** fs, path
+**接口：** Logger
+
+---
+
+## CLI 组件
+
+### 40. CLI 软件包
+
+**位置：** `packages/cli/src/`
+**用途：** 命令行界面
+**命令：**
+
+- `status.ts` - 显示智能体状态
+- `logs.ts` - 查看日志
+- `send.ts` - 向智能体发送消息
+- `fund.ts` - 为金库注资
+
+---
+
+## 关键模式
+
+### ReAct 循环模式
+
+思考 (Think) → 行动 (Act) → 观察 (Observe) → 持久化 (Persist)
+
+### 多层记忆模式
+
+工作记忆 (Working) + 情节记忆 (Episodic) + 语义记忆 (Semantic) + 程序记忆 (Procedural)
+
+### 策略驱动的安全模式
+
+验证 (Validation) → 速率限制 (Rate Limit) → 路径保护 (Path Protection) → 预算检查 (Budget Check)
+
+### 带审计的自修改模式
+
+生成 (Generate) → 验证 (Validate) → 记录 (Log) → 提交 (Commit)
+
+---
+
+_本组件清单由 BMAD `document-project` 工作流生成_

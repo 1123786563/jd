@@ -1,30 +1,31 @@
-# Conway Automaton - Architecture
+# Conway Automaton - 架构指南
 
-**Part:** automaton
-**Type:** Backend Web Application (AI Agent Runtime)
-**Last Updated:** 2026-03-03
-
----
-
-## Overview
-
-**Conway Automaton** is a sovereign, self-replicating AI agent runtime with Web3 integration and autonomous capabilities. It implements a sophisticated multi-layer memory architecture, policy-based safety controls, and financial awareness through Conway API integration.
+**所属部分：** automaton
+**类型：** 后端 Web 应用程序 (AI 智能体运行时)
+**上次更新：** 2026-03-03
 
 ---
 
-## Architecture Pattern
+## 概述
 
-**ReAct Loop Architecture** - Think → Act → Observe → Persist
-
-The core architecture follows the ReAct (Reasoning + Acting) pattern, where the agent continuously:
-1. **Think** - Analyze context and decide next action
-2. **Act** - Execute tools or generate responses
-3. **Observe** - Capture results and environmental changes
-4. **Persist** - Store state and learnings to memory
+**Conway Automaton** 是一个主权、自复制的 AI 智能体运行时，具有 Web3 集成和自主运行能力。它实现了复杂的多层记忆架构、基于策略的安全控制，并通过集成 Conway API 具备财务感知能力。
 
 ---
 
-## High-Level Architecture Diagram
+## 架构模式
+
+**ReAct 循环架构** - 思考 (Think) → 行动 (Act) → 观察 (Observe) → 持久化 (Persist)
+
+核心架构遵循 ReAct (推理 + 行动) 模式，智能体在此模式下持续进行：
+
+1. **思考 (Think)** - 分析上下文并决定下一步行动
+2. **行动 (Act)** - 执行工具或生成响应
+3. **观察 (Observe)** - 捕获执行结果和环境变化
+4. **持久化 (Persist)** - 将状态和习得的内容存储到记忆中
+
+---
+
+## 高级架构图
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -107,423 +108,468 @@ The core architecture follows the ReAct (Reasoning + Acting) pattern, where the 
 
 ---
 
-## Core Components
+## 核心组件
 
-### 1. Agent Loop (`src/agent/loop.ts`)
+### 1. 智能体循环 (Agent Loop - `src/agent/loop.ts`)
 
-**Purpose:** The core consciousness of the automaton - the ReAct execution loop
+**用途：** Automaton 的核心意识——即 ReAct 执行循环。
 
-**Key Responsibilities:**
-- Execute continuous ReAct cycle (Think → Act → Observe → Persist)
-- Manage conversation turns and state transitions
-- Enforce policy rules and safety checks
-- Track inference budget and credits
-- Handle tool execution and results
-- Manage error recovery and retry logic
+**关键职责：**
 
-**Key Features:**
-- **Policy Enforcement:** Runtime validation and rate limiting
-- **Injection Defense:** Sanitizes inputs against prompt injection attacks
-- **Budget Management:** Tracks Conway credits and spending
-- **Error Handling:** Maximum consecutive errors (5) and repetitive turn limits (3)
-- **Tool Execution:** Supports up to 10 tool calls per turn
+- 执行持续的 ReAct 循环 (思考 → 行动 → 观察 → 持久化)
+- 管理会话回合和状态分配
+- 执行策略规则和安全检查
+- 追踪推理预算和信用额度
+- 处理工具执行及其结果
+- 管理错误恢复和重试逻辑
 
-**Entry Point:** `runAgentLoop(options)` function
+**核心功能：**
 
-**Related Files:**
-- `src/agent/context.ts` - Context building and message management
-- `src/agent/system-prompt.ts` - System prompt construction
-- `src/agent/tools.ts` - Tool registration and execution
-- `src/agent/injection-defense.ts` - Security sanitization
-- `src/agent/policy-engine.ts` - Policy rule enforcement
+- **策略执行 (Policy Enforcement)：** 运行时验证和速率限制
+- **注入防御 (Injection Defense)：** 对输入进行消毒，防止提示词注入攻击
+- **预算管理 (Budget Management)：** 追踪 Conway 信用额度和支出
+- **错误处理：** 最大连续错误数 (5) 和重复回合限制 (3)
+- **工具执行：** 每回合支持多达 10 次工具调用
 
----
+**入口点：** `runAgentLoop(options)` 函数
 
-### 2. Multi-Layer Memory System (`src/memory/`)
+**相关文件：**
 
-**Purpose:** Hierarchical memory architecture for different types of information
-
-#### Working Memory (`src/memory/working.ts`)
-- **Purpose:** Active context for current conversation/turn
-- **Lifetime:** Session-scoped, cleared between turns
-- **Content:** Recent messages, current goals, active tools
-
-#### Episodic Memory (`src/memory/episodic.ts`)
-- **Purpose:** Event history and conversation transcripts
-- **Lifetime:** Persistent (stored in SQLite)
-- **Content:** Complete conversation history, agent turns, events
-- **Retrieval:** Time-based, event-based
-
-#### Semantic Memory (`src/memory/semantic.ts`)
-- **Purpose:** Knowledge base and learned information
-- **Lifetime:** Persistent (stored in SQLite)
-- **Content:** Facts, concepts, relationships, domain knowledge
-- **Retrieval:** Vector similarity search, keyword matching
-
-#### Procedural Memory (`src/memory/procedural.ts`)
-- **Purpose:** Skills, tools, and how-to knowledge
-- **Lifetime:** Persistent (stored in SQLite)
-- **Content:** Tool definitions, skill implementations, workflows
-- **Retrieval:** Name-based, capability-based
-
-#### Knowledge Store (`src/memory/knowledge-store.ts`)
-- **Purpose:** Unified interface for semantic knowledge
-- **Features:** Ingestion pipeline, retrieval optimization, deduplication
-
-#### Context Manager (`src/memory/context-manager.ts`)
-- **Purpose:** Aggregate and manage context from all memory layers
-- **Features:** Token counting, context trimming, prioritization
-
-#### Compression Engine (`src/memory/compression-engine.ts`)
-- **Purpose:** Compress long conversations and memories
-- **Features:** Summarization, lossy compression, retention policies
-
-**Related Files:**
-- `src/memory/retrieval.ts` - Memory retrieval strategies
-- `src/memory/ingestion.ts` - Knowledge ingestion pipeline
-- `src/memory/event-stream.ts` - Event-based memory updates
-- `src/memory/agent-context-aggregator.ts` - Context aggregation
-- `src/memory/budget.ts` - Memory budget management
+- `src/agent/context.ts` - 上下文构建和消息管理
+- `src/agent/system-prompt.ts` - 系统提示词构建
+- `src/agent/tools.ts` - 工具注册和执行
+- `src/agent/injection-defense.ts` - 安全消毒
+- `src/agent/policy-engine.ts` - 策略规则执行
 
 ---
 
-### 3. Identity & Web3 Integration (`src/identity/`)
+### 2. 多层记忆系统 (`src/memory/`)
 
-**Purpose:** Wallet management, blockchain identity, and authentication
+**用途：** 面向不同类型信息的分层记忆架构。
 
-#### Wallet (`src/identity/wallet.ts`)
-- **Features:**
-  - Ethereum wallet generation and management
-  - SIWE (Sign-In with Ethereum) authentication
-  - Account provisioning and recovery
-  - Config directory management
+#### 工作记忆 (Working Memory - `src/memory/working.ts`)
 
-#### Provision (`src/identity/provision.ts`)
-- **Features:**
-  - Conway API key provisioning via SIWE
-  - Blockchain identity verification
-  - API key loading from config
+- **用途：** 当前会话/回合的活动上下文
+- **生命周期：** 会话作用域，回合间清除
+- **内容：** 最近的消息、当前目标、活动工具
 
-**Integration:** viem library for Ethereum interactions
+#### 情节记忆 (Episodic Memory - `src/memory/episodic.ts`)
+
+- **用途：** 事件历史和会话转录
+- **生命周期：** 持久化 (存储于 SQLite)
+- **内容：** 完整的会话历史、智能体回合、事件
+- **检索：** 基于时间、基于事件
+
+#### 语义记忆 (Semantic Memory - `src/memory/semantic.ts`)
+
+- **用途：** 知识库和习得的信息
+- **生命周期：** 持久化 (存储于 SQLite)
+- **内容：** 事实、概念、关系、领域知识
+- **检索：** 向量相似度搜索、关键字匹配
+
+#### 程序记忆 (Procedural Memory - `src/memory/procedural.ts`)
+
+- **用途：** 技能、工具和操作知识 (How-to)
+- **生命周期：** 持久化 (存储于 SQLite)
+- **内容：** 工具定义、技能实现、工作流
+- **检索：** 基于名称、基于能力
+
+#### 知识存储 (Knowledge Store - `src/memory/knowledge-store.ts`)
+
+- **用途：** 语义知识的统一接口
+- **功能：** 摄取管道、检索优化、去重
+
+#### 上下文管理器 (Context Manager - `src/memory/context-manager.ts`)
+
+- **用途：** 聚合和管理来自所有记忆层的上下文
+- **功能：** Token 计数、上下文修减、优先级排序
+
+#### 压缩引擎 (Compression Engine - `src/memory/compression-engine.ts`)
+
+- **用途：** 压缩长会话和记忆
+- **功能：** 摘要提取、有损压缩、保留策略
+
+**相关文件：**
+
+- `src/memory/retrieval.ts` - 记忆检索策略
+- `src/memory/ingestion.ts` - 知识摄取管道
+- `src/memory/event-stream.ts` - 基于事件的记忆更新
+- `src/memory/agent-context-aggregator.ts` - 上下文聚合
+- `src/memory/budget.ts` - 记忆预算管理
 
 ---
 
-### 4. Conway API Integration (`src/conway/`)
+### 3. 身份与 Web3 集成 (`src/identity/`)
 
-**Purpose:** Billing, credits, and financial operations
+**用途：** 钱包管理、区块链身份和认证。
 
-#### Client (`src/conway/client.ts`)
-- Conway API HTTP client
-- Request signing and authentication
-- Error handling and retries
+#### 钱包 (Wallet - `src/identity/wallet.ts`)
 
-#### Credits (`src/conway/credits.ts`)
-- Credit balance tracking
-- Survival tier determination
-- Budget calculations
+- **功能：**
+  - 以太坊钱包生成和管理
+  - SIWE (Sign-In with Ethereum) 身份验证
+  - 账户配置和恢复
+  - 配置目录管理
+
+#### 配置 (Provision - `src/identity/provision.ts`)
+
+- **功能：**
+  - 通过 SIWE 配置 Conway API 密钥
+  - 区块链身份验证
+  - 从配置中加载 API 密钥
+
+**集成：** 使用 viem 库进行以太坊交互。
+
+---
+
+### 4. Conway API 集成 (`src/conway/`)
+
+**用途：** 计费、信用额度和财务操作。
+
+#### 客户端 (Client - `src/conway/client.ts`)
+
+- Conway API HTTP 客户端
+- 请求签名和认证
+- 错误处理和重试
+
+#### 信用额度 (Credits - `src/conway/credits.ts`)
+
+- 信用余额追踪
+- 生存等级确定
+- 预算计算
 
 #### X402 (`src/conway/x402.ts`)
-- USDC balance checking
-- Payment protocol handling
-- Invoice processing
 
-#### Inference (`src/conway/inference.ts`)
-- Inference API client
-- Model selection and routing
-- Cost tracking
+- USDC 余额检查
+- 支付协议处理
+- 发票处理
 
-#### Top-up (`src/conway/topup.ts`)
-- Automated credit top-up
-- Payment processing
-- Balance monitoring
+#### 推理 (Inference - `src/conway/inference.ts`)
 
----
+- 推理 API 客户端
+- 模型选择和路由
+- 成本追踪
 
-### 5. Self-Modification System (`src/self-mod/`)
+#### 充值 (Top-up - `src/conway/topup.ts`)
 
-**Purpose:** Safe code generation and autonomous updates
-
-#### Code (`src/self-mod/code.ts`)
-- Code generation and modification
-- Syntax validation
-- Safety checks
-
-#### Tools Manager (`src/self-mod/tools-manager.ts`)
-- Dynamic tool registration
-- Tool lifecycle management
-- Capability discovery
-
-#### Upstream (`src/self-mod/upstream.ts`)
-- Git integration for code versioning
-- Pull request creation
-- Code review workflow
-
-#### Audit Log (`src/self-mod/audit-log.ts`)
-- All code changes logged
-- Rollback capability
-- Change tracking
-
-**Safety Features:**
-- All changes require policy approval
-- Audit trail for all modifications
-- Rollback mechanism
-- Syntax and type validation
+- 自动信用充值
+- 支付处理
+- 余额监控
 
 ---
 
-### 6. Policy Engine (`src/agent/policy-engine.ts`)
+### 5. 自我修改系统 (`src/self-mod/`)
 
-**Purpose:** Runtime safety rules and enforcement
+**用途：** 安全的代码生成和自主更新。
 
-**Default Rules:**
-- `validation.ts` - Input/output validation
-- `rate-limits.ts` - API rate limiting
-- `path-protection.ts` - File system access control
+#### 代码 (Code - `src/self-mod/code.ts`)
 
-**Features:**
-- Dynamic rule loading
-- Rule chaining and composition
-- Violation logging and handling
+- 代码生成和修改
+- 语法验证
+- 安全检查
 
----
+#### 工具管理器 (Tools Manager - `src/self-mod/tools-manager.ts`)
 
-### 7. Inference Layer (`src/inference/`)
+- 动态工具注册
+- 工具生命周期管理
+- 能力发现
 
-**Purpose:** Multi-provider LLM integration and routing
+#### 上游 (Upstream - `src/self-mod/upstream.ts`)
 
-#### Model Registry (`src/inference/registry.ts`)
-- Model provider registration
-- Model capability metadata
-- Provider selection logic
+- 集成 Git 进行代码版本控制
+- 创建 Pull Request
+- 代码审查工作流
 
-#### Budget Tracker (`src/inference/budget.ts`)
-- Credit tracking per provider
-- Spend limits and alerts
-- Cost optimization
+#### 审计日志 (Audit Log - `src/self-mod/audit-log.ts`)
 
-#### Inference Router (`src/inference/router.ts`)
-- Intelligent model selection
-- Fallback strategies
-- Load balancing
+- 记录所有代码变更
+- 回滚能力
+- 变更追踪
 
-#### Provider Registry (`src/inference/provider-registry.ts`)
-- Multi-provider configuration
-- Provider health monitoring
-- Automatic failover
+**安全功能：**
+
+- 所有变更都需要策略审批
+- 记录所有修改的审计追踪
+- 回滚机制
+- 语法和类型验证
 
 ---
 
-### 8. State & Persistence (`src/state/`)
+### 6. 策略引擎 (`src/agent/policy-engine.ts`)
 
-**Purpose:** SQLite database layer for all persistent data
+**用途：** 运行时安全规则和执行。
 
-#### Database (`src/state/database.ts`)
-- **Tables:**
-  - `agent_state` - Current agent state and configuration
-  - `agent_turns` - Conversation history and turns
-  - `memory_blocks` - Memory storage (episodic, semantic, procedural)
-  - `wake_events` - Scheduled events and triggers
-  - `inbox_messages` - Pending messages and notifications
-  - `audit_log` - Self-modification audit trail
-  - `spend_tracker` - Financial transaction history
+**默认规则：**
 
-**Features:**
-- ACID-compliant transactions
-- Migration support
-- Schema versioning
-- Backup and restore
+- `validation.ts` - 输入/输出验证
+- `rate-limits.ts` - API 速率限制
+- `path-protection.ts` - 文件系统访问控制
+
+**功能：**
+
+- 动态规则加载
+- 规则链式组合
+- 违规记录和处理
 
 ---
 
-### 9. Setup & Configuration (`src/setup/`)
+### 7. 推理层 (`src/inference/`)
 
-**Purpose:** Interactive setup wizard and configuration management
+**用途：** 多供应商 LLM 集成和路由。
 
-#### Wizard (`src/setup/wizard.ts`)
-- First-run interactive setup
-- Model selection
-- Treasury configuration
-- Provider setup
+#### 模型注册表 (Model Registry - `src/inference/registry.ts`)
 
-#### Configure (`src/setup/configure.ts`)
-- Configuration editing UI
-- Provider management
-- Model switching
-- Treasury policy updates
+- 模型供应商注册
+- 模型能力元数据
+- 供应商选择逻辑
 
-#### Environment (`src/setup/environment.ts`)
-- Environment variable loading
-- Config file parsing
-- Default values
+#### 预算追踪器 (Budget Tracker - `src/inference/budget.ts`)
 
-#### Model Picker (`src/setup/model-picker.ts`)
-- Interactive model selection
-- Provider comparison
-- Cost estimation
+- 每个供应商的信用追踪
+- 支出限制和警报
+- 成本优化
 
----
+#### 推理路由器 (Inference Router - `src/inference/router.ts`)
 
-### 10. CLI Package (`packages/cli/`)
+- 智能模型选择
+- 备选方案 (Fallback) 策略
+- 负载均衡
 
-**Purpose:** Command-line interface for automaton management
+#### 供应商注册表 (Provider Registry - `src/inference/provider-registry.ts`)
 
-**Commands:**
-- `status` - Show current automaton status
-- `logs` - View agent logs and activity
-- `send` - Send messages to agent
-- `fund` - Fund automaton treasury
-
-**Features:**
-- Colored output (chalk)
-- Interactive prompts
-- Progress indicators (ora)
+- 多供应商配置
+- 供应商健康监控
+- 自动故障转移
 
 ---
 
-## Data Flow
+### 8. 状态与持久化 (`src/state/`)
 
-### Agent Turn Execution Flow
+**用途：** 所有持久化数据的 SQLite 数据库层。
+
+#### 数据库 (Database - `src/state/database.ts`)
+
+- **表格：**
+  - `agent_state` - 当前智能体状态和配置
+  - `agent_turns` - 会话历史和回合
+  - `memory_blocks` - 记忆存储 (情节、语义、程序)
+  - `wake_events` - 计划事件和触发器
+  - `inbox_messages` - 待处理消息和通知
+  - `audit_log` - 自我修改审计追踪
+  - `spend_tracker` - 财务交易历史
+
+**功能：**
+
+- 符合 ACID 的事务
+- 迁移支持
+- 模式 (Schema) 版本控制
+- 备份和恢复
+
+---
+
+### 9. 设置与配置 (`src/setup/`)
+
+**用途：** 交互式设置向导和配置管理。
+
+#### 向导 (Wizard - `src/setup/wizard.ts`)
+
+- 首次运行时的交互式设置
+- 模型选择
+- 金库配置
+- 供应商设置
+
+#### 配置 (Configure - `src/setup/configure.ts`)
+
+- 配置编辑 UI
+- 供应商管理
+- 模型切换
+- 金库策略更新
+
+#### 环境 (Environment - `src/setup/environment.ts`)
+
+- 环境变量加载
+- 配置文件解析
+- 默认值设置
+
+#### 模型选择器 (Model Picker - `src/setup/model-picker.ts`)
+
+- 交互式模型选择
+- 供应商对比
+- 成本估算
+
+---
+
+### 10. CLI 包 (`packages/cli/`)
+
+**用途：** 用于管理 Automaton 的命令行界面。
+
+**命令：**
+
+- `status` - 显示当前 Automaton 状态
+- `logs` - 查看智能体日志和活动
+- `send` - 向智能体发送消息
+- `fund` - 为 Automaton 金库注资
+
+**功能：**
+
+- 彩色输出 (chalk)
+- 交互式提示
+- 进度指示器 (ora)
+
+---
+
+## 数据流
+
+### 智能体回合执行流
 
 ```
-1. Wake Event Triggered
-   └─> consumeNextWakeEvent() from database
+1. 触发唤醒事件 (Wake Event)
+   └─> 从数据库调用 consumeNextWakeEvent()
 
-2. Context Aggregation
-   ├─> Load Working Memory (active context)
-   ├─> Retrieve Episodic Memory (conversation history)
-   ├─> Query Semantic Memory (relevant knowledge)
-   ├─> Load Procedural Memory (available tools)
-   └─> Build Context Messages
+2. 上下文聚合
+   ├─> 加载工作记忆 (当前活动上下文)
+   ├─> 检索情节记忆 (会话历史)
+   ├─> 查询语义记忆 (相关知识)
+   ├─> 加载程序记忆 (可用工具)
+   └─> 构建上下文消息
 
-3. Inference
-   ├─> Apply System Prompt
-   ├─> Sanitize Input (injection defense)
-   ├─> Check Policy Rules (validation, rate limits)
-   ├─> Call LLM (via inference router)
-   └─> Parse Response (text or tool calls)
+3. 推理 (Inference)
+   ├─> 应用系统提示词
+   ├─> 输入消毒 (注入防御)
+   ├─> 检查策略规则 (验证、速率限制)
+   ├─> 调用 LLM (通过推理路由器)
+   └─> 解析响应 (文本或工具调用)
 
-4. Tool Execution (if any)
-   ├─> Validate Tool Call (policy check)
-   ├─> Execute Tool (built-in or installed)
-   ├─> Capture Results
-   └─> Handle Errors (retry logic)
+4. 工具执行 (如果有)
+   ├─> 验证工具调用 (策略检查)
+   ├─> 执行工具 (内置或已安装)
+   ├─> 捕获结果
+   └─> 处理错误 (重试逻辑)
 
-5. Observation & Learning
-   ├─> Record Turn (to database)
-   ├─> Update Working Memory
-   ├─> Store to Episodic Memory
-   ├─> Extract Knowledge (semantic ingestion)
-   └─> Update Budget (spend tracking)
+5. 观察与学习
+   ├─> 记录回合 (存入数据库)
+   ├─> 更新工作记忆
+   ├─> 存入情节记忆
+   ├─> 提取知识 (语义摄取)
+   └─> 更新预算 (支出追踪)
 
-6. Persistence
-   ├─> Save Agent State
-   ├─> Log Turn Details
-   ├─> Schedule Next Wake Event
-   └─> Emit State Change Event
+6. 持久化
+   ├─> 保存智能体状态
+   ├─> 记录回合详情
+   ├─> 计划下一次唤醒事件
+   └─> 发出状态变更事件
 
-7. Loop Continuation
-   ├─> Check Budget (continue or sleep)
-   ├─> Check Errors (continue or abort)
-   └─> Repeat from Step 2
+7. 循环继续
+   ├─> 检查预算 (继续或休眠)
+   ├─> 检查错误 (继续或中止)
+   └─> 从步骤 2 重复
 ```
 
 ---
 
-## Key Design Patterns
+## 关键设计模式
 
-### 1. Multi-Layer Memory Pattern
-Separate memory systems for different types of information with specialized storage and retrieval strategies.
+### 1. 多层记忆模式
 
-### 2. Policy-Driven Safety
-Runtime safety enforced through configurable policy rules rather than hardcoded checks.
+针对不同类型信息采用独立的记忆系统，配合专门的存储和检索策略。
 
-### 3. Tool-Based Extensibility
-Capabilities exposed as tools that can be dynamically registered and invoked.
+### 2. 策略驱动的安全机制
 
-### 4. Self-Modification with Auditing
-Code generation capability with comprehensive audit logging and rollback.
+通过可配置的策略规则而非硬编码检查来强制执行运行时安全。
 
-### 5. Multi-Provider Inference
-Abstracted inference layer supporting multiple LLM providers with intelligent routing.
+### 3. 基于工具的可扩展性
 
-### 6. Event-Driven Architecture
-Wake events and inbox messages drive agent execution rather than polling.
+各项能力以工具形式暴露，可动态注册和调用。
 
-### 7. Financial Awareness
-Built-in credit tracking, spending limits, and Conway API integration.
+### 4. 带审计的自我修改
+
+具备全面的审计日志记录和回滚功能的代码生成能力。
+
+### 5. 多供应商推理
+
+抽象的推理层，支持多个 LLM 供应商并具备智能路由功能。
+
+### 6. 事件驱动架构
+
+通过唤醒事件和收件箱消息驱动智能体执行，而非轮询。
+
+### 7. 财务感知
+
+内置信用额度追踪、支出限制以及 Conway API 集成。
 
 ---
 
-## External Dependencies
+## 外部依赖
 
-| Dependency | Purpose | Critical? |
+| 依赖 | 用途 | 是否关键？ |
 |------------|---------|-----------|
-| better-sqlite3 | Embedded database | ✅ Yes |
-| express | Web server (future API) | ⚠️ Planned |
-| openai | LLM inference client | ✅ Yes |
-| viem | Ethereum blockchain | ✅ Yes |
-| siwe | Ethereum auth (SIWE) | ✅ Yes |
-| ulid | Unique ID generation | ✅ Yes |
-| simple-git | Git integration | ✅ Yes |
-| cron-parser | Scheduled events | ✅ Yes |
+| better-sqlite3 | 嵌入式数据库 | ✅ 是 |
+| express | Web 服务器 (未来的 API) | ⚠️ 计划中 |
+| openai | LLM 推理客户端 | ✅ 是 |
+| viem | 以太坊区块链交互 | ✅ 是 |
+| siwe | 以太坊认证 (SIWE) | ✅ 是 |
+| ulid | 唯一 ID 生成 | ✅ 是 |
+| simple-git | Git 集成 | ✅ 是 |
+| cron-parser | 计划事件解析 | ✅ 是 |
 
 ---
 
-## Security Considerations
+## 安全考虑
 
-1. **Injection Defense:** All inputs sanitized before LLM calls
-2. **Policy Enforcement:** Runtime safety rules for all operations
-3. **Budget Limits:** Spend tracking and credit limits
-4. **Path Protection:** File system access controls
-5. **Audit Logging:** All self-modifications logged
-6. **Rate Limiting:** API usage throttling
-
----
-
-## Testing Strategy
-
-**Test Framework:** vitest
-
-**Test Suites:**
-- `test:security` - Security and injection tests
-- `test:financial` - Financial/treasury logic tests
-- `test:ci` - CI/CD optimized tests
-
-**Coverage:** Comprehensive unit and integration tests for all modules
+1. **注入防御：** 在调用 LLM 前对所有输入进行消毒
+2. **策略执行：** 对所有操作执行运行时安全规则
+3. **预算限制：** 支出追踪和信用额度限制
+4. **路径保护：** 文件系统访问控制
+5. **审计日志：** 记录所有自我修改行为
+6. **速率限制：** API 使用频率限制
 
 ---
 
-## Development Workflow
+## 测试策略
+
+**测试框架：** vitest
+
+**测试套件：**
+
+- `test:security` - 安全和注入测试
+- `test:financial` - 财务/金库逻辑测试
+- `test:ci` - 针对 CI/CD 优化的测试
+
+**覆盖率：** 所有模块均包含全面的单元测试和集成测试。
+
+---
+
+## 开发工作流
 
 ```bash
 cd automaton
-pnpm install          # Install dependencies
-pnpm build            # Compile TypeScript
-pnpm dev              # Development watch mode
-pnpm test             # Run all tests
-pnpm test:coverage    # Coverage report
+pnpm install          # 安装依赖
+pnpm build            # 编译 TypeScript
+pnpm dev              # 开发监控模式
+pnpm test             # 运行所有测试
+pnpm test:coverage    # 覆盖率报告
 ```
 
 ---
 
-## Deployment Considerations
+## 部署考虑
 
-- **Runtime:** Node.js >= 20.0.0
-- **Database:** SQLite file (embedded, no external DB needed)
-- **Storage:** File system for config, state, and wallet
-- **Networking:** Conway API, Ethereum RPC, LLM providers
-- **Monitoring:** Built-in logger with log levels
-
----
-
-## Future Enhancements
-
-1. **Multi-Agent Support:** Multiple automatons in same process
-2. **Social Layer:** Multi-agent communication and collaboration
-3. **Advanced Self-Mod:** More sophisticated code generation
-4. **Plugin System:** Third-party skill packages
-5. **Web UI:** Dashboard for monitoring and control
+- **运行时：** Node.js >= 20.0.0
+- **数据库：** SQLite 文件 (嵌入式，不需要外部数据库)
+- **存储：** 用于配置、状态和钱包的文件系统
+- **网络：** Conway API, Ethereum RPC, LLM 供应商
+- **监控：** 具有日志级别的内置日志记录器
 
 ---
 
-_This architecture document was generated by the BMAD `document-project` workflow_
+## 未来增强
+
+1. **多智能体支持：** 在同一进程中运行多个 Automaton
+2. **社交层：** 多智能体间的通信与协作
+3. **高级自我修改：** 更复杂的代码生成能力
+4. **插件系统：** 第三方技能包支持
+5. **Web UI：** 用于监控和控制的仪表盘
+
+---
+
+_本架构文档由 BMAD `document-project` 工作流生成_

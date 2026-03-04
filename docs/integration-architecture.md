@@ -1,243 +1,243 @@
-# JD - Integration Architecture
+# JD - 集成架构
 
-**Repository:** jd (monorepo)
-**Last Updated:** 2026-03-03
-
----
-
-## Overview
-
-This document describes the integration architecture of the JD monorepo, including how Conway Automaton and TinyClaw relate to each other, their shared patterns, and potential integration points.
+**代码仓库：** jd (monorepo)
+**上次更新：** 2026-03-03
 
 ---
 
-## Monorepo Structure
+## 概述
 
-```
+本文档描述了 JD monorepo 的集成架构，包括 Conway Automaton 与 TinyClaw 之间的关系、它们的共享模式以及潜在的集成点。
+
+---
+
+## Monorepo 结构
+
+```text
 jd/
-├── automaton/              # Part 1: Conway Automaton
-│   ├── src/                # AI agent runtime
-│   ├── packages/cli/       # CLI interface
+├── automaton/              # 第一部分：Conway Automaton
+│   ├── src/                # AI 智能体运行时
+│   ├── packages/cli/       # CLI 界面
 │   └── ...
 │
-├── tinyclaw/               # Part 2: TinyClaw
-│   ├── src/                # Backend (agents, channels, queue)
-│   ├── tinyoffice/         # Frontend (Next.js)
+├── tinyclaw/               # 第二部分：TinyClaw
+│   ├── src/                # 后端 (智能体、渠道、队列)
+│   ├── tinyoffice/         # 前端 (Next.js)
 │   └── ...
 │
-├── docs/                 # Design documents and PRDs
-├── docs/                   # Auto-generated documentation
-└── CLAUDE.md              # Project guidelines
+├── docs/                 # 设计文档与 PRD
+├── docs/                   # 自动生成的文档
+└── CLAUDE.md              # 项目指南
 ```
 
 ---
 
-## Part Independence
+## 各部分的独立性
 
-**Conway Automaton** and **TinyClaw** are **architecturally independent**:
+**Conway Automaton** 和 **TinyClaw** 在**架构上是独立的**：
 
-- ✅ Can be developed separately
-- ✅ Can be deployed independently
-- ✅ No runtime dependencies between them
-- ✅ Separate databases and state
-- ✅ Separate configuration files
-- ✅ Separate package.json and dependencies
+- ✅ 可以分别开发
+- ✅ 可以独立部署
+- ✅ 运行期间互无依赖
+- ✅ 拥有独立的数据库和状态
+- ✅ 拥有独立的配置文件
+- ✅ 拥有独立的 package.json 和依赖项
 
-**Shared Characteristics:**
+**共同特征：**
 
-- Both use TypeScript
-- Both use better-sqlite3 for persistence
-- Both implement autonomous AI agent systems
-- Both use LLM providers (Claude, OpenAI)
-- Both follow agent-centric architecture
-- Both have similar directory structures
+- 均使用 TypeScript
+- 均使用 better-sqlite3 进行持久化
+- 均实现了自主 AI 智能体系统
+- 均使用 LLM 供应商 (Claude, OpenAI)
+- 均遵循以智能体为中心的架构
+- 拥有相似的目录结构
 
 ---
 
-## Conceptual Integration Points
+## 概念性集成点
 
-While not directly integrated, both projects share conceptual alignment:
+虽然没有直接集成，但两个项目在概念上保持一致：
 
-### 1. Agent Patterns
+### 1. 智能体模式 (Agent Patterns)
 
-Both implement similar agent concepts:
+两者实现了类似的智能体概念：
 
-| Concept | Automaton | TinyClaw |
+| 概念 | Automaton | TinyClaw |
 |---------|-----------|----------|
-| **Agent Definition** | Agent config in state | Agent config in JSON |
-| **System Prompt** | Customizable per agent | Customizable per agent |
-| **Conversation State** | SQLite episodic memory | SQLite conversation table |
-| **LLM Integration** | Multi-provider inference | Multi-provider inference |
-| **Tool/Skill System** | Dynamic tools via self-mod | Static tools in config |
+| **智能体定义** | 数据库中的智能体配置 | JSON 中的智能体配置 |
+| **系统提示词** | 每个智能体均可自定义 | 每个智能体均可自定义 |
+| **对话状态** | SQLite 情节记忆 | SQLite 会话表 |
+| **LLM 集成** | 多供应商推理接口 | 多供应商推理接口 |
+| **工具/技能系统** | 通过自修改动态生成工具 | 配置文件中的静态工具 |
 
-### 2. Memory Patterns
+### 2. 记忆模式 (Memory Patterns)
 
-Both use persistent memory:
+两者都使用持久化记忆：
 
-| Pattern | Automaton | TinyClaw |
+| 模式 | Automaton | TinyClaw |
 |---------|-----------|----------|
-| **Storage** | SQLite (better-sqlite3) | SQLite (better-sqlite3) |
-| **Conversation History** | Episodic memory | Conversation table |
-| **Working Directory** | Per-agent workspace | Per-agent working_dir |
-| **State Isolation** | Memory layers | Conversation isolation |
+| **存储方式** | SQLite (better-sqlite3) | SQLite (better-sqlite3) |
+| **对话历史** | 情节记忆 (Episodic memory) | 会话表 (Conversation table) |
+| **工作目录** | 每个智能体的工作区 | 每个智能体的 working_dir |
+| **状态隔离** | 记忆分层 | 会话隔离 |
 
-### 3. Multi-Agent Coordination
+### 3. 多智能体协作
 
-Both support multi-agent systems:
+两者都支持多智能体系统：
 
-| Feature | Automaton | TinyClaw |
+| 功能 | Automaton | TinyClaw |
 |---------|-----------|----------|
-| **Team Concept** | Planned (orchestration) | Implemented (teams) |
-| **Agent Communication** | Messaging system | Team mentions |
-| **Coordination** | Orchestrator | Team leader pattern |
-| **State Sharing** | Shared memory | Internal messages |
+| **团队概念** | 已规划 (orchestration) | 已实现 (teams) |
+| **智能体通信** | 消息系统 | 团队提及 (Mentions) |
+| **编排方式** | 编排器 (Orchestrator) | 团队负责人模式 |
+| **状态共享** | 共享记忆 | 内部消息 |
 
-### 4. Safety and Policy
+### 4. 安全与策略
 
-Both enforce safety:
+两者均强制执行安全措施：
 
-| Safety Feature | Automaton | TinyClaw |
+| 安全功能 | Automaton | TinyClaw |
 |---------------|-----------|----------|
-| **Input Validation** | Policy engine | Plugin hooks |
-| **Rate Limiting** | Policy rules | Queue limits |
-| **Budget Tracking** | Conway credits | Provider limits |
-| **Audit Logging** | Self-mod audit | Activity logs |
+| **输入验证** | 策略引擎 | 插件钩子 (Hooks) |
+| **速率限制** | 策略规则 | 队列限制 |
+| **预算追踪** | Conway 额度 | 供应商额度限制 |
+| **审计日志** | 自修改审计 | 活动日志 |
 
 ---
 
-## Potential Integration Scenarios
+## 潜在集成场景 (Potential Integration Scenarios)
 
-### Scenario 1: Automaton as TinyClaw Agent
+### 场景 1：将 Automaton 作为 TinyClaw 智能体
 
-**Concept:** Use Conway Automaton as a specialized agent within TinyClaw
+**概念：** 将 Conway Automaton 作为 TinyClaw 内部的一个专业智能体使用。
 
-**Integration Points:**
+**集成点：**
 
-1. **Message Routing:** Route specific messages to Automaton
-2. **API Bridge:** TinyClaw calls Automaton API
-3. **State Sharing:** Share conversation context
-4. **Capability Leverage:** Use Automaton's self-modification for TinyClaw agents
+1. **消息路由：** 将特定消息路由到 Automaton
+2. **API 桥接：** TinyClaw 调用 Automaton API
+3. **状态共享：** 共享会话上下文
+4. **能力杠杆：** 为 TinyClaw 智能体利用 Automaton 的自修改能力
 
-**Architecture:**
+**架构图：**
 
-```
-User → TinyClaw Channel → Queue → @automaton-agent
-                                        ↓
-                                Conway Automaton API
-                                        ↓
-                                TinyClaw Response Queue
-                                        ↓
-                                User
-```
-
-**Benefits:**
-
-- Leverage Automaton's advanced memory system
-- Use self-modification for agent evolution
-- Apply policy engine for safety
-- Share Conway billing integration
-
-### Scenario 2: TinyClaw as Automaton Interface
-
-**Concept:** Use TinyClaw channels as input/output for Automaton
-
-**Integration Points:**
-
-1. **Channel Integration:** Automaton receives messages via TinyClaw channels
-2. **Response Routing:** Automaton responses sent through TinyClaw
-3. **Team Orchestration:** TinyClaw teams coordinate Automaton instances
-4. **Frontend Control:** TinyOffice manages Automaton
-
-**Architecture:**
-
-```
-Discord/Telegram/WhatsApp → TinyClaw Channel
-                                   ↓
-                           TinyClaw Queue
-                                   ↓
-                        Conway Automaton Loop
-                                   ↓
-                           Automaton Response
-                                   ↓
-                        TinyClaw Response Queue
-                                   ↓
-                          TinyClaw Channel
-                                   ↓
-                                 User
+```text
+用户 → TinyClaw 渠道 → 队列 → @automaton-agent
+                                         ↓
+                                 Conway Automaton API
+                                         ↓
+                                 TinyClaw 响应队列
+                                         ↓
+                                 用户
 ```
 
-**Benefits:**
+**优势：**
 
-- Multi-channel input for Automaton
-- Web UI (TinyOffice) for Automaton control
-- Team coordination for multiple Automatons
-- Unified logging and monitoring
+- 利用 Automaton 先进的记忆系统
+- 使用自修改实现智能体进化
+- 应用策略引擎确保安全
+- 共享 Conway 计费集成
 
-### Scenario 3: Shared Agent Ecosystem
+### 场景 2：将 TinyClaw 作为 Automaton 界面
 
-**Concept:** Create shared agent ecosystem with common tools and skills
+**概念：** 将 TinyClaw 渠道作为 Automaton 的输入/输出。
 
-**Integration Points:**
+**集成点：**
 
-1. **Shared Tools Library:** Common tool implementations
-2. **Agent Registry:** Central agent catalog
-3. **Skill Marketplace:** Share skills between projects
-4. **Configuration Sync:** Synchronize agent configs
+1. **渠道集成：** Automaton 通过 TinyClaw 渠道接收消息
+2. **响应路由：** Automaton 响应通过 TinyClaw 发送
+3. **团队编排：** TinyClaw 团队协调 Automaton 实例
+4. **前端控制：** TinyOffice 管理 Automaton
 
-**Benefits:**
+**架构图：**
 
-- Reuse agent implementations
-- Share best practices
-- Common tool library
-- Unified agent management
-
-### Scenario 4: Hybrid Architecture
-
-**Concept:** Combine both architectures for different use cases
-
-**Use Cases:**
-
-- **Automaton:** Long-running sovereign agents with Web3
-- **TinyClaw:** Multi-channel customer support and teams
-- **Hybrid:** Automaton handles complex reasoning, TinyClaw handles communication
-
-**Architecture:**
-
-```
-Channels (Discord/Telegram) → TinyClaw
-                                      ↓
-                             Simple Queries → TinyClaw Agents
-                                      ↓
-                          Complex Tasks → Conway Automaton
-                                      ↓
-                                 Response
+```text
+Discord/Telegram/WhatsApp → TinyClaw 渠道
+                                    ↓
+                            TinyClaw 队列
+                                    ↓
+                         Conway Automaton 循环
+                                    ↓
+                            Automaton 响应
+                                    ↓
+                         TinyClaw 响应队列
+                                    ↓
+                           TinyClaw 渠道
+                                    ↓
+                                  用户
 ```
 
-**Benefits:**
+**优势：**
 
-- Right tool for right job
-- Scalable architecture
-- Specialized capabilities
-- Flexible deployment
+- 为 Automaton 提供多渠道输入
+- 使用 Web UI (TinyOffice) 控制 Automaton
+- 针对多个 Automaton 进行团队协作
+- 统一日志记录与监控
+
+### 场景 3：共享智能体生态系统
+
+**概念：** 使用通用的工具和技能创建共享智能体生态。
+
+**集成点：**
+
+1. **共享工具库：** 通用的工具实现
+2. **智能体注册表：** 中心智能体目录
+3. **技能市场：** 项目间共享技能
+4. **配置同步：** 同步智能体配置
+
+**优势：**
+
+- 复用智能体实现
+- 分享最佳实践
+- 通用工具库
+- 统一智能体管理
+
+### 场景 4：混合架构 (Hybrid Architecture)
+
+**概念：** 结合两种架构以适应不同用例。
+
+**用例：**
+
+- **Automaton:** 支持 Web3 的长期主权智能体
+- **TinyClaw:** 多渠道客服与团队协作
+- **Hybrid:** Automaton 处理复杂推理，TinyClaw 处理通信
+
+**架构图：**
+
+```text
+渠道 (Discord/Telegram) → TinyClaw
+                                       ↓
+                              简单查询 → TinyClaw 智能体
+                                       ↓
+                           复杂任务 → Conway Automaton
+                                       ↓
+                                  响应
+```
+
+**优势：**
+
+- 用最合适的工具解决最合适的问题
+- 可扩展的架构
+- 专业化的能力
+- 灵活的部署方式
 
 ---
 
-## Shared Infrastructure Patterns
+## 共享基础设施模式
 
-### 1. SQLite Persistence
+### 1. SQLite 持久化
 
-Both use SQLite with similar patterns:
+两者均使用 SQLite 并采用类似的模式：
 
 ```sql
--- Common patterns
+-- 通用模式
 CREATE TABLE IF NOT EXISTS agent_state (...);
 CREATE TABLE IF NOT EXISTS conversations (...);
 CREATE TABLE IF NOT EXISTS logs (...);
 ```
 
-### 2. Configuration Management
+### 2. 配置管理
 
-Both use JSON configuration:
+两者均使用 JSON 配置：
 
 ```json
 {
@@ -252,12 +252,12 @@ Both use JSON configuration:
 }
 ```
 
-### 3. LLM Provider Integration
+### 3. LLM 供应商集成
 
-Both support multiple providers:
+两者均支持多个供应商：
 
 ```typescript
-// Common interface
+// 通用接口
 interface LLMProvider {
   name: string;
   apiKey: string;
@@ -266,81 +266,82 @@ interface LLMProvider {
 }
 ```
 
-### 4. Logging and Observability
+### 4. 日志记录与可观测性
 
-Both use structured logging:
+两者均使用结构化日志：
 
 ```typescript
-// Common pattern
-logger.info("Message", { context });
-logger.warn("Warning", { context });
-logger.error("Error", { context, error });
+// 通用模式
+logger.info("消息", { context });
+logger.warn("警告", { context });
+logger.error("错误", { context, error });
 ```
 
 ---
 
-## Cross-Project Collaboration
+## 跨项目协作 (Cross-Project Collaboration)
 
-### Knowledge Sharing
+### 知识共享
 
-- **Documentation:** Both documented in `docs/`
-- **Design Patterns:** Shared architectural patterns
-- **Best Practices:** Common development practices
-- **TypeScript Standards:** Consistent type usage
+- **文档：** 两者均在 `docs/` 中记录
+- **设计模式：** 共享架构模式
+- **最佳实践：** 通用开发实践
+- **TypeScript 标准：** 一致的类型使用
 
-### Development Workflow
+### 开发流程
 
-- **Git:** Shared repository, separate branches
-- **Testing:** Similar test frameworks (vitest/jest)
-- **Build:** TypeScript compilation
-- **Deployment:** Independent but coordinated
+- **Git：** 共享代码库，独立分支
+- **测试：** 类似的测试框架 (vitest/jest)
+- **构建：** TypeScript 编译流程
+- **部署：** 独立但协调
 
-### Future Integration Possibilities
+### 未来集成可能性
 
-1. **Shared Library:** Create `@jd/core` package with common utilities
-2. **Unified CLI:** Single CLI tool for both projects
-3. **Common Frontend:** Shared web UI components
-4. **Integrated Testing:** Cross-project integration tests
-5. **Unified Documentation:** Single documentation site
+1. **共享库：** 创建带有通用工具的 `@jd/core` 包
+2. **统一 CLI：** 为两个项目提供单一 CLI 工具
+3. **通用前端：** 共享 Web UI 组件
+4. **集成测试：** 跨项目集成测试
+5. **统一文档：** 单一文档站点
 
 ---
 
-## Deployment Considerations
+## 部署建议
 
-### Independent Deployment
+### 独立部署
 
 ```bash
-# Deploy Automaton
+# 部署 Automaton
 cd automaton
 pnpm install
 pnpm build
-# Run as service
+# 作为服务运行
 
-# Deploy TinyClaw
+# 部署 TinyClaw
 cd tinyclaw
 npm install
 npm run build
 npm run queue &
 npm run discord &
 npm run telegram &
-# Run TinyOffice separately
+# 独立运行 TinyOffice
 cd tinyoffice
+npm install
 npm run build
 npm run start
 ```
 
-### Coordinated Deployment
+### 协调部署
 
 ```bash
-# Deploy both together
+# 同时部署两者
 ./deploy.sh automaton tinyclaw
-# Shared infrastructure (database, logging, monitoring)
+# 共享基础设施 (数据库、日志、监控等)
 ```
 
-### Containerization
+### 容器化 (Containerization)
 
 ```dockerfile
-# Docker Compose for both
+# 针对两者的 Docker Compose
 version: '3.8'
 services:
   automaton:
@@ -373,17 +374,17 @@ services:
 
 ---
 
-## Conclusion
+## 结论
 
-While **Conway Automaton** and **TinyClaw** are currently independent projects, they share significant architectural DNA and could benefit from deeper integration in the future. The current independence allows for:
+虽然 **Conway Automaton** 和 **TinyClaw** 目前是独立的项目，但它们共享深层的架构 DNA，并能从未来的深度集成中受益。当前的独立状态允许：
 
-- ✅ Focused development on each project's strengths
-- ✅ Independent scaling and deployment
-- ✅ Different use cases and audiences
-- ✅ Flexibility to evolve separately
+- ✅ 专注于发挥各自项目的优势
+- ✅ 独立的扩展与部署
+- ✅ 针对不同的用例和受众
+- ✅ 各自独立演进的灵活性
 
-Potential integration scenarios offer exciting possibilities for combining their strengths into a unified autonomous agent platform.
+潜在的集成场景为将它们的优势结合成一个统一的自主智能体平台提供了激动人心的可能性。
 
 ---
 
-_This integration architecture document was generated by the BMAD `document-project` workflow_
+_本集成架构文档由 BMAD `document-project` 工作流生成_

@@ -1,324 +1,324 @@
-# Source Tree Analysis
+# 源码树分析
 
-**Generated:** 2026-03-03
-**Scan Level:** Exhaustive
-**Project Type:** Monorepo (Multi-Part)
+**生成日期：** 2026-03-03
+**扫描级别：** 详尽
+**项目类型：** Monorepo (多部分)
 
 ---
 
-## Repository Structure
+## 存储库结构
 
 ```
 jd/
-├── automaton/               # Part 1: Conway Automaton - AI Agent Runtime
-│   ├── src/                 # TypeScript source code
-│   │   ├── agent/           # Core agent logic and policy enforcement
-│   │   ├── conway/          # Conway API integration and billing
-│   │   ├── identity/        # Wallet and identity management
-│   │   ├── memory/          # Memory systems (episodic, semantic, working)
-│   │   ├── self-mod/        # Self-modification and code generation
-│   │   ├── setup/           # Configuration wizard and defaults
-│   │   └── state/           # Database and persistence layer
-│   ├── packages/            # Monorepo packages
-│   │   └── cli/             # CLI package
-│   ├── dist/                # Compiled output
-│   ├── tests/               # Test files
-│   ├── bin/                 # Executable scripts
-│   └── AGENTS.md            # Agent configuration
+├── automaton/               # 第 1 部分: Conway Automaton - AI 智能体运行时
+│   ├── src/                 # TypeScript 源码
+│   │   ├── agent/           # 核心智能体逻辑和策略执行
+│   │   ├── conway/          # Conway API 集成和计费
+│   │   ├── identity/        # 钱包和身份管理
+│   │   ├── memory/          # 记忆系统 (情节、语义、工作记忆)
+│   │   ├── self-mod/        # 自我修改和代码生成
+│   │   ├── setup/           # 配置向导和默认值
+│   │   └── state/           # 数据库和持久层
+│   ├── packages/            # Monorepo 包
+│   │   └── cli/             # CLI 包
+│   ├── dist/                # 编译输出
+│   ├── tests/               # 测试文件
+│   ├── bin/                 # 可执行脚本
+│   └── AGENTS.md            # 智能体配置
 │
-├── tinyclaw/                # Part 2: TinyClaw - Multi-Team Personal Assistant
-│   ├── src/                 # TypeScript backend source
-│   │   ├── agents/          # Agent implementations
-│   │   ├── channels/        # Discord, Telegram, WhatsApp clients
-│   │   ├── state/           # Agent state management
-│   │   └── team/            # Team orchestration
-│   ├── tinyoffice/          # Next.js frontend control panel
-│   │   ├── app/             # Next.js app router
-│   │   │   ├── agents/      # Agents management UI
-│   │   │   ├── teams/       # Teams management UI
-│   │   │   ├── tasks/       # Task tracking UI
-│   │   │   ├── office/      # Control panel dashboard
-│   │   │   └── console/     # System console
-│   │   ├── src/             # Frontend source
-│   │   │   └── lib/         # Shared frontend/backend code
-│   │   └── .next/           # Next.js build output
-│   ├── dist/                # Backend compiled output
-│   ├── examples/            # Usage examples
-│   └── lib/                 # Shared libraries
+├── tinyclaw/                # 第 2 部分: TinyClaw - 多团队个人助手
+│   ├── src/                 # TypeScript 后端源码
+│   │   ├── agents/          # 智能体实现
+│   │   ├── channels/        # Discord, Telegram, WhatsApp 客户端
+│   │   ├── state/           # 智能体状态管理
+│   │   └── team/            # 团队编排
+│   ├── tinyoffice/          # Next.js 前端控制面板
+│   │   ├── app/             # Next.js App Router
+│   │   │   ├── agents/      # 智能体管理 UI
+│   │   │   ├── teams/       # 团队管理 UI
+│   │   │   ├── tasks/       # 任务追踪 UI
+│   │   │   ├── office/      # 控制面板仪表盘
+│   │   │   └── console/     # 系统控制台
+│   │   ├── src/             # 前端源码
+│   │   │   └── lib/         # 前端/后端共享代码
+│   │   └── .next/           # Next.js 构建输出
+│   ├── dist/                # 后端编译输出
+│   ├── examples/            # 使用示例
+│   └── lib/                 # 共享库
 │
-├── docs/                  # Project documentation (design, PRDs, etc.)
-└── docs/                    # Auto-generated project documentation (this folder)
+├── docs/                  # 项目文档 (设计, PRD 等)
+└── docs/                    # 自动生成的项目文档 (当前目录)
 ```
 
 ---
 
-## Part 1: Conway Automaton
+## 第 1 部分：Conway Automaton
 
-### Critical Directories
+### 关键目录
 
-| Directory | Purpose | Key Files |
+| 目录 | 用途 | 关键文件 |
 |-----------|---------|-----------|
-| `src/agent/` | Core autonomous agent runtime | `loop.ts`, `context.ts`, `injection-defense.ts`, `policy-rules/` |
-| `src/memory/` | Multi-layer memory system | `episodic.ts`, `semantic.ts`, `working.ts`, `knowledge-store.ts` |
-| `src/conway/` | Conway API client and billing | `client.ts`, `credits.ts`, `x402.ts`, `topup.ts` |
-| `src/identity/` | Web3 wallet and identity | `wallet.ts`, `provision.ts` |
-| `src/self-mod/` | Code self-modification | `code.ts`, `tools-manager.ts`, `upstream.ts` |
-| `src/state/` | SQLite database layer | `database.ts`, `schema.ts` |
-| `packages/cli/` | Command-line interface | `src/commands/*.ts` |
-| `tests/` | Unit and integration tests | Test files for all modules |
+| `src/agent/` | 核心自主智能体运行时 | `loop.ts`, `context.ts`, `injection-defense.ts`, `policy-rules/` |
+| `src/memory/` | 多层记忆系统 | `episodic.ts`, `semantic.ts`, `working.ts`, `knowledge-store.ts` |
+| `src/conway/` | Conway API 客户端和计费 | `client.ts`, `credits.ts`, `x402.ts`, `topup.ts` |
+| `src/identity/` | Web3 钱包和身份 | `wallet.ts`, `provision.ts` |
+| `src/self-mod/` | 代码自我修改 | `code.ts`, `tools-manager.ts`, `upstream.ts` |
+| `src/state/` | SQLite 数据库层 | `database.ts`, `schema.ts` |
+| `packages/cli/` | 命令行界面 | `src/commands/*.ts` |
+| `tests/` | 单元和集成测试 | 各模块对应的测试文件 |
 
-### Entry Points
+### 入口点
 
-- **Main Runtime:** `src/index.ts` (compiled to `dist/index.js`)
-- **CLI Tool:** `packages/cli/src/index.ts`
-- **Express Server:** `src/server.ts` (inferred from package.json exports)
+- **主运行时：** `src/index.ts` (编译为 `dist/index.js`)
+- **CLI 工具：** `packages/cli/src/index.ts`
+- **Express 服务器：** `src/server.ts` (从 package.json 导出项推断)
 
-### Technology Stack
+### 技术栈
 
-- **Language:** TypeScript
-- **Runtime:** Node.js (Express framework)
-- **Database:** better-sqlite3 (embedded SQLite)
-- **AI:** OpenAI API integration
-- **Web3:** viem (Ethereum), SIWE (Sign-In with Ethereum)
-- **Package Manager:** pnpm
-- **Build Tool:** TypeScript compiler (tsc)
-- **Testing:** vitest
+- **语言：** TypeScript
+- **运行时：** Node.js (Express 框架)
+- **数据库：** better-sqlite3 (嵌入式 SQLite)
+- **AI：** OpenAI API 集成
+- **Web3：** viem (Ethereum), SIWE (Sign-In with Ethereum)
+- **包管理器：** pnpm
+- **构建工具：** TypeScript 编译器 (tsc)
+- **测试：** vitest
 
 ---
 
-## Part 2: TinyClaw
+## 第 2 部分：TinyClaw
 
-### Critical Directories
+### 关键目录
 
-| Directory | Purpose | Key Files |
+| 目录 | 用途 | 关键文件 |
 |-----------|---------|-----------|
-| `src/agents/` | AI agent implementations | Various agent files |
-| `src/channels/` | Multi-platform messaging | `discord-client.ts`, `telegram-client.ts`, `whatsapp-client.ts`, `feishu-client.ts` |
-| `src/state/` | Agent conversation state | State management files |
-| `src/team/` | Multi-agent team orchestration | Team coordination logic |
-| `tinyoffice/app/` | Next.js frontend pages | React components and pages |
-| `tinyoffice/src/lib/` | Shared utilities | Common code |
-| `examples/` | Usage examples | Demo files |
+| `src/agents/` | AI 智能体实现 | 各类智能体文件 |
+| `src/channels/` | 多平台消息推送 | `discord-client.ts`, `telegram-client.ts`, `whatsapp-client.ts`, `feishu-client.ts` |
+| `src/state/` | 智能体会话状态 | 状态管理文件 |
+| `src/team/` | 多智能体团队编排 | 团队协助逻辑 |
+| `tinyoffice/app/` | Next.js 前端页面 | React 组件和页面 |
+| `tinyoffice/src/lib/` | 共享实用工具 | 通用代码 |
+| `examples/` | 使用示例 | 演示文件 |
 
-### Entry Points
+### 入口点
 
-- **Backend Main:** `src/index.ts` (compiled to `dist/index.js`)
-- **Frontend:** `tinyoffice/app/page.tsx` (Next.js app entry)
-- **Channel Clients:** Individual channel entry points in `dist/channels/`
+- **后端主程序：** `src/index.ts` (编译为 `dist/index.js`)
+- **前端：** `tinyoffice/app/page.tsx` (Next.js 应用入口)
+- **渠道客户端：** `dist/channels/` 下的各渠道入口点
 
-### Technology Stack
+### 技术栈
 
-- **Backend Language:** TypeScript
-- **Backend Framework:** Hono (web framework)
-- **Frontend Framework:** Next.js 16 + React 19
-- **Styling:** Tailwind CSS 4, Radix UI
-- **Channels:** Discord.js, Telegram Bot API, WhatsApp Web.js, Feishu SDK
-- **Database:** better-sqlite3
-- **Package Manager:** npm
-- **Build Tool:** TypeScript compiler (tsc)
+- **后端语言：** TypeScript
+- **后端框架：** Hono (Web 框架)
+- **前端框架：** Next.js 16 + React 19
+- **样式：** Tailwind CSS 4, Radix UI
+- **渠道：** Discord.js, Telegram Bot API, WhatsApp Web.js, 飞书 SDK
+- **数据库：** better-sqlite3
+- **包管理器：** npm
+- **构建工具：** TypeScript 编译器 (tsc)
 
-### Frontend Pages
+### 前端页面
 
-- `/` - Dashboard/Office homepage
-- `/agents` - Agent management
-- `/teams` - Team configuration
-- `/tasks` - Task tracking
-- `/chat/agent/[id]` - Individual agent chat
-- `/chat/team/[id]` - Team chat interface
-- `/console` - System console
-- `/logs` - Activity logs
-- `/settings` - Configuration settings
+- `/` - 仪表盘/Office 首页
+- `/agents` - 智能体管理
+- `/teams` - 团队配置
+- `/tasks` - 任务追踪
+- `/chat/agent/[id]` - 单个智能体会话
+- `/chat/team/[id]` - 团队会话界面
+- `/console` - 系统控制台
+- `/logs` - 活动日志
+- `/settings` - 配置设置
 
 ---
 
-## Integration Points
+## 集成点
 
-### Between Automaton and TinyClaw
+### Automaton 与 TinyClaw 之间
 
-While both are independent projects in the monorepo, they share conceptual architecture:
+虽然两者是 monorepo 中独立的项目，但它们共享概念架构：
 
-1. **Shared Patterns:** Both use better-sqlite3 for persistence
-2. **Agent Philosophy:** Both implement autonomous agent concepts
-3. **TypeScript:** Consistent language and tooling
-4. **AI Integration:** Both leverage LLM capabilities
+1. **共享模式：** 两者都使用 better-sqlite3 进行持久化
+2. **智能体哲学：** 两者都实现了自主智能体概念
+3. **TypeScript：** 一致的语言和工具链
+4. **AI 集成：** 两者都利用 LLM 能力
 
-### External Integrations
+### 外部集成
 
 **Automaton:**
 
-- Conway API (billing, credits)
-- OpenAI (inference)
-- Ethereum blockchain (wallet, transactions)
-- Git (code self-modification)
+- Conway API (计费、积分)
+- OpenAI (推理)
+- 以太坊区块链 (钱包、交易)
+- Git (代码自我修改)
 
 **TinyClaw:**
 
 - Discord API
 - Telegram Bot API
 - WhatsApp Web
-- Feishu (Lark) API
+- 飞书 (Lark) API
 
 ---
 
-## Build and Output Structure
+## 构建与输出结构
 
 ### Automaton
 
 ```
 automaton/
-├── dist/                    # TypeScript output
-│   ├── index.js             # Main runtime
-│   ├── index.d.ts           # TypeScript definitions
+├── dist/                    # TypeScript 输出
+│   ├── index.js             # 主运行时
+│   ├── index.d.ts           # TypeScript 定义
 │   ├── agent/
 │   ├── memory/
 │   ├── conway/
 │   ├── identity/
 │   ├── self-mod/
 │   └── state/
-└── node_modules/            # Dependencies (excluded from scan)
+└── node_modules/            # 依赖包 (扫描时排除)
 ```
 
 ### TinyClaw
 
 ```
 tinyclaw/
-├── dist/                    # Backend compiled output
+├── dist/                    # 后端编译输出
 │   ├── index.js
 │   ├── agents/
 │   ├── channels/
 │   ├── state/
 │   └── team/
-└── tinyoffice/.next/        # Next.js compiled output (excluded from scan)
+└── tinyoffice/.next/        # Next.js 编译输出 (扫描时排除)
 ```
 
 ---
 
-## Configuration Files
+## 配置文件
 
 ### Automaton
 
-- `package.json` - Dependencies and scripts
-- `tsconfig.json` - TypeScript configuration
-- `.env.example` - Environment variable template
-- `AGENTS.md` - Agent system configuration
-- `pnpm-workspace.yaml` (inferred) - Monorepo workspace config
+- `package.json` - 依赖和脚本
+- `tsconfig.json` - TypeScript 配置
+- `.env.example` - 环境变量模板
+- `AGENTS.md` - 智能体系统配置
+- `pnpm-workspace.yaml` (推断) - Monorepo 工作区配置
 
 ### TinyClaw
 
-- `package.json` - Dependencies and scripts
-- `tsconfig.json` - TypeScript configuration
-- `ARCHITECTURE.md` - Architecture documentation
-- `DOCUMENTATION.md` - Project documentation
-- `CONFIG_GUIDE.md` - Configuration guide
-- `constitution.md` - Agent constitution
+- `package.json` - 依赖和脚本
+- `tsconfig.json` - TypeScript 配置
+- `ARCHITECTURE.md` - 架构文档
+- `DOCUMENTATION.md` - 项目文档
+- `CONFIG_GUIDE.md` - 配置指南
+- `constitution.md` - 智能体宪法
 
-### TinyOffice (Frontend)
+### TinyOffice (前端)
 
-- `package.json` - Next.js dependencies
-- `next.config.js` - Next.js configuration
-- `tailwind.config.js` - Tailwind CSS config
-- `tsconfig.json` - TypeScript config
+- `package.json` - Next.js 依赖
+- `next.config.js` - Next.js 配置
+- `tailwind.config.js` - Tailwind CSS 配置
+- `tsconfig.json` - TypeScript 配置
 
 ---
 
-## Test Coverage
+## 测试覆盖率
 
 ### Automaton
 
-- Vitest test runner
-- Coverage reports available
-- Specialized test suites:
-  - `test:security` - Security and injection tests
-  - `test:financial` - Financial/treasury logic tests
-  - `test:ci` - CI/CD optimized tests
+- 使用 Vitest 测试运行器
+- 提供覆盖率报告
+- 特定的测试套件：
+  - `test:security` - 安全和注入测试
+  - `test:financial` - 财务/金库逻辑测试
+  - `test:ci` - CI/CD 优化测试
 
 ### TinyClaw
 
-- Test files in `src/` and subdirectories
-- TypeScript-based testing
+- 测试文件位于 `src/` 及其子目录
+- 基于 TypeScript 的测试
 
 ---
 
-## Key Patterns and Architectures
+## 关键模式与架构
 
-### Automaton Patterns
+### Automaton 模式
 
-1. **Multi-Layer Memory:** Episodic + Semantic + Working + Procedural
-2. **Policy Enforcement:** Runtime validation and rate limiting
-3. **Self-Modification:** Code generation and auditing
-4. **Injection Defense:** Security layer for LLM interactions
-5. **Budget Management:** Credit tracking and spending control
+1. **多层记忆：** 情节记忆 + 语义记忆 + 工作记忆 + 程序记忆
+2. **策略执行：** 运行时验证和速率限制
+3. **自我修改：** 代码生成和审计
+4. **注入防御：** 针对 LLM 交互的安全层
+5. **预算管理：** 积分追踪和支出控制
 
-### TinyClaw Patterns
+### TinyClaw 模式
 
-1. **Multi-Channel Architecture:** Unified interface for Discord/Telegram/WhatsApp/Feishu
-2. **Team Orchestration:** Multi-agent coordination
-3. **State Persistence:** SQLite-backed conversation state
-4. **Next.js SSR:** Server-side rendering for frontend
-5. **Real-time Communication:** WebSocket/long-polling for updates
+1. **多渠道架构：** Discord/Telegram/WhatsApp/飞书的统一接口
+2. **团队编排：** 多智能体协作
+3. **状态持久化：** SQLite 支持的会话状态
+4. **Next.js SSR：** 前端服务器端渲染
+5. **实时通信：** 使用 WebSocket/长轮询进行更新
 
 ---
 
-## Development Workflow
+## 开发工作流
 
 ### Automaton
 
 ```bash
 cd automaton
-pnpm install          # Install dependencies
-pnpm build            # Compile TypeScript
-pnpm dev              # Development watch mode
-pnpm test             # Run tests
-pnpm test:coverage    # Coverage report
+pnpm install          # 安装依赖
+pnpm build            # 编译 TypeScript
+pnpm dev              # 开发监控模式
+pnpm test             # 运行测试
+pnpm test:coverage    # 覆盖率报告
 ```
 
-### TinyClaw Backend
+### TinyClaw 后端
 
 ```bash
 cd tinyclaw
 npm install
 npm run build
-npm run whatsapp      # Start WhatsApp client
-npm run discord       # Start Discord client
-npm run telegram      # Start Telegram client
-npm run feishu        # Start Feishu client
+npm run whatsapp      # 启动 WhatsApp 客户端
+npm run discord       # 启动 Discord 客户端
+npm run telegram      # 启动 Telegram 客户端
+npm run feishu        # 启动飞书客户端
 ```
 
-### TinyOffice Frontend
+### TinyOffice 前端
 
 ```bash
 cd tinyclaw/tinyoffice
 npm install
-npm run dev           # Development server
-npm run build         # Production build
-npm run start         # Production start
+npm run dev           # 开发服务器
+npm run build         # 生产构建
+npm run start         # 生产启动
 ```
 
 ---
 
-## Asset Locations
+## 资产位置
 
 ### Automaton
 
-- No significant static assets (backend-only)
-- Configuration templates in `.agents/`
+- 无显著静态资产 (仅后端)
+- 配置模板位于 `.agents/`
 
 ### TinyClaw
 
-- Frontend assets in `tinyoffice/public/`
-- Images, icons, and static files
-- Next.js optimized asset pipeline
+- 前端资产位于 `tinyoffice/public/`
+- 图片、图标和静态文件
+- Next.js 优化的资产管道
 
 ---
 
-## Notes
+## 说明
 
-- **Exhaustive Scan:** This analysis includes all source directories
-- **Node Modules:** Excluded from analysis (standard dependency folders)
-- **Build Outputs:** Excluded from analysis (compiled files)
-- **Monorepo Structure:** Two independent but related projects
-- **Shared Philosophy:** Both implement autonomous AI agent systems
+- **详尽扫描：** 此分析涵盖了所有源码目录
+- **Node Modules：** 扫描时已排除 (标准依赖文件夹)
+- **构建输出：** 扫描时已排除 (编译后的文件)
+- **Monorepo 结构：** 两个独立但相关的项目
+- **共享哲学：** 两者都实现了自主 AI 智能体系统
 
 ---
 
-_This source tree analysis was generated by the BMAD `document-project` workflow_
+_此源码树分析由 BMAD `document-project` 工作流生成_

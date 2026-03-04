@@ -1,35 +1,35 @@
-# TinyClaw - Development Guide
+# TinyClaw - 开发指南
 
-**Part:** tinyclaw
-**Last Updated:** 2026-03-03
+**所属部分：** tinyclaw
+**上次更新：** 2026-03-03
 
 ---
 
-## Prerequisites
+## 前置条件
 
 - **Node.js** >= 20.0.0
-- **npm** package manager
-- **Git** for version control
-- **Channel API Keys:**
-  - Discord Bot Token (optional)
-  - Telegram Bot Token (optional)
-  - WhatsApp Web credentials (optional)
-  - Feishu Bot credentials (optional)
+- **npm** 包管理器
+- **Git** 版本控制工具
+- **渠道 API 密钥 (Channel API Keys):**
+  - Discord 机器人令牌 (可选)
+  - Telegram 机器人令牌 (可选)
+  - WhatsApp Web 凭据 (可选)
+  - 飞书机器人凭据 (可选)
 
 ---
 
-## Getting Started
+## 快速入门
 
-### 1. Clone and Install
+### 1. 克隆并安装
 
 ```bash
 cd tinyclaw
 npm install
 ```
 
-### 2. Configure Settings
+### 2. 配置设置
 
-Edit `tinyclaw.settings.json`:
+编辑 `tinyclaw.settings.json`:
 
 ```json
 {
@@ -67,9 +67,9 @@ Edit `tinyclaw.settings.json`:
 }
 ```
 
-### 3. Configure Agents
+### 3. 配置智能体 (Agents)
 
-Edit `tinyclaw.agents.json`:
+编辑 `tinyclaw.agents.json`:
 
 ```json
 {
@@ -90,9 +90,9 @@ Edit `tinyclaw.agents.json`:
 }
 ```
 
-### 4. Configure Teams (Optional)
+### 4. 配置团队 (Teams - 可选)
 
-Edit `tinyclaw.teams.json`:
+编辑 `tinyclaw.teams.json`:
 
 ```json
 {
@@ -105,41 +105,41 @@ Edit `tinyclaw.teams.json`:
 }
 ```
 
-### 5. Build and Run
+### 5. 构建与运行
 
 ```bash
-npm run build              # Compile TypeScript
-npm run queue              # Start queue processor
-npm run discord            # Start Discord client
-npm run telegram           # Start Telegram client
-npm run whatsapp           # Start WhatsApp client
-npm run feishu             # Start Feishu client
+npm run build              # 编译 TypeScript
+npm run queue              # 启动队列处理器
+npm run discord            # 启动 Discord 客户端
+npm run telegram           # 启动 Telegram 客户端
+npm run whatsapp           # 启动 WhatsApp 客户端
+npm run feishu             # 启动 飞书客户端
 ```
 
-### 6. Start Frontend
+### 6. 启动前端
 
 ```bash
 cd tinyclaw/tinyoffice
 npm install
-npm run dev                # http://localhost:3000
+npm run dev                # 访问 http://localhost:3000
 ```
 
 ---
 
-## Project Structure
+## 项目结构
 
-```
+```text
 tinyclaw/
-├── src/                    # Backend source code
-│   ├── channels/           # Channel integrations
+├── src/                    # 后端源代码
+│   ├── channels/           # 渠道集成
 │   │   ├── discord-client.ts
 │   │   ├── telegram-client.ts
 │   │   ├── whatsapp-client.ts
 │   │   └── feishu-client.ts
-│   ├── server/             # API server
-│   │   ├── index.ts        # Server entry point
-│   │   ├── sse.ts          # SSE event streaming
-│   │   └── routes/         # API route handlers
+│   ├── server/             # API 服务器
+│   │   ├── index.ts        # 服务器入口
+│   │   ├── sse.ts          # SSE 事件流
+│   │   └── routes/         # API 路由处理器
 │   │       ├── agents.ts
 │   │       ├── teams.ts
 │   │       ├── messages.ts
@@ -148,146 +148,146 @@ tinyclaw/
 │   │       ├── logs.ts
 │   │       ├── settings.ts
 │   │       └── chats.ts
-│   ├── lib/                # Shared libraries
-│   │   ├── agent.ts        # Agent management
-│   │   ├── config.ts       # Configuration loading
-│   │   ├── conversation.ts # Conversation state
-│   │   ├── db.ts           # Database operations
-│   │   ├── invoke.ts       # Agent invocation
-│   │   ├── logging.ts      # Logging system
-│   │   ├── pairing.ts      # Agent pairing
-│   │   ├── plugins.ts      # Plugin system
-│   │   ├── response.ts     # Response handling
-│   │   ├── routing.ts      # Message routing
-│   │   └── types.ts        # Type definitions
-│   ├── queue-processor.ts  # Queue processor (main)
-│   └── visualizer/         # Visualizer (optional)
-├── tinyoffice/             # Next.js frontend
-│   ├── app/                # Next.js app pages
-│   │   ├── agents/         # Agents page
-│   │   ├── teams/          # Teams page
-│   │   ├── tasks/          # Tasks page
-│   │   ├── chat/           # Chat pages
-│   │   │   ├── agent/[id]/ # Agent chat
-│   │   │   └── team/[id]/  # Team chat
-│   │   ├── office/         # Dashboard
-│   │   ├── console/        # System console
-│   │   ├── logs/           # Logs viewer
-│   │   ├── settings/       # Settings page
-│   │   └── page.tsx        # Homepage
+│   ├── lib/                # 共享库
+│   │   ├── agent.ts        # 智能体管理
+│   │   ├── config.ts       # 配置加载
+│   │   ├── conversation.ts # 会话状态管理
+│   │   ├── db.ts           # 数据库操作
+│   │   ├── invoke.ts       # 智能体调用
+│   │   ├── logging.ts      # 日志系统
+│   │   ├── pairing.ts      # 智能体配对
+│   │   ├── plugins.ts      # 插件系统
+│   │   ├── response.ts     # 响应处理
+│   │   ├── routing.ts      # 消息路由
+│   │   └── types.ts        # 类型定义
+│   ├── queue-processor.ts  # 队列处理器 (主程序)
+│   └── visualizer/         # 可视化工具 (可选)
+├── tinyoffice/             # Next.js 前端界面
+│   ├── app/                # Next.js 应用页面
+│   │   ├── agents/         # 智能体页面
+│   │   ├── teams/          # 团队页面
+│   │   ├── tasks/          # 任务页面
+│   │   ├── chat/           # 对话页面
+│   │   │   ├── agent/[id]/ # 智能体对话
+│   │   │   └── team/[id]/  # 团队对话
+│   │   ├── office/         # 仪表盘
+│   │   ├── console/        # 系统控制台
+│   │   ├── logs/           # 日志查看器
+│   │   ├── settings/       # 设置页面
+│   │   └── page.tsx        # 首页
 │   ├── src/
-│   │   └── lib/            # Shared frontend/backend code
-│   ├── public/             # Static assets
+│   │   └── lib/            # 前后端共享代码
+│   ├── public/             # 静态资源
 │   ├── package.json
 │   ├── next.config.js
 │   └── tailwind.config.js
-├── dist/                   # Compiled backend
-├── examples/               # Usage examples
-├── lib/                    # Shared libraries
-├── tinyclaw.settings.json  # Settings config
-├── tinyclaw.agents.json    # Agents config
-├── tinyclaw.teams.json     # Teams config
+├── dist/                   # 后端编译产物
+├── examples/               # 使用示例
+├── lib/                    # 共享库
+├── tinyclaw.settings.json  # 基础设置配置
+├── tinyclaw.agents.json    # 智能体配置
+├── tinyclaw.teams.json     # 团队配置
 ├── package.json
 └── tsconfig.json
 ```
 
 ---
 
-## Development Workflow
+## 开发流程
 
-### Backend Development
+### 后端开发
 
 ```bash
 cd tinyclaw
-npm install                # Install dependencies
-npm run build              # Compile TypeScript
-npm run build:watch        # Watch mode
-npm run queue              # Run queue processor
-npm run discord            # Run Discord client
-npm run telegram           # Run Telegram client
-npm run whatsapp           # Run WhatsApp client
-npm run feishu             # Run Feishu client
-npm run visualize          # Run visualizer
+npm install                # 安装依赖
+npm run build              # 编译 TypeScript
+npm run build:watch        # 监听模式编译
+npm run queue              # 运行队列处理器
+npm run discord            # 运行 Discord 客户端
+npm run telegram           # 运行 Telegram 客户端
+npm run whatsapp           # 运行 WhatsApp 客户端
+npm run feishu             # 运行 飞书客户端
+npm run visualize          # 运行可视化工具
 ```
 
-### Frontend Development
+### 前端开发
 
 ```bash
 cd tinyclaw/tinyoffice
-npm install                # Install dependencies
-npm run dev                # Development server
-npm run build              # Production build
-npm run start              # Production server
-npm run lint               # Lint code
+npm install                # 安装依赖
+npm run dev                # 启动开发服务器
+npm run build              # 生产环境构建
+npm run start              # 启动生产环境服务器
+npm run lint               # 代码检查
 ```
 
-### Full Stack Development
+### 全栈开发
 
-Open multiple terminals:
+同时打开多个终端：
 
 ```bash
-# Terminal 1: Queue Processor
+# 终端 1: 队列处理器
 cd tinyclaw && npm run queue
 
-# Terminal 2: Discord Client
+# 终端 2: Discord 客户端
 cd tinyclaw && npm run discord
 
-# Terminal 3: Telegram Client
+# 终端 3: Telegram 客户端
 cd tinyclaw && npm run telegram
 
-# Terminal 4: Frontend
+# 终端 4: 前端界面
 cd tinyclaw/tinyoffice && npm run dev
 ```
 
 ---
 
-## Configuration
+## 配置说明
 
-### Settings File (`tinyclaw.settings.json`)
+### 设置文件 (`tinyclaw.settings.json`)
 
 ```json
 {
   "workspace": {
-    "path": "~/tinyclaw-workspace"        # Working directory
+    "path": "~/tinyclaw-workspace"        # 工作目录
   },
   "llm": {
-    "default_provider": "claude",         # Default LLM provider
-    "default_model": "claude-3-opus",     # Default model
+    "default_provider": "claude",         # 默认 LLM 供应商
+    "default_model": "claude-3-opus",     # 默认模型
     "providers": {
       "claude": {
-        "api_key": "sk-ant-...",          # Claude API key
+        "api_key": "sk-ant-...",          # Claude API 密钥
         "base_url": "https://api.anthropic.com"
       },
       "openai": {
-        "api_key": "sk-...",              # OpenAI API key
+        "api_key": "sk-...",              # OpenAI API 密钥
         "base_url": "https://api.openai.com"
       }
     }
   },
   "channels": {
     "discord": {
-      "enabled": true,                    # Enable Discord
-      "token": "BOT_TOKEN"                # Discord bot token
+      "enabled": true,                    # 启用 Discord
+      "token": "BOT_TOKEN"                # Discord 机器人令牌
     },
     "telegram": {
-      "enabled": true,                    # Enable Telegram
-      "token": "BOT_TOKEN"                # Telegram bot token
+      "enabled": true,                    # 启用 Telegram
+      "token": "BOT_TOKEN"                # Telegram 机器人令牌
     },
     "whatsapp": {
-      "enabled": false                    # Enable WhatsApp
+      "enabled": false                    # 启用 WhatsApp
     },
     "feishu": {
-      "enabled": false                    # Enable Feishu
+      "enabled": false                    # 启用 飞书
     }
   },
   "queue": {
-    "max_retries": 3,                     # Max retry attempts
-    "retry_delay": 5000                   # Retry delay in ms
+    "max_retries": 3,                     # 最大重试次数
+    "retry_delay": 5000                   # 重试延迟 (毫秒)
   }
 }
 ```
 
-### Agents File (`tinyclaw.agents.json`)
+### 智能体文件 (`tinyclaw.agents.json`)
 
 ```json
 {
@@ -299,7 +299,7 @@ cd tinyclaw/tinyoffice && npm run dev
     "working_dir": "agents/default",
     "temperature": 0.7,
     "max_tokens": 4096,
-    "tools": []                           # Available tools
+    "tools": []                           # 可用工具列表
   },
   "agent-technical": {
     "name": "Technical Support",
@@ -313,7 +313,7 @@ cd tinyclaw/tinyoffice && npm run dev
 }
 ```
 
-### Teams File (`tinyclaw.teams.json`)
+### 团队文件 (`tinyclaw.teams.json`)
 
 ```json
 {
@@ -327,8 +327,8 @@ cd tinyclaw/tinyoffice && npm run dev
     ],
     "description": "Customer support team",
     "rules": {
-      "timeout": 300,                     # Timeout in seconds
-      "max_mentions": 5                   # Max teammate mentions
+      "timeout": 300,                     # 超时时间 (秒)
+      "max_mentions": 5                   # 最大队友提及数
     }
   }
 }
@@ -336,11 +336,11 @@ cd tinyclaw/tinyoffice && npm run dev
 
 ---
 
-## Adding New Features
+## 添加新功能
 
-### 1. Add a New Agent
+### 1. 添加新智能体 (Agent)
 
-Edit `tinyclaw.agents.json`:
+编辑 `tinyclaw.agents.json`:
 
 ```json
 {
@@ -355,11 +355,11 @@ Edit `tinyclaw.agents.json`:
 }
 ```
 
-Test by sending message: `@my-agent Hello!`
+发送消息测试：`@my-agent Hello!`
 
-### 2. Add a New Team
+### 2. 添加新团队 (Team)
 
-Edit `tinyclaw.teams.json`:
+编辑 `tinyclaw.teams.json`:
 
 ```json
 {
@@ -372,11 +372,11 @@ Edit `tinyclaw.teams.json`:
 }
 ```
 
-Test by sending message: `@my-team Help me with...`
+发送消息测试：`@my-team Help me with...`
 
-### 3. Add a New Channel
+### 3. 添加新渠道 (Channel)
 
-Create channel client in `src/channels/my-channel.ts`:
+在 `src/channels/my-channel.ts` 中创建渠道客户端：
 
 ```typescript
 import { MessageData } from '../lib/types';
@@ -384,27 +384,27 @@ import { log } from '../lib/logging';
 
 export class MyChannelClient {
   async start(): Promise<void> {
-    // Connect to channel
+    // 连接到渠道
     log('INFO', 'MyChannel connected');
 
-    // Listen for messages
+    // 监听消息
     this.onMessage((message: MessageData) => {
-      // Process message
+      // 处理消息
       log('INFO', `Received: ${message.message}`);
     });
   }
 
   async sendMessage(recipient: string, message: string): Promise<void> {
-    // Send message to channel
+    // 向渠道发送消息
   }
 
   private onMessage(callback: (msg: MessageData) => void): void {
-    // Message handler
+    // 消息处理器
   }
 }
 ```
 
-Add startup script in `package.json`:
+在 `package.json` 中添加启动脚本：
 
 ```json
 {
@@ -414,9 +414,9 @@ Add startup script in `package.json`:
 }
 ```
 
-### 4. Add a Plugin/Hook
+### 4. 添加插件/钩子 (Plugin/Hook)
 
-Create plugin in `plugins/my-plugin.ts`:
+在 `plugins/my-plugin.ts` 中创建插件：
 
 ```typescript
 import { Plugin } from '../lib/plugins';
@@ -424,26 +424,26 @@ import { Plugin } from '../lib/plugins';
 export const myPlugin: Plugin = {
   name: 'my-plugin',
   onMessageReceived: async (message) => {
-    // Modify or reject message
+    // 修改或拒绝消息
     if (message.message.includes('badword')) {
-      return null; // Reject message
+      return null; // 拒绝消息
     }
-    return message; // Accept message
+    return message; // 接受消息
   },
   onAgentResponse: async (response) => {
-    // Modify response before sending
+    // 发送前修改响应
     response.message += '\n\n— My Plugin';
     return response;
   }
 };
 ```
 
-Register in `src/lib/plugins.ts`:
+在 `src/lib/plugins.ts` 中注册：
 
 ```typescript
 export function loadPlugins() {
   return [
-    // ... existing plugins
+    // ... 现有插件
     myPlugin,
   ];
 }
@@ -451,302 +451,227 @@ export function loadPlugins() {
 
 ---
 
-## Debugging
+## 调试
 
-### Log Levels
+### 日志级别
 
-Logs are written to `logs/tinyclaw.log`:
+日志记录在 `logs/tinyclaw.log`：
 
 ```bash
-tail -f logs/tinyclaw.log              # View logs
-grep "ERROR" logs/tinyclaw.log         # View errors
-grep "agent-technical" logs/tinyclaw.log # Filter by agent
+tail -f logs/tinyclaw.log              # 实时查看日志
+grep "ERROR" logs/tinyclaw.log         # 查看错误日志
+grep "agent-technical" logs/tinyclaw.log # 按智能体过滤日志
 ```
 
-### Debug Queue
+### 调试队列
 
 ```bash
 sqlite3 tinyclaw.db
-.tables                                # List tables
-SELECT * FROM queue_messages WHERE status='pending';  # Pending messages
-SELECT * FROM queue_messages WHERE status='failed';   # Failed messages
-SELECT COUNT(*) FROM queue_messages;   # Total messages
+.tables                                # 列出表
+SELECT * FROM queue_messages WHERE status='pending';  # 查询待处理消息
+SELECT * FROM queue_messages WHERE status='failed';   # 查询失败消息
+SELECT COUNT(*) FROM queue_messages;   # 查询消息总数
 ```
 
-### Debug API
+### 调试 API
 
 ```bash
-# Get queue status
+# 获取队列状态
 curl http://localhost:3777/api/queue/status
 
-# List agents
+# 列出智能体
 curl http://localhost:3777/api/agents
 
-# List teams
+# 列出团队
 curl http://localhost:3777/api/teams
 
-# Send test message
+# 发送测试消息
 curl -X POST http://localhost:3777/api/messages \
   -H "Content-Type: application/json" \
   -d '{"agent": "default", "message": "Hello"}'
 ```
 
-### Frontend Debug
-
-Open browser DevTools (F12):
-
-- Console: View JavaScript logs
-- Network: Inspect API calls
-- Application: View local storage
-
 ---
 
-## Common Tasks
+## 常用任务
 
-### Reset All Data
+### 重置所有数据
 
 ```bash
 rm -rf tinyclaw.db
 rm -rf tinyclaw-workspace/
 rm -rf logs/
-npm run queue  # Recreate database
+npm run queue  # 重新创建数据库
 ```
 
-### Add Channel Bot
+### 添加渠道机器人 (Bot)
 
 **Discord:**
-1. Go to https://discord.com/developers/applications
-2. Create new application
-3. Add bot and copy token
-4. Update `tinyclaw.settings.json` with token
+
+1. 访问 [Discord Developer Portal](https://discord.com/developers/applications)
+2. 创建新应用 (Application)
+3. 添加 Bot 并复制 Token
+4. 将 Token 更新到 `tinyclaw.settings.json`
 
 **Telegram:**
-1. Talk to @BotFather on Telegram
-2. Create new bot with `/newbot`
-3. Copy token
-4. Update `tinyclaw.settings.json` with token
 
-### Test Team Conversation
+1. 在 Telegram 上联系 @BotFather
+2. 使用 `/newbot` 创建新机器人
+3. 复制 Token
+4. 将 Token 更新到 `tinyclaw.settings.json`
 
-Send message to team:
+### 测试团队会话
 
-```
+向团队发送消息：
+
+```text
 @team-support I need help with my account
 ```
 
-Leader agent receives message and can mention teammates:
+负责人智能体 (Leader agent) 接收消息并可以提及队友：
 
-```
+```text
 [@agent-technical: Can you check the account status?]
 [@agent-billing: Can you verify the payment?]
 ```
 
-### Monitor Queue
+### 监控队列
 
-Via API:
+通过 API：
 
 ```bash
 curl http://localhost:3777/api/queue/status | jq
 ```
 
-Via Frontend:
-1. Open http://localhost:3000
-2. Go to Dashboard
-3. View queue statistics
+通过前端界面：
 
-### Export Data
+1. 访问 `http://localhost:3000`
+2. 进入仪表盘 (Dashboard)
+3. 查看队列统计信息
+
+### 导出数据
 
 ```bash
-sqlite3 tinyclaw.db .dump > backup.sql           # Export database
-cp -r tinyclaw-workspace/ backup-workspace/      # Export workspace
-cp logs/tinyclaw.log backup-log.txt              # Export logs
+sqlite3 tinyclaw.db .dump > backup.sql           # 导出数据库
+cp -r tinyclaw-workspace/ backup-workspace/      # 导出工作区
+cp logs/tinyclaw.log backup-log.txt              # 导出日志
 ```
 
 ---
 
-## Testing
+## 测试
 
-### Manual Testing
+### 手动测试
 
-1. Start queue processor: `npm run queue`
-2. Start channel client: `npm run discord`
-3. Send message from Discord/Telegram
-4. Observe logs: `tail -f logs/tinyclaw.log`
-5. Check database: `sqlite3 tinyclaw.db`
+1. 启动队列处理器：`npm run queue`
+2. 启动渠道客户端：`npm run discord`
+3. 从 Discord/Telegram 发送消息
+4. 观察日志：`tail -f logs/tinyclaw.log`
+5. 检查数据库：`sqlite3 tinyclaw.db`
 
-### Frontend Testing
+### 前端测试
 
-1. Start frontend: `cd tinyoffice && npm run dev`
-2. Open http://localhost:3000
-3. Test all pages and features
-4. Check browser console for errors
+1. 启动前端：`cd tinyoffice && npm run dev`
+2. 访问 `http://localhost:3000`
+3. 测试所有页面和功能
+4. 检查浏览器控制台是否有错误
 
-### API Testing
+### API 测试
 
 ```bash
-# Test agents endpoint
+# 测试智能体接口
 curl http://localhost:3777/api/agents
 
-# Test teams endpoint
+# 测试团队接口
 curl http://localhost:3777/api/teams
 
-# Test messages endpoint
+# 测试消息发送接口
 curl -X POST http://localhost:3777/api/messages \
   -H "Content-Type: application/json" \
   -d '{"agent": "default", "message": "test"}'
 
-# Test SSE stream
+# 测试 SSE 事件流
 curl http://localhost:3777/api/events/stream
 ```
 
 ---
 
-## Architecture Patterns
+## 架构模式
 
-### Queue-Based Processing
+### 基于队列的处理模式
 
-All messages go through SQLite queue:
+所有消息都经过 SQLite 队列：
 
-```
-Channel → Queue (pending) → Processor → Agent → Response → Channel
-```
-
-Benefits:
-- Reliability (persistent queue)
-- Retry logic (failed messages)
-- Load balancing (multiple processors)
-- Recovery (stale message detection)
-
-### Team Orchestration via Mentions
-
-Team collaboration via natural mentions:
-
-```
-User: @team-support Help me
-Leader: [@agent-technical: Check this]
-Technical: [@agent-billing: Verify payment]
-Billing: Payment confirmed
-Leader: User, everything is OK!
+```text
+渠道 (Channel) → 队列 (等待处理) → 处理器 (Processor) → 智能体 (Agent) → 响应 → 渠道
 ```
 
-Benefits:
-- Natural language interface
-- Flexible team structures
-- Async coordination
-- Conversation tracking
+优势：
 
-### Hot-Reloadable Configuration
+- 可靠性 (持久化队列)
+- 重试逻辑 (针对失败消息)
+- 负载均衡 (支持多个处理器)
+- 恢复能力 (过时消息检测)
 
-Configs reloaded on each message:
+### 通过提示进行团队编排模式
+
+通过自然语言提及实现团队协作：
+
+```text
+用户: @team-support Help me
+负责人 (Leader): [@agent-technical: Check this]
+技术支持 (Technical): [@agent-billing: Verify payment]
+账单支持 (Billing): Payment confirmed
+负责人 (Leader): 用户，一切正常！
+```
+
+优势：
+
+- 自然语言交互界面
+- 灵活的团队结构
+- 异步协作
+- 完整的会话追踪
+
+### 支持热重载的配置模式
+
+针对每条消息重新加载配置：
 
 ```typescript
-// On each message
-const settings = getSettings();  // Fresh from file
-const agents = getAgents(settings);  // Fresh from file
+// 在每条消息处理时
+const settings = getSettings();  // 从文件实时获取
+const agents = getAgents(settings);  // 从文件实时获取
 ```
 
-Benefits:
-- No restart needed for config changes
-- Dynamic agent/team updates
-- Runtime flexibility
+优势：
+
+- 配置修改无需重启
+- 动态的智能体/团队更新
+- 极佳的运行时灵活性
 
 ---
 
-## Best Practices
+## 最佳实践
 
-1. **Type Safety:** Use TypeScript strictly
-2. **Error Handling:** Catch and log all errors
-3. **Idempotency:** Queue messages should be idempotent
-4. **Testing:** Test each channel separately
-5. **Monitoring:** Watch queue and logs
-6. **Security:** Keep API keys in environment variables
-7. **Documentation:** Document custom agents and teams
-
----
-
-## Troubleshooting
-
-### Queue Processor Not Starting
-
-```bash
-# Check logs
-tail -f logs/tinyclaw.log
-
-# Check database
-sqlite3 tinyclaw.db ".tables"
-
-# Reset database
-rm tinyclaw.db
-npm run queue
-```
-
-### Channel Client Not Connecting
-
-```bash
-# Check token in settings
-cat tinyclaw.settings.json | grep token
-
-# Check logs
-tail -f logs/tinyclaw.log | grep "ERROR"
-
-# Test token manually
-curl https://discord.com/api/v10/users/@me \
-  -H "Authorization: Bot YOUR_TOKEN"
-```
-
-### Agent Not Responding
-
-1. Check agent config exists in `tinyclaw.agents.json`
-2. Check provider API key is valid
-3. Check model name is correct
-4. Check logs for LLM errors
-5. Test with simple message
-
-### Team Mentions Not Working
-
-1. Check team exists in `tinyclaw.teams.json`
-2. Check teammates are in team agents array
-3. Check mention format: `[@agent-id: message]`
-4. Check internal messages in queue
-5. Check conversation state in database
-
-### Frontend Not Loading
-
-```bash
-# Check if running
-curl http://localhost:3000
-
-# Check logs
-cd tinyoffice && npm run dev
-
-# Clear cache
-rm -rf .next/
-npm run dev
-```
+1. **类型安全：** 严格使用 TypeScript
+2. **错误处理：** 捕获并记录所有错误
+3. **幂等性：** 队列消息应保持幂等性
+4. **测试：** 分别测试每个渠道
+5. **监控：** 密切关注队列和日志
+6. **安全性：** 将 API 密钥保留在环境变量中
+7. **文档：** 记录自定义智能体和团队的逻辑
 
 ---
 
-## Contributing
+## 相关资源
 
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Make changes and test
-4. Commit changes (`git commit -m 'Add amazing feature'`)
-5. Push to branch (`git push origin feature/amazing-feature`)
-6. Open pull request
-
----
-
-## Resources
-
-- [Architecture Documentation](./architecture-tinyclaw.md)
-- [Source Tree Analysis](./source-tree-analysis.md)
-- [Project Overview](./project-overview.md)
-- [tinyclaw/ARCHITECTURE.md](../tinyclaw/ARCHITECTURE.md) - Detailed architecture
-- [tinyclaw/DOCUMENTATION.md](../tinyclaw/DOCUMENTATION.md) - Project docs
-- [tinyclaw/CONFIG_GUIDE.md](../tinyclaw/CONFIG_GUIDE.md) - Config guide
-- [tinyclaw/CLAUDE.md](../tinyclaw/CLAUDE.md) - Project guidelines
+- [架构文档 (中文)](./architecture-tinyclaw.md)
+- [源码树分析 (中文)](./source-tree-analysis.md)
+- [项目概览 (中文)](./project-overview.md)
+- [tinyclaw/ARCHITECTURE.md](../tinyclaw/ARCHITECTURE.md) - 详细架构设计
+- [tinyclaw/DOCUMENTATION.md](../tinyclaw/DOCUMENTATION.md) - 项目文档
+- [tinyclaw/CONFIG_GUIDE.md](../tinyclaw/CONFIG_GUIDE.md) - 配置指南
+- [tinyclaw/CLAUDE.md](../tinyclaw/CLAUDE.md) - 项目指南
 
 ---
 
-_This development guide was generated by the BMAD `document-project` workflow_
+_本开发指南由 BMAD `document-project` 工作流生成_

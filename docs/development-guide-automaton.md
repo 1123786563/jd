@@ -1,189 +1,190 @@
-# Conway Automaton - Development Guide
+# Conway Automaton - 开发指南
 
-**Part:** automaton
-**Last Updated:** 2026-03-03
+**所属部分：** automaton
+**上次更新：** 2026-03-03
 
 ---
 
-## Prerequisites
+## 前置条件
 
 - **Node.js** >= 20.0.0
-- **pnpm** package manager
-- **Git** for version control
-- **Conway API Key** (optional, for billing/credits)
-- **Ethereum Wallet** (optional, for Web3 features)
+- **pnpm** 包管理器
+- **Git** 版本控制工具
+- **Conway API Key** (可选，用于计费/额度)
+- **Ethereum 钱包** (可选，用于 Web3 功能)
 
 ---
 
-## Getting Started
+## 快速入门
 
-### 1. Clone and Install
+### 1. 克隆并安装
 
 ```bash
 cd automaton
 pnpm install
 ```
 
-### 2. First Run (Setup Wizard)
+### 2. 首次运行 (设置向导)
 
 ```bash
 pnpm dev
 ```
 
-The first run will trigger an interactive setup wizard that will:
-- Configure LLM providers (Claude, OpenAI, etc.)
-- Set up treasury and budget policies
-- Select default inference model
-- Configure Conway API integration (optional)
-- Set up Ethereum wallet (optional)
+首次运行将触发交互式设置向导，该向导将：
 
-### 3. Manual Setup (Alternative)
+- 配置 LLM 供应商 (Claude, OpenAI 等)
+- 设置金库 (Treasury) 和预算策略
+- 选择默认推理模型
+- 配置 Conway API 集成 (可选)
+- 设置以太坊钱包 (可选)
+
+### 3. 手动设置 (替代方案)
 
 ```bash
-automaton --setup          # Re-run setup wizard
-automaton --configure      # Edit configuration
-automaton --pick-model     # Select inference model
-automaton --provision      # Provision Conway API key
+automaton --setup          # 重新运行设置向导
+automaton --configure      # 编辑配置
+automaton --pick-model     # 选择推理模型
+automaton --provision      # 供给 Conway API 密钥
 ```
 
 ---
 
-## Project Structure
+## 项目结构
 
 ```
 automaton/
-├── src/                    # Main source code
-│   ├── agent/              # Core agent loop and policy engine
-│   │   ├── loop.ts         # ReAct execution loop
-│   │   ├── context.ts      # Context building
-│   │   ├── tools.ts        # Tool registration and execution
-│   │   ├── system-prompt.ts # System prompt construction
-│   │   ├── injection-defense.ts # Security sanitization
-│   │   ├── policy-engine.ts # Policy enforcement
-│   │   └── policy-rules/   # Policy rule implementations
-│   ├── memory/             # Multi-layer memory system
-│   │   ├── working.ts      # Working memory (active context)
-│   │   ├── episodic.ts     # Episodic memory (event history)
-│   │   ├── semantic.ts     # Semantic memory (knowledge base)
-│   │   ├── procedural.ts   # Procedural memory (skills)
-│   │   ├── knowledge-store.ts # Knowledge storage
-│   │   ├── context-manager.ts # Context aggregation
-│   │   ├── compression-engine.ts # Memory compression
-│   │   ├── retrieval.ts    # Memory retrieval
-│   │   └── ingestion.ts    # Knowledge ingestion
-│   ├── conway/             # Conway API integration
-│   │   ├── client.ts       # HTTP client
-│   │   ├── credits.ts      # Credit tracking
-│   │   ├── x402.ts         # USDC balance
-│   │   ├── inference.ts    # Inference API
-│   │   └── topup.ts        # Automated top-up
-│   ├── identity/           # Web3 identity
-│   │   ├── wallet.ts       # Ethereum wallet
-│   │   └── provision.ts    # API key provisioning
-│   ├── self-mod/           # Self-modification
-│   │   ├── code.ts         # Code generation
-│   │   ├── tools-manager.ts # Tool lifecycle
-│   │   ├── upstream.ts     # Git integration
-│   │   └── audit-log.ts    # Change auditing
-│   ├── inference/          # Multi-provider inference
-│   │   ├── registry.ts     # Model registry
-│   │   ├── budget.ts       # Budget tracking
-│   │   ├── router.ts       # Inference routing
-│   │   └── provider-registry.ts # Provider management
-│   ├── state/              # Persistence layer
-│   │   └── database.ts     # SQLite database
-│   ├── setup/              # Configuration wizard
-│   │   ├── wizard.ts       # Interactive setup
-│   │   ├── configure.ts    # Config editing
-│   │   ├── model-picker.ts # Model selection
-│   │   └── environment.ts  # Environment loading
-│   ├── heartbeat/          # Scheduling system
-│   │   ├── daemon.ts       # Heartbeat daemon
-│   │   └── config.ts       # Wake event config
-│   ├── skills/             # Installed skills
-│   │   └── loader.ts       # Skill loading
-│   ├── social/             # Social platform integration
-│   │   └── client.ts       # Social client
-│   ├── orchestration/      # Multi-agent orchestration
-│   │   ├── orchestrator.ts # Agent orchestration
-│   │   ├── plan-mode.ts    # Plan mode controller
-│   │   ├── attention.ts    # Attention mechanism
-│   │   ├── messaging.ts    # Inter-agent messaging
-│   │   ├── local-worker.ts # Local worker pool
-│   │   └── simple-tracker.ts # Simple agent tracker
-│   ├── observability/      # Logging and monitoring
-│   │   └── logger.ts       # Structured logger
-│   ├── git/                # Git integration
-│   │   └── state-versioning.ts # State versioning
-│   └── index.ts            # Main entry point
-├── packages/cli/           # CLI package
+├── src/                    # 主源代码
+│   ├── agent/              # 核心智能体循环与策略引擎
+│   │   ├── loop.ts         # ReAct 执行循环
+│   │   ├── context.ts      # 上下文构建
+│   │   ├── tools.ts        # 工具注册与执行
+│   │   ├── system-prompt.ts # 系统提示词构建
+│   │   ├── injection-defense.ts # 安全过滤
+│   │   ├── policy-engine.ts # 策略执行
+│   │   └── policy-rules/   # 策略规则实现
+│   ├── memory/             # 多层记忆系统
+│   │   ├── working.ts      # 工作记忆 (活跃上下文)
+│   │   ├── episodic.ts     # 情节记忆 (事件历史)
+│   │   ├── semantic.ts     # 语义记忆 (知识库)
+│   │   ├── procedural.ts   # 程序记忆 (技能库)
+│   │   ├── knowledge-store.ts # 知识存储
+│   │   ├── context-manager.ts # 上下文聚合
+│   │   ├── compression-engine.ts # 记忆压缩
+│   │   ├── retrieval.ts    # 记忆检索
+│   │   └── ingestion.ts    # 知识摄取
+│   ├── conway/             # Conway API 集成
+│   │   ├── client.ts       # HTTP 客户端
+│   │   ├── credits.ts      # 额度追踪
+│   │   ├── x402.ts         # USDC 余额
+│   │   ├── inference.ts    # 推理 API
+│   │   └── topup.ts        # 自动充值
+│   ├── identity/           # Web3 身份
+│   │   ├── wallet.ts       # 以太坊钱包
+│   │   └── provision.ts    # API 密钥供给
+│   ├── self-mod/           # 自修改功能
+│   │   ├── code.ts         # 代码生成
+│   │   ├── tools-manager.ts # 工具生命周期管理
+│   │   ├── upstream.ts     # Git 集成
+│   │   └── audit-log.ts    # 变更审计
+│   ├── inference/          # 多供应商推理
+│   │   ├── registry.ts     # 模型注册表
+│   │   ├── budget.ts       # 预算追踪
+│   │   ├── router.ts       # 推理路由
+│   │   └── provider-registry.ts # 供应商管理
+│   ├── state/              # 持久化层
+│   │   └── database.ts     # SQLite 数据库
+│   ├── setup/              # 配置向导
+│   │   ├── wizard.ts       # 交互式设置
+│   │   ├── configure.ts    # 配置编辑
+│   │   ├── model-picker.ts # 模型选择
+│   │   └── environment.ts  # 环境加载
+│   ├── heartbeat/          # 调度系统
+│   │   ├── daemon.ts       # 心跳守护进程
+│   │   └── config.ts       # 唤醒事件配置
+│   ├── skills/             # 已安装技能
+│   │   └── loader.ts       # 技能加载
+│   ├── social/             # 社交平台集成
+│   │   └── client.ts       # 社交客户端
+│   ├── orchestration/      # 多智能体编排
+│   │   ├── orchestrator.ts # 智能体编排
+│   │   ├── plan-mode.ts    # 计划模式控制器
+│   │   ├── attention.ts    # 注意力机制
+│   │   ├── messaging.ts    # 智能体间消息传递
+│   │   ├── local-worker.ts # 本地工作线程池
+│   │   └── simple-tracker.ts # 简单智能体追踪
+│   ├── observability/      # 可观测性与监控
+│   │   └── logger.ts       # 结构化日志记录
+│   ├── git/                # Git 集成
+│   │   └── state-versioning.ts # 状态版本控制
+│   └── index.ts            # 主入口文件
+├── packages/cli/           # CLI 软件包
 │   └── src/
-│       ├── commands/       # CLI commands
-│       │   ├── status.ts   # Status command
-│       │   ├── logs.ts     # Logs command
-│       │   ├── send.ts     # Send message command
-│       │   └── fund.ts     # Fund treasury command
-│       └── index.ts        # CLI entry point
-├── tests/                  # Test suite
-├── dist/                   # Compiled output
-├── config/                 # Configuration files
-├── .automaton/             # Runtime data (wallet, state, logs)
-├── package.json            # Dependencies and scripts
-└── tsconfig.json           # TypeScript configuration
+│       ├── commands/       # CLI 命令
+│       │   ├── status.ts   # status 命令
+│       │   ├── logs.ts     # logs 命令
+│       │   ├── send.ts     # send 消息命令
+│       │   └── fund.ts     # fund 金库命令
+│       └── index.ts        # CLI 入口
+├── tests/                  # 测试套件
+├── dist/                   # 编译输出
+├── config/                 # 配置文件
+├── .automaton/             # 运行时数据 (钱包、状态、日志)
+├── package.json            # 依赖与脚本
+└── tsconfig.json           # TypeScript 配置
 ```
 
 ---
 
-## Development Workflow
+## 开发流程
 
-### Build
+### 构建
 
 ```bash
-pnpm build                 # Compile TypeScript to dist/
-pnpm build:watch           # Watch mode for development
+pnpm build                 # 将 TypeScript 编译到 dist/
+pnpm build:watch           # 开发模式下的监听构建
 ```
 
-### Run
+### 运行
 
 ```bash
-pnpm dev                   # Development mode (watch + run)
-node dist/index.js         # Run compiled version
+pnpm dev                   # 开发运行模式 (监听 + 运行)
+node dist/index.js         # 运行编译后的版本
 ```
 
-### CLI Commands
+### CLI 命令
 
 ```bash
-automaton --version        # Show version
-automaton --help           # Show help
-automaton --status         # Show agent status
-automaton --setup          # Run setup wizard
-automaton --configure      # Edit configuration
-automaton --pick-model     # Select inference model
-automaton --provision      # Provision Conway API key
-automaton --init           # Initialize wallet and config
+automaton --version        # 显示版本
+automaton --help           # 显示帮助
+automaton --status         # 显示智能体状态
+automaton --setup          # 运行设置向导
+automaton --configure      # 编辑配置
+automaton --pick-model     # 选择推理模型
+automaton --provision      # 供给 Conway API 密钥
+automaton --init           # 初始化钱包与配置
 ```
 
 ---
 
-## Configuration
+## 配置说明
 
-### Configuration Files
+### 配置文件
 
-- `~/.automaton/config.json` - Main configuration
-- `~/.automaton/wallet.json` - Ethereum wallet
-- `~/.automaton/state.db` - SQLite database
-- `~/.automaton/logs/` - Log files
+- `~/.automaton/config.json` - 主配置文件
+- `~/.automaton/wallet.json` - 以太坊钱包文件
+- `~/.automaton/state.db` - SQLite 数据库文件
+- `~/.automaton/logs/` - 日志目录
 
-### Environment Variables
+### 环境变量
 
 ```bash
-CONWAY_API_URL=https://api.conway.tech      # Conway API URL
-CONWAY_API_KEY=sk-...                       # Conway API key
-OLLAMA_BASE_URL=http://localhost:11434      # Ollama base URL
-AUTOMATON_LOG_LEVEL=info                    # Log level (debug, info, warn, error)
+CONWAY_API_URL=https://api.conway.tech      # Conway API 地址
+CONWAY_API_KEY=sk-...                       # Conway API 密钥
+OLLAMA_BASE_URL=http://localhost:11434      # Ollama 基础地址
+AUTOMATON_LOG_LEVEL=info                    # 日志级别 (debug, info, warn, error)
 ```
 
-### Configuration Example
+### 配置示例
 
 ```json
 {
@@ -219,46 +220,46 @@ AUTOMATON_LOG_LEVEL=info                    # Log level (debug, info, warn, erro
 
 ---
 
-## Testing
+## 测试
 
-### Run Tests
+### 运行测试
 
 ```bash
-pnpm test                  # Run all tests
-pnpm test:coverage         # Run with coverage report
-pnpm test:security         # Security-focused tests
-pnpm test:financial        # Financial/treasury tests
-pnpm test:ci               # CI-optimized tests
+pnpm test                  # 运行所有测试
+pnpm test:coverage         # 运行并生成覆盖率报告
+pnpm test:security         # 侧重安全性的测试
+pnpm test:financial        # 财务/金库相关测试
+pnpm test:ci               # CI 优化测试
 ```
 
-### Test Structure
+### 测试结构
 
 ```
 tests/
 ├── agent/
-│   ├── loop.test.ts       # Agent loop tests
-│   ├── policy.test.ts     # Policy engine tests
-│   └── tools.test.ts      # Tool execution tests
+│   ├── loop.test.ts       # 智能体循环测试
+│   ├── policy.test.ts     # 策略引擎测试
+│   └── tools.test.ts      # 工具执行测试
 ├── memory/
-│   ├── working.test.ts    # Working memory tests
-│   ├── episodic.test.ts   # Episodic memory tests
-│   └── semantic.test.ts   # Semantic memory tests
+│   ├── working.test.ts    # 工作记忆测试
+│   ├── episodic.test.ts   # 情节记忆测试
+│   └── semantic.test.ts   # 语义记忆测试
 ├── conway/
-│   ├── credits.test.ts    # Credit tracking tests
-│   └── inference.test.ts  # Inference API tests
+│   ├── credits.test.ts    # 额度追踪测试
+│   └── inference.test.ts  # 推理 API 测试
 ├── self-mod/
-│   └── code.test.ts       # Code generation tests
+│   └── code.test.ts       # 代码生成测试
 └── integration/
-    └── e2e.test.ts        # End-to-end tests
+    └── e2e.test.ts        # 端到端集成测试
 ```
 
 ---
 
-## Adding New Features
+## 添加新功能
 
-### 1. Add a New Tool
+### 1. 添加新工具 (Tool)
 
-Tools extend agent capabilities. Create in `src/agent/tools/`:
+工具用于扩展智能体的能力。在 `src/agent/tools/` 中创建：
 
 ```typescript
 // src/agent/tools/my-tool.ts
@@ -266,35 +267,35 @@ import type { AutomatonTool, ToolContext } from "../types.js";
 
 export const myTool: AutomatonTool = {
   name: "my_tool",
-  description: "Does something useful",
+  description: "执行某些有用的操作",
   parameters: {
     type: "object",
     properties: {
-      input: { type: "string", description: "Input parameter" }
+      input: { type: "string", description: "输入参数" }
     },
     required: ["input"]
   },
   async execute(context: ToolContext, args: { input: string }): Promise<string> {
-    // Tool implementation
-    return `Result: ${args.input}`;
+    // 工具具体实现逻辑
+    return `结果: ${args.input}`;
   }
 };
 ```
 
-Register in `src/agent/tools.ts`:
+在 `src/agent/tools.ts` 中注册：
 
 ```typescript
 export function createBuiltinTools(sandboxId: string) {
   return {
-    // ... existing tools
+    // ... 现有工具
     my_tool: myTool,
   };
 }
 ```
 
-### 2. Add a Policy Rule
+### 2. 添加策略规则 (Policy Rule)
 
-Policy rules enforce safety. Create in `src/agent/policy-rules/`:
+策略规则用于确保安全性。在 `src/agent/policy-rules/` 中创建：
 
 ```typescript
 // src/agent/policy-rules/my-rule.ts
@@ -302,31 +303,31 @@ import type { PolicyRule, AgentState } from "../../types.js";
 
 export const myRule: PolicyRule = {
   name: "my_rule",
-  description: "Validates something",
+  description: "验证某些内容",
   validate(state: AgentState): { allowed: boolean; reason?: string } {
-    // Validation logic
-    if (/* some condition */) {
-      return { allowed: false, reason: "Not allowed" };
+    // 验证逻辑
+    if (/* 某些条件 */) {
+      return { allowed: false, reason: "不允许操作" };
     }
     return { allowed: true };
   }
 };
 ```
 
-Register in `src/agent/policy-rules/index.ts`:
+在 `src/agent/policy-rules/index.ts` 中注册：
 
 ```typescript
 export function createDefaultRules(): PolicyRule[] {
   return [
-    // ... existing rules
+    // ... 现有规则
     myRule,
   ];
 }
 ```
 
-### 3. Add a Memory Layer
+### 3. 添加记忆层 (Memory Layer)
 
-Create new memory type in `src/memory/`:
+在 `src/memory/` 中创建新的记忆类型：
 
 ```typescript
 // src/memory/my-memory.ts
@@ -334,20 +335,20 @@ import type { MemoryBlock } from "../types.js";
 
 export class MyMemory {
   async store(key: string, value: any): Promise<void> {
-    // Store logic
+    // 存储逻辑
   }
 
   async retrieve(key: string): Promise<any> {
-    // Retrieve logic
+    // 检索逻辑
   }
 
   async search(query: string): Promise<MemoryBlock[]> {
-    // Search logic
+    // 搜索逻辑
   }
 }
 ```
 
-Integrate in `src/memory/memory.ts`:
+在 `src/memory/memory.ts` 中集成：
 
 ```typescript
 export class MemoryManager {
@@ -357,48 +358,48 @@ export class MemoryManager {
     this.myMemory = new MyMemory();
   }
 
-  // Use in context building, retrieval, etc.
+  // 在上下文构建、检索等流程中使用
 }
 ```
 
 ---
 
-## Debugging
+## 调试
 
-### Log Levels
+### 日志级别
 
 ```bash
-AUTOMATON_LOG_LEVEL=debug    # Verbose debugging
-AUTOMATON_LOG_LEVEL=info     # Normal operation (default)
-AUTOMATON_LOG_LEVEL=warn     # Warnings only
-AUTOMATON_LOG_LEVEL=error    # Errors only
+AUTOMATON_LOG_LEVEL=debug    # 详细调试日志
+AUTOMATON_LOG_LEVEL=info     # 正常运行 (默认)
+AUTOMATON_LOG_LEVEL=warn     # 仅限警告
+AUTOMATON_LOG_LEVEL=error    # 仅限错误
 ```
 
-### Debug Agent Loop
+### 调试智能体循环
 
-Add logging to `src/agent/loop.ts`:
+向 `src/agent/loop.ts` 添加日志：
 
 ```typescript
-logger.debug("Context:", context);
-logger.debug("Response:", response);
-logger.debug("Tool calls:", toolCalls);
+logger.debug("上下文:", context);
+logger.debug("响应:", response);
+logger.debug("工具调用:", toolCalls);
 ```
 
-### Inspect Database
+### 检查数据库
 
 ```bash
 sqlite3 ~/.automaton/state.db
-.tables                        # List tables
-SELECT * FROM agent_state;     # View agent state
-SELECT * FROM agent_turns;     # View conversation history
-SELECT * FROM memory_blocks;   # View memory
+.tables                        # 列出表
+SELECT * FROM agent_state;     # 查看智能体状态
+SELECT * FROM agent_turns;     # 查看对话历史
+SELECT * FROM memory_blocks;   # 查看记忆块
 ```
 
 ---
 
-## Common Tasks
+## 常用任务
 
-### Reset Agent State
+### 重置智能体状态
 
 ```bash
 rm -rf ~/.automaton/state.db
@@ -406,148 +407,148 @@ rm -rf ~/.automaton/logs/*
 automaton --init
 ```
 
-### Change Inference Model
+### 更改推理模型
 
 ```bash
 automaton --pick-model
-# Or edit ~/.automaton/config.json manually
+# 或者手动编辑 ~/.automaton/config.json
 ```
 
-### Fund Treasury
+### 为金库注资
 
 ```bash
-automaton fund --amount 1000   # Add 1000 credits
-# Or use CLI:
+automaton fund --amount 1000   # 添加 1000 额度
+# 或者使用 CLI：
 cd packages/cli
 pnpm fund --amount 1000
 ```
 
-### View Logs
+### 查看日志
 
 ```bash
 tail -f ~/.automaton/logs/automaton.log
-# Or use CLI:
+# 或者使用 CLI：
 cd packages/cli
 pnpm logs
 ```
 
-### Send Message to Agent
+### 向智能体发送消息
 
 ```bash
 cd packages/cli
-pnpm send "Hello, how are you?"
+pnpm send "你好，最近怎么样？"
 ```
 
 ---
 
-## Architecture Patterns
+## 架构模式
 
-### ReAct Loop
+### ReAct 循环
 
-The core pattern is **ReAct (Reasoning + Acting)**:
+核心模式是 **ReAct (Reasoning + Acting，推理 + 行动)**：
 
-1. **Think** - Analyze context, decide next action
-2. **Act** - Execute tool or generate response
-3. **Observe** - Capture results
-4. **Persist** - Store to memory
+1. **思考 (Think)** - 分析上下文，决定下一步行动
+2. **行动 (Act)** - 执行工具或生成响应
+3. **观察 (Observe)** - 捕获结果
+4. **持久化 (Persist)** - 存储到记忆中
 
-### Multi-Layer Memory
+### 多层记忆
 
-Four memory layers with different lifetimes:
+具有不同生命周期的四个记忆层级：
 
-- **Working** - Active context (session-scoped)
-- **Episodic** - Event history (persistent)
-- **Semantic** - Knowledge base (persistent)
-- **Procedural** - Skills and tools (persistent)
+- **工作记忆 (Working)** - 活跃上下文 (会话作用域)
+- **情节记忆 (Episodic)** - 事件历史 (持久化)
+- **语义记忆 (Semantic)** - 知识库 (持久化)
+- **程序记忆 (Procedural)** - 技能与工具 (持久化)
 
-### Policy-Driven Safety
+### 策略驱动的安全
 
-All operations pass through policy engine:
+所有操作都必须通过策略引擎：
 
-- Input validation
-- Rate limiting
-- Path protection
-- Budget enforcement
-- Injection defense
-
----
-
-## Best Practices
-
-1. **Type Safety:** Use TypeScript strictly, no `any`
-2. **Error Handling:** Always catch and log errors
-3. **Testing:** Write tests for all new features
-4. **Documentation:** Document all public APIs
-5. **Security:** Sanitize all inputs, validate all outputs
-6. **Performance:** Profile before optimizing
-7. **Code Style:** Follow existing patterns and conventions
+- 输入验证
+- 速率限制
+- 路径保护
+- 预算强制执行
+- 注入防御 (Injection defense)
 
 ---
 
-## Troubleshooting
+## 最佳实践
 
-### Agent Not Starting
+1. **类型安全：** 严格使用 TypeScript，杜绝 `any`
+2. **错误处理：** 始终捕获并记录错误
+3. **测试：** 为所有新功能编写测试
+4. **文档：** 为所有公开 API 编写文档
+5. **安全性：** 处理所有输入，验证所有输出
+6. **性能：** 优化前先进行性能分析
+7. **代码风格：** 遵循现有的模式和约定
+
+---
+
+## 故障排除
+
+### 智能体未启动
 
 ```bash
-# Check logs
+# 检查日志
 tail -f ~/.automaton/logs/automaton.log
 
-# Check config
+# 检查配置
 cat ~/.automaton/config.json
 
-# Reset and re-init
+# 重置并重新初始化
 rm -rf ~/.automaton/*
 automaton --init
 ```
 
-### Out of Credits
+### 额度不足
 
 ```bash
-# Check balance
+# 检查余额
 automaton --status
 
-# Add credits
+# 添加额度
 automaton fund --amount 1000
 
-# Or configure auto-topup in config.json
+# 或者在 config.json 中配置自动充值
 ```
 
-### Tool Not Working
+### 工具不起作用
 
-1. Check tool is registered in `src/agent/tools.ts`
-2. Check tool parameters match schema
-3. Check tool execution has proper error handling
-4. Check logs for tool-specific errors
+1. 检查工具是否已在 `src/agent/tools.ts` 中注册
+2. 检查工具参数是否符合 Schema (架构)
+3. 检查工具执行逻辑是否包含适当的错误处理
+4. 检查日志中是否存在特定工具的错误
 
-### Memory Issues
+### 记忆问题
 
-1. Check SQLite database is not corrupted
-2. Check disk space for `~/.automaton/`
-3. Check memory budget limits in config
-4. Review memory compression settings
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Make changes and add tests
-4. Run tests (`pnpm test`)
-5. Commit changes (`git commit -m 'Add amazing feature'`)
-6. Push to branch (`git push origin feature/amazing-feature`)
-7. Open pull request
+1. 检查 SQLite 数据库是否损坏
+2. 检查 `~/.automaton/` 目录的磁盘空间
+3. 检查配置中的记忆预算限制
+4. 检查记忆压缩设置
 
 ---
 
-## Resources
+## 贡献代码
 
-- [Architecture Documentation](./architecture-automaton.md)
-- [Source Tree Analysis](./source-tree-analysis.md)
-- [Project Overview](./project-overview.md)
-- [automaton/AGENTS.md](../automaton/AGENTS.md) - Agent configuration
-- [automaton/CLAUDE.md](../automaton/CLAUDE.md) - Project guidelines
+1. Fork 仓库
+2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
+3. 修改代码并添加测试
+4. 运行测试 (`pnpm test`)
+5. 提交更改 (`git commit -m 'Add amazing feature'`)
+6. 推送到分支 (`git push origin feature/amazing-feature`)
+7. 开启拉取请求 (Pull Request)
 
 ---
 
-_This development guide was generated by the BMAD `document-project` workflow_
+## 相关资源
+
+- [架构文档 (中文)](./architecture-automaton.md)
+- [源码树分析 (中文)](./source-tree-analysis.md)
+- [项目概览 (中文)](./project-overview.md)
+- [automaton/AGENTS.md](../automaton/AGENTS.md) - 智能体配置
+- [automaton/CLAUDE.md](../automaton/CLAUDE.md) - 项目指南
+
+---
+
+_本开发指南由 BMAD `document-project` 工作流生成_

@@ -1,0 +1,309 @@
+---
+# JD - Epic Breakdown
+
+## Overview
+
+This document provides the complete epic and story breakdown for JD, decomposing the requirements from the existing architecture documentation and project context into implementable stories.
+
+## Requirements Inventory
+
+### Functional Requirements
+
+FR1: Autonomous Agent Runtime - System must provide a self-directing AI agent loop capable of continuous autonomous operation with decision-making capabilities
+
+FR2: Multi-Layer Memory System - System must implement hierarchical memory architecture including working memory (active context), episodic memory (event history), semantic memory (knowledge base), and procedural memory (skills)
+
+FR3: Web3 Integration - System must support Ethereum wallet operations, SIWE authentication, and cryptographic identity management
+
+FR4: Conway API Integration - System must provide real-time billing and credit management capabilities through Conway API
+
+FR5: Code Self-Modification - System must enable safe, audited code generation and updates with policy enforcement
+
+FR6: Policy Enforcement - System must implement runtime validation, rate limiting, and security rules for all agent operations
+
+FR7: Budget Management - System must track and manage credit/USDC balances with spending controls
+
+FR8: Injection Defense - System must protect against prompt injection attacks and sanitize all external inputs
+
+FR9: CLI Interface - System must provide command-line management tools for agent operations
+
+FR10: Agent Context Aggregation - System must aggregate and manage multi-source context for agent decision-making
+
+FR11: Multi-Channel Support - System must support messaging across Discord, Telegram, WhatsApp, and Feishu (Lark) platforms
+
+FR12: Team Orchestration - System must coordinate multiple AI agents and manage team-based state
+
+FR13: State Persistence - System must provide SQLite-backed persistent storage for conversations, agent state, teams, and tasks
+
+FR14: Next.js Control Panel - System must provide a web-based management interface (TinyOffice) with pages for Agents, Teams, Tasks, Chat, and Console
+
+FR15: Real-time Updates - System must support WebSocket-enabled live interface for real-time status updates
+
+FR16: Agent Management - System must enable creation, configuration, and monitoring of AI agents through the control panel
+
+FR17: Task Tracking - System must provide comprehensive monitoring and management of agent tasks
+
+FR18: Activity Logging - System must maintain a complete audit trail of all agent activities and operations
+
+FR19: Configuration Management - System must provide centralized settings management for the entire platform
+
+FR20: 24/7 Operation - System must support persistent background processing for continuous availability
+
+### NonFunctional Requirements
+
+NFR1: Performance - Node.js >= 20.0.0 required for optimal performance across all projects
+
+NFR2: Type Safety - TypeScript strict mode must be enabled across all projects with strict type checking
+
+NFR3: Testing - Minimum 60% statement coverage, 50% branch coverage, 55% function coverage, and 60% line coverage
+
+NFR4: Test Timeout - Unit tests must complete within 30 seconds (testTimeout: 30_000)
+
+NFR5: Module Systems - Automaton must use ESM (NodeNext) with .js extensions in imports, TinyClaw must use CommonJS
+
+NFR6: Error Handling - All async operations must be wrapped in try/catch blocks with structured logging
+
+NFR7: Database Testing - In-memory SQLite must be used for database tests (never file-based)
+
+NFR8: Security - Policy engine must validate EVERY tool call, protected files must never expose private keys in logs
+
+NFR9: Agent Loop Limits - Maximum 10 tool calls per turn, maximum 5 consecutive errors before sleep, maximum 3 repetitive turns for loop detection
+
+NFR10: Performance Optimization - Credit/USDC balances must be cached, tool results truncated to MAX_TOOL_RESULT_SIZE, connection pooling used for database operations
+
+NFR11: Code Quality - Files must use kebab-case naming (except React components in PascalCase), test files named *.test.ts, source organized in feature directories
+
+NFR12: Logging - StructuredLogger must be used with module namespace and context objects
+
+NFR13: Code Organization - All modules must follow src/module-name/ structure with index.ts for exports
+
+NFR14: Documentation - All architecture decisions must be recorded in documentation
+
+NFR15: Monorepo Structure - Projects must maintain independent builds with shared TypeScript tooling
+
+### Additional Requirements
+
+#### Technical Requirements from Architecture:
+
+- **Automaton Starter Template**: Use Express.js with ESM (NodeNext) module system, TypeScript 5.9.3, pnpm 10.28.1 as package manager
+- **TinyClaw Starter Template**: Use Hono framework with CommonJS module system, TypeScript 5.9.3, npm as package manager
+- **TinyOffice Frontend**: Use Next.js 16.1.6 with React 19.2.3, App Router, Tailwind CSS 4, Radix UI 1.4.3
+- **Database**: better-sqlite3 version 11.0.0 for all persistent storage
+- **LLM Integration**: OpenAI SDK 6.24.0 for language model inference
+- **Web3 Dependencies**: viem 2.44.2 for Ethereum client operations, SIWE for authentication
+- **Messaging Clients**: Discord.js 14.16.0, Telegram Bot API 0.67.0, WhatsApp Web.js 1.34.6, Feishu SDK for multi-channel support
+- **Testing Framework**: Vitest 2.0.0 for all unit and integration tests
+- **Build Tools**: tsc for TypeScript compilation, appropriate package managers (pnpm for automaton, npm for tinyclaw)
+
+#### Infrastructure Requirements:
+
+- Separate build outputs: automaton/dist/, tinyclaw/dist/, tinyclaw/tinyoffice/.next/
+- Independent test suites for each project
+- Shared TypeScript configuration with project-specific overrides
+- Environment variable management for secrets and configuration
+- Git hooks for pre-commit validation (type checking, linting)
+
+#### Integration Requirements:
+
+- Multi-project monorepo with independent deployment capabilities
+- Shared understanding of agent patterns between Automaton and TinyClaw
+- Common infrastructure patterns (SQLite, TypeScript, npm/pnpm)
+- Potential for cross-project agent collaboration (future extensibility)
+- Consistent logging and error handling across projects
+
+#### Deployment Requirements:
+
+- Docker support for containerized deployment (recommended)
+- Environment-specific configuration (development, staging, production)
+- Health check endpoints for monitoring
+- Graceful shutdown handling for all services
+
+### FR Coverage Map
+
+FR1: Epic 1a - Agent runtime provides autonomous decision-making
+FR2: Epic 1a - Multi-layer memory stores and retrieves context
+FR3: Epic 1b - Web3 integration enables wallet operations and authentication
+FR4: Epic 1b - Conway API manages billing and credits
+FR5: Epic 1c - Self-modification enables code generation with safety
+FR6: Epic 1a - Policy engine validates all operations
+FR7: Epic 1b - Budget management tracks spending
+FR8: Epic 1a - Injection defense protects against attacks
+FR9: Epic 1c - CLI provides command-line management
+FR10: Epic 1c - Context aggregation manages multi-source inputs
+FR11: Epic 2a - Multi-channel support enables messaging across 2 platforms
+FR12: Epic 2b - Team orchestration coordinates agents
+FR13: Epic 2a - State persistence stores conversations and agent state
+FR14: Epic 3 - Control panel provides web-based management UI
+FR15: Epic 3 - Real-time updates enable live status monitoring
+FR16: Epic 3 - Agent management enables creation and configuration
+FR17: Epic 3 - Task tracking monitors agent activities
+FR18: Epic 2a - Activity logging maintains audit trail
+FR19: Epic 2a - Configuration management provides centralized settings
+FR20: Epic 2a - 24/7 operation supports persistent processing
+
+### Epic List
+
+## Epic 1a: Conway Automaton Core - Autonomous Agent Runtime Foundation
+
+**Goal:** Deploy the foundational autonomous agent runtime with multi-layer memory system, policy enforcement, and injection defense.
+
+**User Outcome:** Users can run a basic autonomous AI agent that makes decisions, maintains context across sessions, follows safety policies, and is protected against attacks.
+
+**FRs Covered:** FR1, FR2, FR6, FR8
+
+**Technical Scope:**
+- Express.js backend with ESM (NodeNext) module system
+- Autonomous agent loop (ReAct pattern)
+- 5-tier memory system (working, episodic, semantic, procedural, knowledge store)
+- Policy engine for runtime validation and safety
+- Injection defense for security
+- Better-sqlite3 persistent storage
+
+**Dependencies:** None - Standalone runtime foundation.
+
+---
+
+## Epic 1b: Conway Automaton Web3 & Billing - Wallet and Credit Management
+
+**Goal:** Add Ethereum wallet integration, SIWE authentication, and Conway API billing capabilities to the agent runtime.
+
+**User Outcome:** Users can operate AI agents with their own Ethereum wallet, authenticate via SIWE, and manage billing through Conway API with credit tracking.
+
+**FRs Covered:** FR3, FR4, FR7
+
+**Technical Scope:**
+- Web3 wallet integration (viem 2.44.2)
+- SIWE authentication for cryptographic identity
+- Conway API client for billing operations
+- Credit/USDC balance tracking and caching
+- Spending controls and budget management
+- Web3 transaction logging
+
+**Dependencies:** Epic 1a (builds upon core runtime)
+
+---
+
+## Epic 1c: Conway Automaton Self-Modification & CLI - Code Generation and Management Tools
+
+**Goal:** Enable safe, audited code self-modification capabilities and provide command-line interface for agent management.
+
+**User Outcome:** Users can safely modify agent code through LLM-generated updates with full audit trail, and manage agents via CLI tools.
+
+**FRs Covered:** FR5, FR9, FR10
+
+**Technical Scope:**
+- Safe code generation with policy validation
+- Audit log for all self-modification operations
+- Code review and approval workflow
+- CLI interface for agent operations (start, stop, configure, query)
+- Agent context aggregation from multiple sources
+- Upstream integration for code updates
+
+**Dependencies:** Epic 1a (core runtime), Epic 1b (billing for self-mod costs)
+
+---
+
+## Epic 2a: TinyClaw Messaging Core - Multi-Channel Platform Foundation
+
+**Goal:** Deploy a production-ready messaging platform supporting Discord and Telegram with persistent state management and configuration system.
+
+**User Outcome:** Users can run AI assistants on Discord and Telegram with persistent conversation history, centralized configuration, and 24/7 availability.
+
+**FRs Covered:** FR11 (Discord + Telegram), FR13, FR18, FR19, FR20
+
+**Technical Scope:**
+- Hono backend framework with CommonJS
+- Discord.js 14.16.0 integration
+- Telegram Bot API 0.67.0 integration
+- Shared message queue processor
+- SQLite persistent storage for conversations and state
+- Configuration management system
+- Activity logging and audit trail
+- Background processing for 24/7 operation
+- Health check endpoints
+
+**Dependencies:** None - Standalone messaging platform.
+
+---
+
+## Epic 2b: TinyClaw Team Orchestration - Multi-Agent Coordination
+
+**Goal:** Add WhatsApp and Feishu (Lark) support, implement team-based agent orchestration, and enable multi-agent coordination.
+
+**User Outcome:** Users can deploy multiple AI agents across 4 messaging platforms with team-based coordination, shared context, and workload distribution.
+
+**FRs Covered:** FR11 (WhatsApp + Feishu), FR12
+
+**Technical Scope:**
+- WhatsApp Web.js 1.34.6 integration
+- Feishu SDK integration
+- Team orchestrator for multi-agent coordination
+- Agent routing based on teams and capabilities
+- Shared context management across agents
+- Load balancing and failover
+- Team configuration UI (basic)
+
+**Dependencies:** Epic 2a (builds upon messaging core)
+
+---
+
+## Epic 3: TinyOffice Control Panel - Web Management Interface
+
+**Goal:** Deploy a modern web-based control panel that enables users to manage AI agents, monitor team activities, track tasks, and configure the platform.
+
+**User Outcome:** Users can manage AI agents through an intuitive web interface with real-time status updates, agent configuration, task monitoring, and live chat capabilities.
+
+**FRs Covered:** FR14, FR15, FR16, FR17
+
+**Technical Scope:**
+- Next.js 16.1.6 with React 19.2.3 (App Router)
+- Tailwind CSS 4 styling
+- Radix UI 1.4.3 components
+- WebSocket integration for real-time updates
+- Pages: Agents (list, create, configure), Teams (manage, assign), Tasks (monitor, track), Chat (live messaging), Console (logs, debugging)
+- Agent creation and configuration forms
+- Task monitoring dashboard with status indicators
+- Real-time activity feed and logs
+- Authentication and authorization
+- Responsive design for mobile/tablet
+
+**API Dependencies (from Epic 2a/2b):**
+- GET /api/agents - List all agents
+- POST /api/agents - Create new agent
+- GET /api/agents/:id - Get agent details
+- PUT /api/agents/:id - Update agent configuration
+- DELETE /api/agents/:id - Delete agent
+- GET /api/teams - List teams
+- GET /api/tasks - List active tasks
+- GET /api/logs - Stream activity logs
+- GET /api/health - System health status
+
+**Dependencies:** Epic 2a and Epic 2b (requires backend API)
+
+---
+
+## Epic 4: Agent Integration & Advanced Features - Cross-Platform Enhancement
+
+**Goal:** Enable Conway Automaton agents to integrate with TinyClaw messaging channels, add advanced monitoring, analytics, and cross-project collaboration features.
+
+**User Outcome:** Users can deploy Conway Automaton agents across TinyClaw messaging channels, view unified analytics, and leverage advanced automation workflows.
+
+**FRs Covered:** Enhancement of FR1-FR20 with integration capabilities
+
+**Technical Scope:**
+- Conway Automaton integration adapter for TinyClaw channels
+- Cross-project agent collaboration framework
+- Unified agent registry and discovery
+- Shared context management between Automaton and TinyClaw
+- Advanced monitoring and analytics dashboard
+- Workflow automation engine
+- Performance metrics and reporting
+- Enhanced logging and debugging tools
+- Backup and restore functionality
+
+**Dependencies:** Epic 1a, 1b, 1c, 2a, 2b, 3 (all previous epics)
+
+---
+
+
+
