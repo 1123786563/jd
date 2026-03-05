@@ -140,6 +140,49 @@ export function initQueueDb(): void {
     if (!cols.some(c => c.name === 'metadata')) {
         db.exec('ALTER TABLE responses ADD COLUMN metadata TEXT');
     }
+
+    // A2A Task 表
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS tasks (
+            id TEXT PRIMARY KEY,
+            status TEXT NOT NULL DEFAULT 'submitted',
+            conversation_id TEXT,
+            history TEXT NOT NULL DEFAULT '[]',
+            artifacts TEXT DEFAULT '[]',
+            from_agent TEXT,
+            to_agent TEXT NOT NULL,
+            priority INTEGER DEFAULT 0,
+            metadata TEXT,
+            retry_count INTEGER DEFAULT 0,
+            max_retries INTEGER DEFAULT 3,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
+            completed_at INTEGER,
+            error_message TEXT,
+            message_id INTEGER,
+            FOREIGN KEY (message_id) REFERENCES messages(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+        CREATE INDEX IF NOT EXISTS idx_tasks_to_agent ON tasks(to_agent, status);
+        CREATE INDEX IF NOT EXISTS idx_tasks_conversation ON tasks(conversation_id);
+        CREATE INDEX IF NOT EXISTS idx_tasks_retry ON tasks(retry_count, max_retries);
+    `);
+
+    // Agent 心跳表
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS agent_heartbeats (
+            agent_id TEXT PRIMARY KEY,
+            status TEXT NOT NULL,
+            current_task_id TEXT,
+            last_heartbeat INTEGER NOT NULL,
+            metadata TEXT,
+            FOREIGN KEY (current_task_id) REFERENCES tasks(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_heartbeats_status ON agent_heartbeats(status);
+        CREATE INDEX IF NOT EXISTS idx_heartbeats_time ON agent_heartbeats(last_heartbeat);
+    `);
 }
 
 function getDb(): Database.Database {
@@ -349,6 +392,100 @@ export function getPendingAgents(): string[] {
         SELECT DISTINCT COALESCE(agent, 'default') as agent FROM messages WHERE status = 'pending'
     `).all() as { agent: string }[];
     return rows.map(r => r.agent);
+}
+
+// ── A2A Tasks ────────────────────────────────────────────────────────────────
+
+export interface DbTask {
+    id: string;
+    status: string;
+    conversation_id: string | null;
+    history: string;
+    artifacts: string;
+    from_agent: string | null;
+    to_agent: string;
+    priority: number;
+    metadata: string | null;
+    retry_count: number;
+    max_retries: number;
+    created_at: number;
+    updated_at: number;
+    completed_at: number | null;
+    error_message: string | null;
+    message_id: number | null;
+}
+
+export function createTask(task: Omit<DbTask, 'created_at' | 'updated_at'>): void {
+    const now = Date.now();
+    getDb().prepare(`
+        INSERT INTO tasks (id, status, conversation_id, history, artifacts, from_agent, to_agent, priority, metadata, retry_count, max_retries, created_at, updated_at, message_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        task.id, task.status, task.conversation_id, task.history, task.artifacts,
+        task.from_agent, task.to_agent, task.priority, task.metadata,
+        task.retry_count, task.max_retries, now, now, task.message_id
+    );
+}
+
+export function getTask(taskId: string): DbTask | undefined {
+    return getDb().prepare('SELECT * FROM tasks WHERE id = ?').get(taskId) as DbTask | undefined;
+}
+
+export function updateTaskStatus(taskId: string, status: string, errorMessage?: string): void {
+    const now = Date.now();
+    const completedAt = ['completed', 'failed', 'canceled'].includes(status) ? now : null;
+    getDb().prepare(`
+        UPDATE tasks SET status = ?, updated_at = ?, completed_at = ?, error_message = ?
+        WHERE id = ?
+    `).run(status, now, completedAt, errorMessage ?? null, taskId);
+}
+
+export function getPendingTasksForAgent(agentId: string): DbTask[] {
+    return getDb().prepare(`
+        SELECT * FROM tasks WHERE to_agent = ? AND status = 'submitted'
+        ORDER BY priority ASC, created_at ASC
+    `).all(agentId) as DbTask[];
+}
+
+export function getStaleWorkingTasks(thresholdMs: number): DbTask[] {
+    const cutoff = Date.now() - thresholdMs;
+    return getDb().prepare(`
+        SELECT * FROM tasks WHERE status = 'working' AND updated_at < ?
+    `).all(cutoff) as DbTask[];
+}
+
+// ── Agent Heartbeats ──────────────────────────────────────────────────────────
+
+export interface DbAgentHeartbeat {
+    agent_id: string;
+    status: string;
+    current_task_id: string | null;
+    last_heartbeat: number;
+    metadata: string | null;
+}
+
+export function upsertHeartbeat(heartbeat: Omit<DbAgentHeartbeat, 'last_heartbeat'>): void {
+    const now = Date.now();
+    getDb().prepare(`
+        INSERT INTO agent_heartbeats (agent_id, status, current_task_id, last_heartbeat, metadata)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(agent_id) DO UPDATE SET
+            status = excluded.status,
+            current_task_id = excluded.current_task_id,
+            last_heartbeat = excluded.last_heartbeat,
+            metadata = excluded.metadata
+    `).run(heartbeat.agent_id, heartbeat.status, heartbeat.current_task_id, now, heartbeat.metadata ?? null);
+}
+
+export function getHeartbeat(agentId: string): DbAgentHeartbeat | undefined {
+    return getDb().prepare('SELECT * FROM agent_heartbeats WHERE agent_id = ?').get(agentId) as DbAgentHeartbeat | undefined;
+}
+
+export function getDeadAgents(thresholdMs: number): DbAgentHeartbeat[] {
+    const cutoff = Date.now() - thresholdMs;
+    return getDb().prepare(`
+        SELECT * FROM agent_heartbeats WHERE last_heartbeat < ?
+    `).all(cutoff) as DbAgentHeartbeat[];
 }
 
 // ── Lifecycle ────────────────────────────────────────────────────────────────

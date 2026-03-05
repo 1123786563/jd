@@ -319,7 +319,9 @@ export class InferenceRouter {
 
     for (const msg of messages) {
       const last = result[result.length - 1];
-      if (last && last.role === msg.role && msg.role !== "system" && msg.role !== "tool") {
+      // 合并连续的相同角色消息（tool 消息除外）
+      // 特别处理：合并连续的 system 消息，因为某些 API（如智谱AI）不支持多个 system 消息
+      if (last && last.role === msg.role && msg.role !== "tool") {
         last.content = (last.content || "") + "\n" + (msg.content || "");
         if (msg.tool_calls) {
           last.tool_calls = [...(last.tool_calls || []), ...msg.tool_calls];

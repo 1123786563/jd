@@ -133,6 +133,37 @@ export const STATIC_MODEL_BASELINE: Omit<ModelEntry, "lastSeen" | "createdAt" | 
     enabled: true,
   },
   // === 智普 (Zhipu) Models ===
+  // 推荐模型
+  {
+    modelId: "glm-5",
+    provider: "zhipu",
+    displayName: "GLM-5",
+    tierMinimum: "normal",
+    costPer1kInput: 10,    // ¥10/M input (estimated)
+    costPer1kOutput: 40,   // ¥40/M output (estimated)
+    maxTokens: 32768,
+    contextWindow: 128000,
+    supportsTools: true,
+    supportsVision: true,  // 支持图片理解
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  // 更多模型
+  {
+    modelId: "glm-4.7",
+    provider: "zhipu",
+    displayName: "GLM-4.7",
+    tierMinimum: "normal",
+    costPer1kInput: 8,     // ¥8/M input (estimated)
+    costPer1kOutput: 32,   // ¥32/M output (estimated)
+    maxTokens: 32768,
+    contextWindow: 128000,
+    supportsTools: true,
+    supportsVision: true,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  // 旧模型（保留兼容）
   {
     modelId: "glm-4-plus",
     provider: "zhipu",
@@ -190,6 +221,65 @@ export const STATIC_MODEL_BASELINE: Omit<ModelEntry, "lastSeen" | "createdAt" | 
     enabled: true,
   },
   // === Qwen Models ===
+  // 推荐模型
+  {
+    modelId: "qwen3.5-plus",
+    provider: "qwen",
+    displayName: "Qwen 3.5 Plus",
+    tierMinimum: "normal",
+    costPer1kInput: 5,     // ¥5/M input (estimated)
+    costPer1kOutput: 20,   // ¥20/M output (estimated)
+    maxTokens: 16384,
+    contextWindow: 131072,
+    supportsTools: true,
+    supportsVision: true,  // 支持图片理解
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  // 更多模型
+  {
+    modelId: "qwen3-max-2026-01-23",
+    provider: "qwen",
+    displayName: "Qwen 3 Max (2026-01-23)",
+    tierMinimum: "normal",
+    costPer1kInput: 20,    // ¥20/M input (estimated)
+    costPer1kOutput: 80,   // ¥80/M output (estimated)
+    maxTokens: 32768,
+    contextWindow: 131072,
+    supportsTools: true,
+    supportsVision: true,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  {
+    modelId: "qwen3-coder-next",
+    provider: "qwen",
+    displayName: "Qwen 3 Coder Next",
+    tierMinimum: "normal",
+    costPer1kInput: 15,    // ¥15/M input (estimated)
+    costPer1kOutput: 60,   // ¥60/M output (estimated)
+    maxTokens: 32768,
+    contextWindow: 131072,
+    supportsTools: true,
+    supportsVision: false,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  {
+    modelId: "qwen3-coder-plus",
+    provider: "qwen",
+    displayName: "Qwen 3 Coder Plus",
+    tierMinimum: "normal",
+    costPer1kInput: 8,     // ¥8/M input (estimated)
+    costPer1kOutput: 32,   // ¥32/M output (estimated)
+    maxTokens: 16384,
+    contextWindow: 131072,
+    supportsTools: true,
+    supportsVision: false,
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  // 旧模型（保留兼容）
   {
     modelId: "qwen-turbo",
     provider: "qwen",
@@ -247,6 +337,22 @@ export const STATIC_MODEL_BASELINE: Omit<ModelEntry, "lastSeen" | "createdAt" | 
     enabled: true,
   },
   // === Kimi Models ===
+  // 推荐模型
+  {
+    modelId: "kimi-k2.5",
+    provider: "kimi",
+    displayName: "Kimi K2.5",
+    tierMinimum: "normal",
+    costPer1kInput: 10,    // ¥10/M input (estimated)
+    costPer1kOutput: 40,   // ¥40/M output (estimated)
+    maxTokens: 32768,
+    contextWindow: 131072,
+    supportsTools: true,
+    supportsVision: true,  // 支持图片理解
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
+  // 旧模型（保留兼容）
   {
     modelId: "moonshot-v1-8k",
     provider: "kimi",
@@ -289,6 +395,22 @@ export const STATIC_MODEL_BASELINE: Omit<ModelEntry, "lastSeen" | "createdAt" | 
     parameterStyle: "max_tokens",
     enabled: true,
   },
+  // === MiniMax Models ===
+  // 推荐模型
+  {
+    modelId: "MiniMax-M2.5",
+    provider: "minimax",
+    displayName: "MiniMax M2.5",
+    tierMinimum: "normal",
+    costPer1kInput: 15,    // ¥15/M input (estimated)
+    costPer1kOutput: 60,   // ¥60/M output (estimated)
+    maxTokens: 32768,
+    contextWindow: 131072,
+    supportsTools: true,
+    supportsVision: true,  // 支持图片理解
+    parameterStyle: "max_tokens",
+    enabled: true,
+  },
 ];
 
 // === 默认路由矩阵 ===
@@ -296,30 +418,30 @@ export const STATIC_MODEL_BASELINE: Omit<ModelEntry, "lastSeen" | "createdAt" | 
 
 export const DEFAULT_ROUTING_MATRIX: RoutingMatrix = {
   high: {
-    agent_turn: { candidates: ["gpt-5.2", "gpt-5.3"], maxTokens: 8192, ceilingCents: -1 },
-    heartbeat_triage: { candidates: ["gpt-5-mini"], maxTokens: 2048, ceilingCents: 5 },
-    safety_check: { candidates: ["gpt-5.2", "gpt-5.3"], maxTokens: 4096, ceilingCents: 20 },
-    summarization: { candidates: ["gpt-5.2", "gpt-5-mini"], maxTokens: 4096, ceilingCents: 15 },
-    planning: { candidates: ["gpt-5.2", "gpt-5.3"], maxTokens: 8192, ceilingCents: -1 },
+    agent_turn: { candidates: ["glm-4-flash", "glm-4-plus", "gpt-5.2", "gpt-5.3"], maxTokens: 8192, ceilingCents: -1 },
+    heartbeat_triage: { candidates: ["glm-4-flash", "gpt-5-mini"], maxTokens: 2048, ceilingCents: 5 },
+    safety_check: { candidates: ["glm-4-flash", "gpt-5.2", "gpt-5.3"], maxTokens: 4096, ceilingCents: 20 },
+    summarization: { candidates: ["glm-4-flash", "gpt-5.2", "gpt-5-mini"], maxTokens: 4096, ceilingCents: 15 },
+    planning: { candidates: ["glm-4-plus", "gpt-5.2", "gpt-5.3"], maxTokens: 8192, ceilingCents: -1 },
   },
   normal: {
-    agent_turn: { candidates: ["gpt-5.2", "gpt-5-mini"], maxTokens: 4096, ceilingCents: -1 },
-    heartbeat_triage: { candidates: ["gpt-5-mini"], maxTokens: 2048, ceilingCents: 5 },
-    safety_check: { candidates: ["gpt-5.2", "gpt-5-mini"], maxTokens: 4096, ceilingCents: 10 },
-    summarization: { candidates: ["gpt-5.2", "gpt-5-mini"], maxTokens: 4096, ceilingCents: 10 },
-    planning: { candidates: ["gpt-5.2", "gpt-5-mini"], maxTokens: 4096, ceilingCents: -1 },
+    agent_turn: { candidates: ["glm-4-flash", "gpt-5.2", "gpt-5-mini"], maxTokens: 4096, ceilingCents: -1 },
+    heartbeat_triage: { candidates: ["glm-4-flash", "gpt-5-mini"], maxTokens: 2048, ceilingCents: 5 },
+    safety_check: { candidates: ["glm-4-flash", "gpt-5.2", "gpt-5-mini"], maxTokens: 4096, ceilingCents: 10 },
+    summarization: { candidates: ["glm-4-flash", "gpt-5.2", "gpt-5-mini"], maxTokens: 4096, ceilingCents: 10 },
+    planning: { candidates: ["glm-4-flash", "gpt-5.2", "gpt-5-mini"], maxTokens: 4096, ceilingCents: -1 },
   },
   low_compute: {
-    agent_turn: { candidates: ["gpt-5-mini"], maxTokens: 4096, ceilingCents: 10 },
-    heartbeat_triage: { candidates: ["gpt-5-mini"], maxTokens: 1024, ceilingCents: 2 },
-    safety_check: { candidates: ["gpt-5-mini"], maxTokens: 2048, ceilingCents: 5 },
-    summarization: { candidates: ["gpt-5-mini"], maxTokens: 2048, ceilingCents: 5 },
-    planning: { candidates: ["gpt-5-mini"], maxTokens: 2048, ceilingCents: 5 },
+    agent_turn: { candidates: ["glm-4-flash", "gpt-5-mini"], maxTokens: 4096, ceilingCents: 10 },
+    heartbeat_triage: { candidates: ["glm-4-flash", "gpt-5-mini"], maxTokens: 1024, ceilingCents: 2 },
+    safety_check: { candidates: ["glm-4-flash", "gpt-5-mini"], maxTokens: 2048, ceilingCents: 5 },
+    summarization: { candidates: ["glm-4-flash", "gpt-5-mini"], maxTokens: 2048, ceilingCents: 5 },
+    planning: { candidates: ["glm-4-flash", "gpt-5-mini"], maxTokens: 2048, ceilingCents: 5 },
   },
   critical: {
-    agent_turn: { candidates: ["gpt-5-mini"], maxTokens: 2048, ceilingCents: 3 },
-    heartbeat_triage: { candidates: ["gpt-5-mini"], maxTokens: 512, ceilingCents: 1 },
-    safety_check: { candidates: ["gpt-5-mini"], maxTokens: 1024, ceilingCents: 2 },
+    agent_turn: { candidates: ["glm-4-flash", "gpt-5-mini"], maxTokens: 2048, ceilingCents: 3 },
+    heartbeat_triage: { candidates: ["glm-4-flash", "gpt-5-mini"], maxTokens: 512, ceilingCents: 1 },
+    safety_check: { candidates: ["glm-4-flash", "gpt-5-mini"], maxTokens: 1024, ceilingCents: 2 },
     summarization: { candidates: [], maxTokens: 0, ceilingCents: 0 },
     planning: { candidates: [], maxTokens: 0, ceilingCents: 0 },
   },

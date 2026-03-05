@@ -6,6 +6,9 @@
     "build": "tsc && tsc -p tsconfig.visualizer.json && echo '{\"type\":\"module\"}' > dist/visualizer/package.json",
     "build:main": "tsc",
     "build:visualizer": "tsc -p tsconfig.visualizer.json && echo '{\"type\":\"module\"}' > dist/visualizer/package.json",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
     "whatsapp": "node dist/channels/whatsapp-client.js",
     "discord": "node dist/channels/discord-client.js",
     "telegram": "node dist/channels/telegram-client.js",
@@ -34,6 +37,9 @@
     "@types/node": "^25.2.2",
     "@types/node-telegram-bot-api": "^0.64.13",
     "@types/qrcode-terminal": "^0.12.2",
-    "typescript": "^5.9.3"
+    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/ui": "^4.0.18",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }

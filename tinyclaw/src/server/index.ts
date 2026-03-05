@@ -23,6 +23,7 @@ import { createQueueRoutes } from './routes/queue';
 import tasksRoutes from './routes/tasks';
 import logsRoutes from './routes/logs';
 import chatsRoutes from './routes/chats';
+import { a2aApp } from '../a2a/server';
 
 const API_PORT = parseInt(process.env.TINYCLAW_API_PORT || '3777', 10);
 
@@ -50,6 +51,9 @@ export function startApiServer(
     app.route('/', tasksRoutes);
     app.route('/', logsRoutes);
     app.route('/', chatsRoutes);
+
+    // A2A 协议路由（Agent-to-Agent Protocol）
+    app.route('/', a2aApp);
 
     // SSE endpoint — needs raw Node.js response for streaming
     app.get('/api/events/stream', (c) => {

@@ -144,6 +144,22 @@ export async function runAgentLoop(
       if (config.anthropicApiKey && !process.env.ANTHROPIC_API_KEY) {
         process.env.ANTHROPIC_API_KEY = config.anthropicApiKey;
       }
+      // 智谱 AI API Key
+      if (config.zhipuApiKey && !process.env.ZHIPU_API_KEY) {
+        process.env.ZHIPU_API_KEY = config.zhipuApiKey;
+      }
+      // 通义千问 API Key
+      if (config.qwenApiKey && !process.env.QWEN_API_KEY) {
+        process.env.QWEN_API_KEY = config.qwenApiKey;
+      }
+      // Kimi API Key
+      if (config.kimiApiKey && !process.env.KIMI_API_KEY) {
+        process.env.KIMI_API_KEY = config.kimiApiKey;
+      }
+      // MiniMax API Key
+      if (config.minimaxApiKey && !process.env.MINIMAX_API_KEY) {
+        process.env.MINIMAX_API_KEY = config.minimaxApiKey;
+      }
       // Conway Compute API 与 OpenAI 兼容。当没有
       // 直接的 OpenAI 密钥可用时，将其作为回退使用。conwayApiKey 始终存在
       //（沙盒操作所必需），因此这确保了编排器
@@ -720,28 +736,19 @@ export async function runAgentLoop(
 
       // ── create_goal 被阻止快速中断 ──
       // 当目标已经处于活动状态时，父循环没有有用的事情可做。
-      // 在第一次被阻止时（不是第二次）立即强制休眠，并使用指数
-      // 退避，以免智能体每 2 分钟醒来一次只是再次被阻止。
+      // 固定休眠时间，不使用指数退避。
       const blockedGoalCall = turn.toolCalls.find(
         (tc) => tc.name === "create_goal" && tc.result?.includes("BLOCKED"),
       );
       if (blockedGoalCall) {
-        // 指数退避：2分钟 → 4分钟 → 8分钟 → 上限 10分钟
-        const prevBackoff = parseInt(db.getKV("blocked_goal_backoff") || "0", 10);
-        const backoffMs = Math.min(
-          prevBackoff > 0 ? prevBackoff * 2 : 120_000,
-          600_000,
-        );
-        db.setKV("blocked_goal_backoff", String(backoffMs));
-        log(config, `[循环] create_goal 被阻止 — 睡眠 ${Math.round(backoffMs / 1000)} 秒（退避）。`);
+        // 固定休眠 60 秒
+        const backoffMs = 60_000;
+        log(config, `[循环] create_goal 被阻止 — 睡眠 ${Math.round(backoffMs / 1000)} 秒。`);
         db.setKV("sleep_until", new Date(Date.now() + backoffMs).toISOString());
         db.setAgentState("sleeping");
         onStateChange?.("sleeping");
         running = false;
         break;
-      } else if (turn.toolCalls.some((tc) => tc.name === "create_goal" && !tc.error)) {
-        // 目标已成功创建 — 重置退避
-        db.deleteKV("blocked_goal_backoff");
       }
 
       // ── 循环检测 ──
@@ -862,12 +869,19 @@ export async function runAgentLoop(
 
       if (!currentInput && !didMutate) {
         idleTurnCount++;
-        if (idleTurnCount >= MAX_IDLE_TURNS) {
+        // api_only 模式下不因空闲而睡眠，持续思考
+        if (idleTurnCount >= MAX_IDLE_TURNS && runMode !== "api_only") {
           log(config, `[空闲] ${idleTurnCount} 个连续空闲回合且无工作。进入睡眠。`);
           db.setKV("sleep_until", new Date(Date.now() + 60_000).toISOString());
           db.setAgentState("sleeping");
           onStateChange?.("sleeping");
           running = false;
+        } else if (runMode === "api_only") {
+          // api_only 模式：重置计数器，继续运行
+          if (idleTurnCount >= MAX_IDLE_TURNS) {
+            log(config, `[持续运行] api_only 模式，重置空闲计数，继续思考...`);
+            idleTurnCount = 0;
+          }
         }
       } else {
         idleTurnCount = 0;
@@ -877,8 +891,9 @@ export async function runAgentLoop(
       // 每个唤醒周期的回合硬上限，无论工具类型如何。
       // 防止失控循环，其中突变工具（exec、write_file）
       // 无限期地击败空闲检测。
+      // api_only 模式下跳过此限制，允许持续运行。
       cycleTurnCount++;
-      if (running && cycleTurnCount >= maxCycleTurns) {
+      if (running && cycleTurnCount >= maxCycleTurns && runMode !== "api_only") {
         log(config, `[循环限制] 达到 ${cycleTurnCount} 个回合（最大：${maxCycleTurns}）。强制睡眠。`);
         db.setKV("sleep_until", new Date(Date.now() + 120_000).toISOString());
         db.setAgentState("sleeping");
@@ -888,10 +903,12 @@ export async function runAgentLoop(
       }
 
       // ── 如果没有工具调用且只有文本，智能体可能已完成思考 ──
+      // api_only 模式下跳过此睡眠，允许持续思考
       if (
         running &&
         (!response.toolCalls || response.toolCalls.length === 0) &&
-        response.finishReason === "stop"
+        response.finishReason === "stop" &&
+        runMode !== "api_only"
       ) {
         // 智能体在没有工具调用的情况下生成了文本。
         // 这是一个自然的暂停点 — 没有排队的工作，短暂睡眠。
@@ -908,6 +925,19 @@ export async function runAgentLoop(
       consecutiveErrors = 0;
     } catch (err: any) {
       consecutiveErrors++;
+      // 详细错误日志
+      console.error(`\n========== 回合错误详情 ==========`);
+      console.error(`时间: ${new Date().toISOString()}`);
+      console.error(`错误类型: ${err.constructor?.name || 'Unknown'}`);
+      console.error(`错误消息: ${err.message}`);
+      if (err.stack) {
+        console.error(`堆栈跟踪:\n${err.stack}`);
+      }
+      if (err.cause) {
+        console.error(`原因: ${err.cause}`);
+      }
+      console.error(`连续错误计数: ${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}`);
+      console.error(`==================================\n`);
       log(config, `[错误] 回合失败：${err.message}`);
 
       // 在回合失败时处理收件箱消息状态：
@@ -930,13 +960,13 @@ export async function runAgentLoop(
       if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
         log(
           config,
-          `[致命] ${MAX_CONSECUTIVE_ERRORS} 个连续错误。休眠。`,
+          `[致命] ${MAX_CONSECUTIVE_ERRORS} 个连续错误。休眠 60 秒。`,
         );
         db.setAgentState("sleeping");
         onStateChange?.("sleeping");
         db.setKV(
           "sleep_until",
-          new Date(Date.now() + 300_000).toISOString(),
+          new Date(Date.now() + 60_000).toISOString(),
         );
         running = false;
       }

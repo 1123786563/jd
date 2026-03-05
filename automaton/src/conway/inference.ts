@@ -66,9 +66,24 @@ export function createInferenceClient(
       backend !== "ollama" && /^(o[1-9]|gpt-5|gpt-4\.1)/.test(model);
     const tokenLimit = opts?.maxTokens || maxTokens;
 
+    // 智谱AI 特殊处理：确保至少有一个 user 消息
+    // 智谱AI API 要求 messages 中至少包含一个 user 角色的消息
+    let processedMessages = messages;
+    if (backend === "zhipu") {
+      const hasUserMessage = messages.some(m => m.role === "user");
+      if (!hasUserMessage) {
+        // 在 system 消息后添加一个触发消息
+        processedMessages = [
+          ...messages.filter(m => m.role === "system"),
+          { role: "user", content: "请开始思考并行动。" },
+          ...messages.filter(m => m.role !== "system")
+        ];
+      }
+    }
+
     const body: Record<string, unknown> = {
       model,
-      messages: messages.map(formatMessage),
+      messages: processedMessages.map(formatMessage),
       stream: false,
     };
 
@@ -102,7 +117,7 @@ export function createInferenceClient(
     const openAiLikeApiUrl =
       backend === "openai" ? "https://api.openai.com" :
       backend === "ollama" ? (ollamaBaseUrl as string).replace(/\/$/, "") :
-      backend === "zhipu" ? "https://open.bigmodel.cn/api/coding/paas/v4" :
+      backend === "zhipu" ? "https://open.bigmodel.cn/api/paas/v4" :
       apiUrl;
     const openAiLikeApiKey =
       backend === "openai" ? (openaiApiKey as string) :
@@ -219,6 +234,19 @@ async function chatViaOpenAiCompatible(params: {
 
   if (!resp.ok) {
     const text = await resp.text();
+    // 详细错误日志：打印请求和响应信息
+    console.error(`\n========== API 错误详情 ==========`);
+    console.error(`时间: ${new Date().toISOString()}`);
+    console.error(`后端: ${params.backend}`);
+    console.error(`URL: ${params.apiUrl}${apiPath}`);
+    console.error(`HTTP 状态: ${resp.status}`);
+    console.error(`响应体: ${text}`);
+    console.error(`请求模型: ${params.body.model as string}`);
+    console.error(`消息数量: ${(params.body.messages as any[])?.length || 0}`);
+    if ((params.body.messages as any[])?.length > 0) {
+      console.error(`消息角色列表: ${(params.body.messages as any[]).map(m => m.role).join(', ')}`);
+    }
+    console.error(`==================================\n`);
     throw new Error(
       `推理错误 (${params.backend}): ${resp.status}: ${text}`,
     );

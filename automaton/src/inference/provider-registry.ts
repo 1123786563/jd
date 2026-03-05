@@ -243,9 +243,10 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
   {
     id: "zhipu",
     name: "Zhipu AI (智普)",
-    baseUrl: " https://open.bigmodel.cn/api/coding/paas/v4",
+    baseUrl: "https://open.bigmodel.cn/api/coding/paas/v4",
     apiKeyEnvVar: "ZHIPU_API_KEY",
     models: [
+      // === 推荐模型 ===
       {
         id: "glm-5",
         tier: "reasoning",
@@ -253,6 +254,18 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
         maxOutputTokens: 32768,
         costPerInputToken: 1.0,
         costPerOutputToken: 4.0,
+        supportsTools: true,
+        supportsVision: true,  // 支持图片理解
+        supportsStreaming: true,
+      },
+      // === 更多模型 ===
+      {
+        id: "glm-4.7",
+        tier: "reasoning",
+        contextWindow: 128000,
+        maxOutputTokens: 32768,
+        costPerInputToken: 0.8,
+        costPerOutputToken: 3.2,
         supportsTools: true,
         supportsVision: true,
         supportsStreaming: true,
@@ -296,13 +309,60 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
     priority: 4,
     enabled: true,
   },
-  // === Qwen (阿里通义千问) ===
+  // === Qwen (阿里通义千问) - Coding API ===
   {
     id: "qwen",
     name: "Qwen (通义千问)",
-    baseUrl: "https://dashscope.aliyuncs.com/api/v1",
+    baseUrl: "https://coding.dashscope.aliyuncs.com/v1",
     apiKeyEnvVar: "QWEN_API_KEY",
     models: [
+      // === 推荐模型 ===
+      {
+        id: "qwen3.5-plus",
+        tier: "fast",
+        contextWindow: 131072,
+        maxOutputTokens: 16384,
+        costPerInputToken: 0.5,
+        costPerOutputToken: 2.0,
+        supportsTools: true,
+        supportsVision: true,  // 支持图片理解
+        supportsStreaming: true,
+      },
+      // === 更多模型 ===
+      {
+        id: "qwen3-max-2026-01-23",
+        tier: "reasoning",
+        contextWindow: 131072,
+        maxOutputTokens: 32768,
+        costPerInputToken: 2.0,
+        costPerOutputToken: 8.0,
+        supportsTools: true,
+        supportsVision: true,
+        supportsStreaming: true,
+      },
+      {
+        id: "qwen3-coder-next",
+        tier: "reasoning",
+        contextWindow: 131072,
+        maxOutputTokens: 32768,
+        costPerInputToken: 1.5,
+        costPerOutputToken: 6.0,
+        supportsTools: true,
+        supportsVision: false,
+        supportsStreaming: true,
+      },
+      {
+        id: "qwen3-coder-plus",
+        tier: "fast",
+        contextWindow: 131072,
+        maxOutputTokens: 16384,
+        costPerInputToken: 0.8,
+        costPerOutputToken: 3.2,
+        supportsTools: true,
+        supportsVision: false,
+        supportsStreaming: true,
+      },
+      // === 旧模型（保留兼容） ===
       {
         id: "qwen-max",
         tier: "reasoning",
@@ -360,6 +420,19 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
     baseUrl: "https://api.moonshot.cn/v1",
     apiKeyEnvVar: "KIMI_API_KEY",
     models: [
+      // === 推荐模型 ===
+      {
+        id: "kimi-k2.5",
+        tier: "reasoning",
+        contextWindow: 131072,
+        maxOutputTokens: 32768,
+        costPerInputToken: 1.0,
+        costPerOutputToken: 4.0,
+        supportsTools: true,
+        supportsVision: true,  // 支持图片理解
+        supportsStreaming: true,
+      },
+      // === 旧模型（保留兼容） ===
       {
         id: "moonshot-v1-128k",
         tier: "reasoning",
@@ -397,6 +470,31 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
     maxRequestsPerMinute: 600,
     maxTokensPerMinute: 1_000_000,
     priority: 6,
+    enabled: true,
+  },
+  // === MiniMax (稀宇科技) ===
+  {
+    id: "minimax",
+    name: "MiniMax (稀宇科技)",
+    baseUrl: "https://api.minimax.chat/v1",
+    apiKeyEnvVar: "MINIMAX_API_KEY",
+    models: [
+      // === 推荐模型 ===
+      {
+        id: "MiniMax-M2.5",
+        tier: "reasoning",
+        contextWindow: 131072,
+        maxOutputTokens: 32768,
+        costPerInputToken: 1.5,
+        costPerOutputToken: 6.0,
+        supportsTools: true,
+        supportsVision: true,  // 支持图片理解
+        supportsStreaming: true,
+      },
+    ],
+    maxRequestsPerMinute: 600,
+    maxTokensPerMinute: 1_000_000,
+    priority: 7,
     enabled: true,
   },
 ];
