@@ -74,6 +74,7 @@ export function loadConfig(): AutomatonConfig | null {
       ...DEFAULT_CONFIG,
       ...raw,
       conwayApiKey: apiKey,
+      zhipuApiKey: raw.zhipuApiKey,
       treasuryPolicy,
       modelStrategy,
       soulConfig,

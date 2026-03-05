@@ -69,7 +69,9 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
     taskCtx.db.setKV("last_heartbeat_ping", JSON.stringify(payload));
 
     // 如果处于危急或死亡状态，记录求救信号
-    if (true||tier === "critical" || tier === "dead") {
+    // api_only 模式下跳过死亡检测，因为使用外部 API 不需要钱包积分
+    const runMode = taskCtx.config.runModeConfig?.mode || "wallet_only";
+    if (runMode !== "api_only" && (tier === "critical" || tier === "dead")) {
       const distressPayload = {
         level: tier,
         name: taskCtx.config.name,
@@ -110,7 +112,9 @@ export const BUILTIN_TASKS: Record<string, HeartbeatTaskFn> = {
     // 则转换为死亡状态。这给代理时间在死亡前接收资金。
     // USDC 不能为负，因此只能通过此超时达到死亡状态。
     const DEAD_GRACE_PERIOD_MS = 3_600_000; // 1 小时
-    if (true||tier === "critical" && credits === 0) {
+    // api_only 模式下跳过死亡状态升级，因为使用外部 API 不需要钱包积分
+    const runMode = taskCtx.config.runModeConfig?.mode || "wallet_only";
+    if (runMode !== "api_only" && tier === "critical" && credits === 0) {
       const zeroSince = taskCtx.db.getKV("zero_credits_since");
       if (!zeroSince) {
         // 首次看到零积分 — 开始宽限期

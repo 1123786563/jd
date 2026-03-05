@@ -244,12 +244,12 @@ describe("execute – stage behaviour", () => {
     const result = await engine.execute(plan);
 
     expect(result.success).toBe(true);
-    // compact is called for the reset boundary
+    // 为重置边界调用 compact
     expect(mockEventStream.compact).toHaveBeenCalledWith(
       expect.any(String),
       "summarize",
     );
-    // append is called at least once for the checkpoint reflection
+    // 为检查点反思至少调用一次 append
     const appendCalls = mockEventStream.append.mock.calls as Array<[any]>;
     const checkpointReflection = appendCalls.find(([arg]) => {
       try {
@@ -299,8 +299,8 @@ describe("execute – Stage 3 failure fallthrough", () => {
       type === "inference" ? events : []
     );
 
-    // First call (stage 3 summarize_batch) throws; second call (stage 4
-    // summarizeForCheckpoint) succeeds.
+    // 第一次调用（阶段3 summarize_batch）抛出；第二次调用（阶段4
+    // summarizeForCheckpoint）成功。
     mockInference.chat
       .mockRejectedValueOnce(new Error("stage3 inference unavailable"))
       .mockResolvedValue({ content: "checkpoint summary" });
@@ -350,7 +350,7 @@ describe("metrics accumulation", () => {
     await engine.evaluate(makeUtilization(78));
     const thirdPlan = await engine.evaluate(makeUtilization(62));
 
-    // After evaluate with 78%, peak should be 78
+    // 在 evaluate 78% 之后，峰值应该是 78
     const result = await engine.execute(thirdPlan);
     expect(result.metrics.peakUtilizationPercent).toBe(78);
   });

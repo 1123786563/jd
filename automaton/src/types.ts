@@ -55,6 +55,7 @@ export interface AutomatonConfig {
   openaiApiKey?: string;
   anthropicApiKey?: string;
   ollamaBaseUrl?: string;
+  zhipuApiKey?: string;
   inferenceModel: string;
   maxTokensPerTurn: number;
   heartbeatConfigPath: string;

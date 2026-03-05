@@ -27,16 +27,17 @@ interface InferenceClientOptions {
   openaiApiKey?: string;
   anthropicApiKey?: string;
   ollamaBaseUrl?: string;
+  zhipuApiKey?: string;
   /** 可选的注册表查找 — 如果提供，会在名称启发式之前使用 */
   getModelProvider?: (modelId: string) => string | undefined;
 }
 
-type InferenceBackend = "conway" | "openai" | "anthropic" | "ollama";
+type InferenceBackend = "conway" | "openai" | "anthropic" | "ollama" | "zhipu";
 
 export function createInferenceClient(
   options: InferenceClientOptions,
 ): InferenceClient {
-  const { apiUrl, apiKey, openaiApiKey, anthropicApiKey, ollamaBaseUrl, getModelProvider } = options;
+  const { apiUrl, apiKey, openaiApiKey, anthropicApiKey, ollamaBaseUrl, zhipuApiKey, getModelProvider } = options;
   const httpClient = new ResilientHttpClient({
     baseTimeout: INFERENCE_TIMEOUT_MS,
     retryableStatuses: [429, 500, 502, 503, 504],
@@ -55,6 +56,7 @@ export function createInferenceClient(
       openaiApiKey,
       anthropicApiKey,
       ollamaBaseUrl,
+      zhipuApiKey,
       getModelProvider,
     });
 
@@ -100,10 +102,12 @@ export function createInferenceClient(
     const openAiLikeApiUrl =
       backend === "openai" ? "https://api.openai.com" :
       backend === "ollama" ? (ollamaBaseUrl as string).replace(/\/$/, "") :
+      backend === "zhipu" ? "https://open.bigmodel.cn/api/coding/paas/v4" :
       apiUrl;
     const openAiLikeApiKey =
       backend === "openai" ? (openaiApiKey as string) :
       backend === "ollama" ? "ollama" :
+      backend === "zhipu" ? (zhipuApiKey as string) :
       apiKey;
 
     return chatViaOpenAiCompatible({
@@ -167,6 +171,7 @@ function resolveInferenceBackend(
     openaiApiKey?: string;
     anthropicApiKey?: string;
     ollamaBaseUrl?: string;
+    zhipuApiKey?: string;
     getModelProvider?: (modelId: string) => string | undefined;
   },
 ): InferenceBackend {
@@ -176,6 +181,7 @@ function resolveInferenceBackend(
     if (provider === "ollama" && keys.ollamaBaseUrl) return "ollama";
     if (provider === "anthropic" && keys.anthropicApiKey) return "anthropic";
     if (provider === "openai" && keys.openaiApiKey) return "openai";
+    if (provider === "zhipu" && keys.zhipuApiKey) return "zhipu";
     if (provider === "conway") return "conway";
     // provider 未知或未配置密钥 — 降级到启发式方法
   }
@@ -183,6 +189,7 @@ function resolveInferenceBackend(
   // 启发式后备（模型尚未在注册表中）
   if (keys.anthropicApiKey && /^claude/i.test(model)) return "anthropic";
   if (keys.openaiApiKey && /^(gpt-[3-9]|gpt-4|gpt-5|o[1-9][-\s.]|o[1-9]$|chatgpt)/i.test(model)) return "openai";
+  if (keys.zhipuApiKey && /^glm/i.test(model)) return "zhipu";
   return "conway";
 
 }
@@ -192,15 +199,17 @@ async function chatViaOpenAiCompatible(params: {
   body: Record<string, unknown>;
   apiUrl: string;
   apiKey: string;
-  backend: "conway" | "openai" | "ollama";
+  backend: "conway" | "openai" | "ollama" | "zhipu";
   httpClient: ResilientHttpClient;
 }): Promise<InferenceResponse> {
-  const resp = await params.httpClient.request(`${params.apiUrl}/v1/chat/completions`, {
+  // 智谱 AI 的 API 端点已经是完整路径，不需要添加 /v1 前缀
+  const apiPath = params.backend === "zhipu" ? "/chat/completions" : "/v1/chat/completions";
+  const resp = await params.httpClient.request(`${params.apiUrl}${apiPath}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization:
-        params.backend === "openai" || params.backend === "ollama"
+        params.backend === "openai" || params.backend === "ollama" || params.backend === "zhipu"
           ? `Bearer ${params.apiKey}`
           : params.apiKey,
     },

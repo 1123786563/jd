@@ -274,6 +274,7 @@ async function run(): Promise<void> {
     openaiApiKey: config.openaiApiKey,
     anthropicApiKey: config.anthropicApiKey,
     ollamaBaseUrl,
+    zhipuApiKey: config.zhipuApiKey,
     getModelProvider: (modelId) => modelRegistry.get(modelId)?.provider,
   });
 

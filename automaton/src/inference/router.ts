@@ -52,6 +52,7 @@ export class InferenceRouter {
 
     // 1. 从路由矩阵选择模型
     const model = this.selectModel(tier, taskType);
+    console.log(`[Router] Selected model: ${model?.modelId} (provider: ${model?.provider}) for tier: ${tier}, taskType: ${taskType}`);
     if (!model) {
       return {
         content: "",
