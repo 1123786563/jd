@@ -23,13 +23,17 @@ import type { TasksCreateParams, TasksGetParams, TasksCancelParams, MessagesComp
 const ALLOWED_API_KEYS = process.env.TINYCLAW_API_KEYS
   ? process.env.TINYCLAW_API_KEYS.split(',').map(k => k.trim())
   : [];
+const A2A_STRICT_AUTH = process.env.TINYCLAW_A2A_STRICT_AUTH === 'true';
+const A2A_ALLOW_INSECURE_DEV_AUTH = process.env.TINYCLAW_A2A_ALLOW_INSECURE_DEV_AUTH === 'true';
 
 /**
  * 开发模式标志：需要显式设置 TINYCLAW_DEV_MODE=true
  * 仅在非生产环境且未配置 API Key 白名单时自动启用
  */
-const DEV_MODE = process.env.TINYCLAW_DEV_MODE === 'true' ||
-                 (process.env.NODE_ENV !== 'production' && ALLOWED_API_KEYS.length === 0);
+const DEV_MODE = !A2A_STRICT_AUTH && (
+  process.env.TINYCLAW_DEV_MODE === 'true' ||
+  (process.env.NODE_ENV !== 'production' && ALLOWED_API_KEYS.length === 0)
+);
 
 // ============================================
 // 配置常量
@@ -70,6 +74,13 @@ interface AuthResult {
 }
 
 async function verifyAuth(authHeader: string | undefined): Promise<AuthResult> {
+  if (!DEV_MODE && ALLOWED_API_KEYS.length === 0) {
+    return {
+      valid: false,
+      error: 'A2A auth is enabled but no API keys configured (set TINYCLAW_API_KEYS)',
+    };
+  }
+
   if (!authHeader) {
     return { valid: false, error: 'Missing Authorization header' };
   }
@@ -88,8 +99,8 @@ async function verifyAuth(authHeader: string | undefined): Promise<AuthResult> {
       return { valid: false, error: 'Invalid Bearer token' };
     }
 
-    // 开发模式：接受任何非空 token，但记录警告
-    if (token && token.length > 0) {
+    // 开发模式：仅在显式允许时接受未验证 token
+    if (token && token.length > 0 && A2A_ALLOW_INSECURE_DEV_AUTH) {
       console.warn(`[A2A] 开发模式：接受未验证的 Bearer token (长度: ${token.length})`);
       return { valid: true, agentId: `agent-${token.slice(0, 8)}` };
     }
@@ -109,8 +120,8 @@ async function verifyAuth(authHeader: string | undefined): Promise<AuthResult> {
       return { valid: false, error: 'Invalid API key' };
     }
 
-    // 开发模式：接受任何非空 key，但记录警告
-    if (key && key.length > 0) {
+    // 开发模式：仅在显式允许时接受未验证 key
+    if (key && key.length > 0 && A2A_ALLOW_INSECURE_DEV_AUTH) {
       console.warn(`[A2A] 开发模式：接受未验证的 API key (长度: ${key.length})`);
       return { valid: true, agentId: `agent-${key.slice(0, 8)}` };
     }
@@ -177,6 +188,7 @@ a2aApp.post('/a2a', async (c) => {
   // 验证请求体大小
   const contentLength = c.req.header('content-length');
   if (contentLength && parseInt(contentLength) > MAX_REQUEST_BODY_SIZE) {
+    console.log('[A2A Server] ❌ 请求体过大', { contentLength, maxSize: MAX_REQUEST_BODY_SIZE });
     return c.json(jsonRpcError(null, JSON_RPC_ERRORS.INVALID_REQUEST, 'Request body too large'), 413);
   }
 
@@ -185,9 +197,18 @@ a2aApp.post('/a2a', async (c) => {
   // 判断是单个请求还是批量请求
   const requests = isBatchRequest(body) ? body : [body];
 
+  // 【A2A 日志】接收到的请求
+  console.log('[A2A Server] 📨 收到 A2A 请求', {
+    isBatch: isBatchRequest(body),
+    requestCount: requests.length,
+    methods: requests.map(r => r.method),
+    timestamp: new Date().toISOString()
+  });
+
   // 验证所有请求
   for (const request of requests) {
     if (request.jsonrpc !== '2.0') {
+      console.log('[A2A Server] ❌ 无效的 JSON-RPC 版本', { request });
       return c.json(jsonRpcError(request.id ?? null, JSON_RPC_ERRORS.INVALID_REQUEST, 'Invalid JSON-RPC version'));
     }
   }
@@ -195,16 +216,41 @@ a2aApp.post('/a2a', async (c) => {
   // 认证检查（所有请求共享同一个认证）
   const authResult = await verifyAuth(c.req.header('Authorization'));
   if (!authResult.valid) {
+    console.log('[A2A Server] ❌ 认证失败', { error: authResult.error });
     return c.json(jsonRpcError(null, JSON_RPC_ERRORS.INVALID_REQUEST, authResult.error || 'Unauthorized'));
   }
+
+  // 【A2A 日志】认证成功
+  console.log('[A2A Server] ✅ 认证成功', { agentId: authResult.agentId });
 
   // 处理所有请求
   const results = await Promise.all(
     requests.map(async (request) => {
       try {
+        // 【A2A 日志】开始处理方法
+        console.log('[A2A Server] 🔄 处理方法', {
+          method: request.method,
+          params: JSON.stringify(request.params).substring(0, 200)
+        });
+
+        const startTime = Date.now();
         const response = await handleJsonRpcRequest(request, authResult.agentId!, methodHandlers);
+        const duration = Date.now() - startTime;
+
+        // 【A2A 日志】方法处理完成
+        console.log('[A2A Server] ✅ 方法处理完成', {
+          method: request.method,
+          duration: `${duration}ms`,
+          hasResult: !!response?.result,
+          hasError: !!response?.error
+        });
+
         return response;
       } catch (error: any) {
+        console.log('[A2A Server] ❌ 方法处理失败', {
+          method: request.method,
+          error: error.message
+        });
         return jsonRpcError(request.id ?? null, JSON_RPC_ERRORS.INTERNAL_ERROR, error.message);
       }
     })
@@ -215,8 +261,15 @@ a2aApp.post('/a2a', async (c) => {
 
   // 如果全是通知，返回 204
   if (responses.length === 0) {
+    console.log('[A2A Server] 📤 所有请求都是通知，返回 204');
     return c.body(null, 204 as const);
   }
+
+  // 【A2A 日志】发送响应
+  console.log('[A2A Server] 📤 发送响应', {
+    responseCount: responses.length,
+    timestamp: new Date().toISOString()
+  });
 
   // 批量请求返回数组，单个请求返回对象
   return c.json(isBatchRequest(body) ? responses : responses[0]);

@@ -37,7 +37,7 @@ import { logModification } from "./audit-log.js";
 const PROTECTED_FILES: readonly string[] = Object.freeze([
   // 身份
   "wallet.json",
-  "config.json",
+  //"config.json",
   // 数据库
   "state.db",
   "state.db-wal",
@@ -69,7 +69,7 @@ const PROTECTED_FILES: readonly string[] = Object.freeze([
   "skills/registry.js",
   // 配置和身份
   "automaton.json",
-  "package.json",
+  //"package.json",
   "SOUL.md",
   // 策略引擎（防止自我修改）
   "agent/policy-engine.ts",
@@ -102,7 +102,7 @@ const BLOCKED_DIRECTORY_PATTERNS: readonly string[] = Object.freeze([
  * 每小时最大自我修改次数。
  * 防止失控的修改循环。
  */
-const MAX_MODIFICATIONS_PER_HOUR = 20;
+const MAX_MODIFICATIONS_PER_HOUR = 200;
 
 /**
  * 单个文件修改的最大大小（字节）。

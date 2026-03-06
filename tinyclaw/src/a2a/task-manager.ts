@@ -33,6 +33,16 @@ export function createTask(params: CreateTaskParams): Task {
   const taskId = generateTaskId();
   const now = new Date().toISOString();
 
+  // 【A2A 日志】创建 Task
+  console.log('[A2A TaskManager] 📝 创建新 Task', {
+    taskId,
+    fromAgent: params.fromAgent,
+    toAgent: params.toAgent,
+    conversationId: params.conversationId,
+    contentPreview: params.content?.substring(0, 100),
+    timestamp: now
+  });
+
   const initialMessage: Message = {
     role: 'user',
     parts: params.message?.parts || [{ type: 'text', text: params.content || '' }]
@@ -55,6 +65,7 @@ export function createTask(params: CreateTaskParams): Task {
   };
 
   // 存储到数据库
+  console.log('[A2A TaskManager] 💾 存储 Task 到数据库', { taskId });
   dbCreateTask({
     id: taskId,
     status: 'submitted',
@@ -73,6 +84,12 @@ export function createTask(params: CreateTaskParams): Task {
   });
 
   // 入队消息
+  console.log('[A2A TaskManager] 📨 消息入队', {
+    taskId,
+    channel: 'a2a',
+    sender: params.fromAgent || 'system',
+    agent: params.toAgent
+  });
   enqueueMessage({
     channel: 'a2a',
     sender: params.fromAgent || 'system',
@@ -85,6 +102,8 @@ export function createTask(params: CreateTaskParams): Task {
 
   // 发送事件
   taskEvents.emit('task:created', task);
+
+  console.log('[A2A TaskManager] ✅ Task 创建完成', { taskId, state: task.status.state });
 
   return task;
 }

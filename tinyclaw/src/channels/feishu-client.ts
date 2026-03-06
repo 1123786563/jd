@@ -21,7 +21,19 @@ import { SETTINGS_FILE, FILES_DIR, TINYCLAW_HOME } from '../lib/config';
 import { ensureSenderPaired } from '../lib/pairing';
 
 const API_PORT = parseInt(process.env.TINYCLAW_API_PORT || '3777', 10);
-const API_BASE = `http://localhost:${API_PORT}`;
+const API_BASE = process.env.TINYCLAW_API_BASE || `http://localhost:${API_PORT}`;
+const API_KEY = process.env.TINYCLAW_API_KEY || '';
+const API_AUTH_HEADERS: Record<string, string> = API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {};
+
+async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+    return fetch(url, {
+        ...init,
+        headers: {
+            ...API_AUTH_HEADERS,
+            ...(init.headers || {}),
+        },
+    });
+}
 
 const SCRIPT_DIR = path.resolve(__dirname, '..', '..');
 const _localTinyclaw = path.join(SCRIPT_DIR, '.tinyclaw');
@@ -354,7 +366,7 @@ async function handleEvent(event: FeishuEvent): Promise<void> {
     }
 
     // Write to queue via API
-    await fetch(`${API_BASE}/api/message`, {
+    await apiFetch(`${API_BASE}/api/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -393,7 +405,7 @@ async function checkOutgoingQueue(): Promise<void> {
     processingOutgoingQueue = true;
 
     try {
-        const res = await fetch(`${API_BASE}/api/responses/pending?channel=feishu`);
+        const res = await apiFetch(`${API_BASE}/api/responses/pending?channel=feishu`);
         if (!res.ok) return;
         const responses = await res.json() as any[];
 
@@ -439,7 +451,7 @@ async function checkOutgoingQueue(): Promise<void> {
                     }
                 }
 
-                await fetch(`${API_BASE}/api/responses/${resp.id}/ack`, { method: 'POST' });
+                await apiFetch(`${API_BASE}/api/responses/${resp.id}/ack`, { method: 'POST' });
             } catch (error) {
                 log('ERROR', `Error processing response ${resp.id}: ${(error as Error).message}`);
             }

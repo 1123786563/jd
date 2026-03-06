@@ -339,6 +339,9 @@ export function retryDeadMessage(rowId: number): boolean {
         UPDATE messages SET status = 'pending', retry_count = 0, claimed_by = NULL, updated_at = ?
         WHERE id = ? AND status = 'dead'
     `).run(Date.now(), rowId);
+    if (result.changes > 0) {
+        queueEvents.emit('message:enqueued', { id: rowId, source: 'retry_dead' });
+    }
     return result.changes > 0;
 }
 

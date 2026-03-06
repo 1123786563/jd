@@ -160,7 +160,6 @@ export default function SettingsPage() {
                 <ApiEndpoint method="GET" path="/api/queue/status" desc="Queue status" />
                 <ApiEndpoint method="GET" path="/api/responses" desc="Recent responses" />
                 <ApiEndpoint method="GET" path="/api/events/stream" desc="SSE event stream" />
-                <ApiEndpoint method="GET" path="/api/events" desc="Recent events (polling)" />
                 <ApiEndpoint method="GET" path="/api/logs" desc="Queue processor logs" />
                 <ApiEndpoint method="GET" path="/api/chats" desc="Chat histories" />
               </div>

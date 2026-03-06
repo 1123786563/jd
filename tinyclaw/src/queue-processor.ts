@@ -22,7 +22,7 @@ import {
     getSettings, getAgents, getTeams
 } from './lib/config';
 import { log, emitEvent } from './lib/logging';
-import { parseAgentRouting, findTeamForAgent, getAgentResetFlag, extractTeammateMentions } from './lib/routing';
+import { parseAgentRouting, getAgentResetFlag, extractTeammateMentions } from './lib/routing';
 import { invokeAgent } from './lib/invoke';
 import { loadPlugins, runIncomingHooks, runOutgoingHooks } from './lib/plugins';
 import { startApiServer } from './server';
@@ -52,7 +52,15 @@ async function processMessage(dbMsg: DbMessage): Promise<void> {
         const rawMessage = dbMsg.message;
         const messageId = dbMsg.message_id;
         const isInternal = !!dbMsg.conversation_id;
-        const files: string[] = dbMsg.files ? JSON.parse(dbMsg.files) : [];
+        let files: string[] = [];
+        if (dbMsg.files) {
+            try {
+                const parsed = JSON.parse(dbMsg.files);
+                files = Array.isArray(parsed) ? parsed : [];
+            } catch {
+                files = [];
+            }
+        }
 
         // Build a MessageData-like object for compatibility
         const messageData: MessageData = {
@@ -122,6 +130,8 @@ async function processMessage(dbMsg: DbMessage): Promise<void> {
             const conv = conversations.get(messageData.conversationId!);
             if (conv) teamContext = conv.teamContext;
         } else {
+            // Only explicit @team routing enters team conversation mode.
+            // Direct @agent routing should remain single-agent unless it is an internal handoff.
             if (isTeamRouted) {
                 for (const [tid, t] of Object.entries(teams)) {
                     if (t.leader_agent === agentId && t.agents.includes(agentId)) {
@@ -129,9 +139,6 @@ async function processMessage(dbMsg: DbMessage): Promise<void> {
                         break;
                     }
                 }
-            }
-            if (!teamContext) {
-                teamContext = findTeamForAgent(agentId, teams);
             }
         }
 
@@ -376,11 +383,16 @@ emitEvent('processor_start', { agents: Object.keys(getAgents(getSettings())), te
 
 // Event-driven: all messages come through the API server (same process)
 queueEvents.on('message:enqueued', () => processQueue());
+// Drain queue on startup in case messages were pending before process boot.
+void processQueue();
 
 // Periodic maintenance
 setInterval(() => {
     const count = recoverStaleMessages();
-    if (count > 0) log('INFO', `Recovered ${count} stale message(s)`);
+    if (count > 0) {
+        log('INFO', `Recovered ${count} stale message(s)`);
+        void processQueue();
+    }
 }, 5 * 60 * 1000); // every 5 min
 
 setInterval(() => {

@@ -28,16 +28,25 @@ interface InferenceClientOptions {
   anthropicApiKey?: string;
   ollamaBaseUrl?: string;
   zhipuApiKey?: string;
+  qwenApiKey?: string;
   /** 可选的注册表查找 — 如果提供，会在名称启发式之前使用 */
   getModelProvider?: (modelId: string) => string | undefined;
 }
 
-type InferenceBackend = "conway" | "openai" | "anthropic" | "ollama" | "zhipu";
+type InferenceBackend = "conway" | "openai" | "anthropic" | "ollama" | "zhipu" | "qwen";
+
+// 后端特性配置：定义各后端的 API 行为差异
+const BACKEND_CONFIG = {
+  // 这些后端的 API 端点已包含 /v1，不需要额外前缀
+  SHORT_API_PATH: new Set(["zhipu", "qwen"]),
+  // 这些后端使用 Bearer token 认证
+  BEARER_AUTH: new Set(["openai", "ollama", "zhipu", "qwen"]),
+} as const;
 
 export function createInferenceClient(
   options: InferenceClientOptions,
 ): InferenceClient {
-  const { apiUrl, apiKey, openaiApiKey, anthropicApiKey, ollamaBaseUrl, zhipuApiKey, getModelProvider } = options;
+  const { apiUrl, apiKey, openaiApiKey, anthropicApiKey, ollamaBaseUrl, zhipuApiKey, qwenApiKey, getModelProvider } = options;
   const httpClient = new ResilientHttpClient({
     baseTimeout: INFERENCE_TIMEOUT_MS,
     retryableStatuses: [429, 500, 502, 503, 504],
@@ -57,6 +66,7 @@ export function createInferenceClient(
       anthropicApiKey,
       ollamaBaseUrl,
       zhipuApiKey,
+      qwenApiKey,
       getModelProvider,
     });
 
@@ -118,11 +128,13 @@ export function createInferenceClient(
       backend === "openai" ? "https://api.openai.com" :
       backend === "ollama" ? (ollamaBaseUrl as string).replace(/\/$/, "") :
       backend === "zhipu" ? "https://open.bigmodel.cn/api/paas/v4" :
+      backend === "qwen" ? "https://coding.dashscope.aliyuncs.com/v1" :
       apiUrl;
     const openAiLikeApiKey =
       backend === "openai" ? (openaiApiKey as string) :
       backend === "ollama" ? "ollama" :
       backend === "zhipu" ? (zhipuApiKey as string) :
+      backend === "qwen" ? (qwenApiKey as string) :
       apiKey;
 
     return chatViaOpenAiCompatible({
@@ -187,6 +199,7 @@ function resolveInferenceBackend(
     anthropicApiKey?: string;
     ollamaBaseUrl?: string;
     zhipuApiKey?: string;
+    qwenApiKey?: string;
     getModelProvider?: (modelId: string) => string | undefined;
   },
 ): InferenceBackend {
@@ -197,6 +210,7 @@ function resolveInferenceBackend(
     if (provider === "anthropic" && keys.anthropicApiKey) return "anthropic";
     if (provider === "openai" && keys.openaiApiKey) return "openai";
     if (provider === "zhipu" && keys.zhipuApiKey) return "zhipu";
+    if (provider === "qwen" && keys.qwenApiKey) return "qwen";
     if (provider === "conway") return "conway";
     // provider 未知或未配置密钥 — 降级到启发式方法
   }
@@ -205,6 +219,7 @@ function resolveInferenceBackend(
   if (keys.anthropicApiKey && /^claude/i.test(model)) return "anthropic";
   if (keys.openaiApiKey && /^(gpt-[3-9]|gpt-4|gpt-5|o[1-9][-\s.]|o[1-9]$|chatgpt)/i.test(model)) return "openai";
   if (keys.zhipuApiKey && /^glm/i.test(model)) return "zhipu";
+  if (keys.qwenApiKey && /^qwen/i.test(model)) return "qwen";
   return "conway";
 
 }
@@ -214,19 +229,19 @@ async function chatViaOpenAiCompatible(params: {
   body: Record<string, unknown>;
   apiUrl: string;
   apiKey: string;
-  backend: "conway" | "openai" | "ollama" | "zhipu";
+  backend: InferenceBackend;
   httpClient: ResilientHttpClient;
 }): Promise<InferenceResponse> {
-  // 智谱 AI 的 API 端点已经是完整路径，不需要添加 /v1 前缀
-  const apiPath = params.backend === "zhipu" ? "/chat/completions" : "/v1/chat/completions";
+  // 根据后端特性选择 API 路径
+  const apiPath = BACKEND_CONFIG.SHORT_API_PATH.has(params.backend) ? "/chat/completions" : "/v1/chat/completions";
+  // 根据后端特性选择认证方式
+  const authHeader = BACKEND_CONFIG.BEARER_AUTH.has(params.backend) ? `Bearer ${params.apiKey}` : params.apiKey;
+
   const resp = await params.httpClient.request(`${params.apiUrl}${apiPath}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization:
-        params.backend === "openai" || params.backend === "ollama" || params.backend === "zhipu"
-          ? `Bearer ${params.apiKey}`
-          : params.apiKey,
+      Authorization: authHeader,
     },
     body: JSON.stringify(params.body),
     timeout: INFERENCE_TIMEOUT_MS,

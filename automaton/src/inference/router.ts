@@ -21,8 +21,10 @@ import type {
 import { ModelRegistry } from "./registry.js";
 import { InferenceBudgetTracker } from "./budget.js";
 import { DEFAULT_ROUTING_MATRIX, TASK_TIMEOUTS } from "./types.js";
+import { createLogger } from "../observability/logger.js";
 
 type Database = BetterSqlite3.Database;
+const logger = createLogger("inference.router");
 
 export class InferenceRouter {
   private db: Database;
@@ -52,7 +54,7 @@ export class InferenceRouter {
 
     // 1. 从路由矩阵选择模型
     const model = this.selectModel(tier, taskType);
-    console.log(`[Router] Selected model: ${model?.modelId} (provider: ${model?.provider}) for tier: ${tier}, taskType: ${taskType}`);
+    logger.debug(`Selected model=${model?.modelId} provider=${model?.provider} tier=${tier} taskType=${taskType}`);
     if (!model) {
       return {
         content: "",

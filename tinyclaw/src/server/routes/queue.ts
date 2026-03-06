@@ -6,6 +6,15 @@ import {
     enqueueResponse, getDeadMessages, retryDeadMessage, deleteDeadMessage,
 } from '../../lib/db';
 
+function safeJsonParse<T>(raw: string | null, fallback: T): T {
+    if (!raw) return fallback;
+    try {
+        return JSON.parse(raw) as T;
+    } catch {
+        return fallback;
+    }
+}
+
 export function createQueueRoutes(conversations: Map<string, Conversation>) {
     const app = new Hono();
 
@@ -34,7 +43,7 @@ export function createQueueRoutes(conversations: Map<string, Conversation>) {
             timestamp: r.created_at,
             messageId: r.message_id,
             agent: r.agent,
-            files: r.files ? JSON.parse(r.files) : undefined,
+            files: safeJsonParse<string[] | undefined>(r.files, undefined),
         })));
     });
 
@@ -52,8 +61,8 @@ export function createQueueRoutes(conversations: Map<string, Conversation>) {
             originalMessage: r.original_message,
             messageId: r.message_id,
             agent: r.agent,
-            files: r.files ? JSON.parse(r.files) : undefined,
-            metadata: r.metadata ? JSON.parse(r.metadata) : undefined,
+            files: safeJsonParse<string[] | undefined>(r.files, undefined),
+            metadata: safeJsonParse<Record<string, unknown> | undefined>(r.metadata, undefined),
         })));
     });
 
